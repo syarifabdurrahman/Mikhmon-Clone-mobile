@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx @react-native-community/cli@latest init:*)",
+      "Bash(npm install:*)",
+      "Bash(grep:*)",
+      "Bash(./gradlew.bat:*)",
+      "Bash(npm uninstall:*)"
+    ]
+  }
+}
