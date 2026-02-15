@@ -211,23 +211,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: OutlinedButton.icon(
-            onPressed: _handleRegister,
-            icon: const Icon(Icons.person_add_rounded, size: 22),
-            label: const Text(
-              'Create Account',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -251,19 +234,5 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   void _handleLogin() {
     context.go(AppRouter.loginRoute);
-  }
-
-  void _handleRegister() {
-    // Registration feature coming soon - show info message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Registration feature coming soon!'),
-        backgroundColor: AppTheme.secondaryColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
   }
 }

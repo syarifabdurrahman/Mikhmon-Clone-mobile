@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../navigation/app_router.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
+import '../../services/routeros_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _rememberMe = false;
+  // Demo mode is always enabled for static data
+  final bool _demoMode = true;
 
   @override
   void dispose() {
@@ -40,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
+    if (_demoMode || _formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -50,13 +53,18 @@ class _LoginScreenState extends State<LoginScreen> {
         await Future.delayed(const Duration(seconds: 2));
 
         if (mounted) {
-          if (_rememberMe) {
+          if (_rememberMe && !_demoMode) {
             final storage = FlutterSecureStorage();
             await storage.write(key: 'router_ip', value: _ipController.text);
-            await storage.write(key: 'username', value: _usernameController.text);
-            await storage.write(key: 'password', value: _passwordController.text);
+            await storage.write(
+                key: 'username', value: _usernameController.text);
+            await storage.write(
+                key: 'password', value: _passwordController.text);
             await storage.write(key: 'port', value: _portController.text);
           }
+
+          // Set demo mode for the entire app
+          RouterOSService().setDemoMode(_demoMode);
 
           if (mounted) {
             context.go(AppRouter.dashboardRoute);
@@ -91,9 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
         title: Text(
           'Mikhmon Clone',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: AppTheme.onSurfaceColor,
-            fontWeight: FontWeight.bold,
-          ),
+                color: AppTheme.onSurfaceColor,
+                fontWeight: FontWeight.bold,
+              ),
         ),
       ),
       body: SafeArea(
@@ -115,17 +123,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     _buildLogoSection(isSmallScreen),
                     const SizedBox(height: 32),
-
                     Text(
                       'RouterOS Login',
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        color: AppTheme.onBackgroundColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.displayMedium?.copyWith(
+                                color: AppTheme.onBackgroundColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
-
                     if (_errorMessage != null)
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -136,14 +143,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Text(
                           _errorMessage!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.onBackgroundColor,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.onBackgroundColor,
+                                  ),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     const SizedBox(height: 24),
-
                     TextFormField(
                       controller: _ipController,
                       keyboardType: TextInputType.url,
@@ -154,7 +161,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.router_rounded, size: 20),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                            _obscurePassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                           ),
                           onPressed: () {
                             _ipController.clear();
@@ -164,7 +173,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: Validators.validateIP,
                     ),
                     const SizedBox(height: 16),
-
                     TextFormField(
                       controller: _portController,
                       keyboardType: TextInputType.number,
@@ -177,7 +185,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: Validators.validatePort,
                     ),
                     const SizedBox(height: 16),
-
                     TextFormField(
                       controller: _usernameController,
                       textInputAction: TextInputAction.next,
@@ -189,7 +196,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: Validators.validateUsername,
                     ),
                     const SizedBox(height: 16),
-
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -200,7 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_rounded, size: 20),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                            _obscurePassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                           ),
                           onPressed: _togglePasswordVisibility,
                         ),
@@ -208,7 +216,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: Validators.validatePassword,
                     ),
                     const SizedBox(height: 16),
-
                     Row(
                       children: [
                         Checkbox(
@@ -229,15 +236,54 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                           child: Text(
                             'Remember credentials',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.onSurfaceColor,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: AppTheme.onSurfaceColor,
+                                ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    // Demo mode is always enabled for static data testing
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryColor.withValues(alpha: 0.2),
+                            AppTheme.primaryColor.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.science_rounded,
+                            size: 18,
+                            color: AppTheme.primaryColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Demo Mode Enabled (Static Data)',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 24),
-
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -253,7 +299,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.onPrimaryColor),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppTheme.onPrimaryColor),
                                 ),
                               )
                             : const Text(
@@ -265,30 +312,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: AppTheme.onPrimaryColor,
                                 ),
                               ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Center(
-                      child: TextButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Registration coming soon!'),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          "Don't have an account? Register",
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
                       ),
                     ),
                   ],

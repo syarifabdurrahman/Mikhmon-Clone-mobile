@@ -8,9 +8,15 @@ class RouterOSService {
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   RouterOSClient? _client;
+  bool _demoMode = false;
 
   RouterOSClient? get client => _client;
   bool get isConnected => _client?.isConnected ?? false;
+  bool get isDemoMode => _demoMode;
+
+  void setDemoMode(bool enabled) {
+    _demoMode = enabled;
+  }
 
   Future<RouterOSClient> connect() async {
     final host = await _storage.read(key: 'router_ip');

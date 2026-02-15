@@ -12,6 +12,8 @@
 .swiftpm/
 migrate_working_dir/
 
+\model-clone
+
 # IntelliJ related
 *.iml
 *.ipr

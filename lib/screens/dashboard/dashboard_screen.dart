@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/routeros_service.dart';
 import '../../services/models.dart';
+import '../../navigation/app_router.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,6 +31,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
+      // Check if demo mode is enabled
+      if (_routerOSService.isDemoMode) {
+        // Simulate loading delay
+        await Future.delayed(const Duration(milliseconds: 800));
+
+        if (mounted) {
+          setState(() {
+            _resources = _getDemoResources();
+          });
+        }
+        return;
+      }
+
       if (!_routerOSService.isConnected) {
         await _routerOSService.connect();
       }
@@ -60,6 +75,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  SystemResources _getDemoResources() {
+    return SystemResources(
+      platform: 'Mikrotik Cloud Hosted Router',
+      boardName: 'CHR-demo',
+      version: '7.12 (long-term)',
+      cpuFrequency: 1000,
+      cpuLoad: 15,
+      freeMemory: 1048576,
+      totalMemory: 2097152,
+      freeHddSpace: 52428800,
+      totalHddSpace: 104857600,
+      uptimeSeconds: 86400 * 3 + 3600 * 12 + 1800,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,6 +98,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: AppTheme.surfaceColor,
         foregroundColor: AppTheme.onSurfaceColor,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            RouterOSService().setDemoMode(false);
+            context.go(AppRouter.initialRoute);
+          },
+        ),
         title: Text(
           'Dashboard',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -83,7 +120,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.settings_rounded),
             onPressed: () {
-              // Navigate to settings
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Settings feature coming soon')),
+              );
             },
           ),
         ],
@@ -163,6 +202,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_routerOSService.isDemoMode) _buildDemoBanner(),
             _buildSystemInfoCard(),
             const SizedBox(height: 16),
             _buildResourceCards(),
@@ -303,7 +343,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Hotspot Users',
                 subtitle: 'View All',
                 onTap: () {
-                  // Navigate to hotspot users
+                  context.go(AppRouter.usersRoute);
                 },
               ),
             ),
@@ -461,7 +501,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Add Hotspot User',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  // Navigate to add user screen
+                  context.go(AppRouter.usersRoute);
                 },
               ),
               Divider(
@@ -473,7 +513,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Manage Hotspot',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  // Navigate to hotspot management
+                  context.go(AppRouter.usersRoute);
                 },
               ),
               Divider(
@@ -486,6 +526,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icons.arrow_forward_ios_rounded,
                 () {
                   // Navigate to logs screen
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Logs feature coming soon')),
+                  );
                 },
               ),
             ],
@@ -572,5 +615,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       return '${minutes}m';
     }
+  }
+
+  Widget _buildDemoBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.2),
+            AppTheme.primaryColor.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.science_rounded,
+            color: AppTheme.primaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Demo Mode - Showing simulated data',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

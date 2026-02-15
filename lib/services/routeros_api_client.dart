@@ -134,6 +134,43 @@ class RouterOSClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getHotspotUsersList() async {
+    try {
+      _socket!.write('/ip/hotspot/user/print\n');
+      final response = await _readResponse();
+      return _parseUserListResponse(response);
+    } catch (e) {
+      throw Exception('Failed to fetch hotspot users list: $e');
+    }
+  }
+
+  List<Map<String, dynamic>> _parseUserListResponse(String response) {
+    final lines = response.split('\n');
+    final users = <Map<String, dynamic>>[];
+    Map<String, dynamic>? currentUser;
+
+    for (final line in lines) {
+      if (line.startsWith('!re')) {
+        // Start of a new record
+        if (currentUser != null) {
+          users.add(currentUser);
+        }
+        currentUser = {};
+      } else if (line.startsWith('=') && currentUser != null) {
+        final parts = line.substring(1).split('=');
+        if (parts.length >= 2) {
+          currentUser![parts[0]] = parts.sublist(1).join('=');
+        }
+      }
+    }
+
+    if (currentUser != null) {
+      users.add(currentUser);
+    }
+
+    return users;
+  }
+
   Future<Map<String, dynamic>> getSystemResources() async {
     try {
       _socket!.write('/system/resource/print\n');
