@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../navigation/app_router.dart';
 import '../../theme/app_theme.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -233,6 +232,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   void _handleLogin() {
-    context.go(AppRouter.loginRoute);
+    context.go('/login');
   }
 }

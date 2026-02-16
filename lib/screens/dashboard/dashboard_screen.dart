@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/routeros_service.dart';
 import '../../services/models.dart';
-import '../../navigation/app_router.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -102,7 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
             RouterOSService().setDemoMode(false);
-            context.go(AppRouter.initialRoute);
+            context.go('/');
           },
         ),
         title: Text(
@@ -343,7 +342,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Hotspot Users',
                 subtitle: 'View All',
                 onTap: () {
-                  context.go(AppRouter.usersRoute);
+                  context.go('/users');
                 },
               ),
             ),
@@ -501,7 +500,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Add Hotspot User',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  context.go(AppRouter.usersRoute);
+                  context.go('/users');
                 },
               ),
               Divider(
@@ -513,7 +512,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Manage Hotspot',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  context.go(AppRouter.usersRoute);
+                  context.go('/users');
                 },
               ),
               Divider(

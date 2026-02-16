@@ -159,7 +159,7 @@ class RouterOSClient {
       } else if (line.startsWith('=') && currentUser != null) {
         final parts = line.substring(1).split('=');
         if (parts.length >= 2) {
-          currentUser![parts[0]] = parts.sublist(1).join('=');
+          currentUser[parts[0]] = parts.sublist(1).join('=');
         }
       }
     }

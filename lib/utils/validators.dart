@@ -4,8 +4,9 @@ class Validators {
       return 'Please enter router IP address';
     }
 
+    // Simple IPv4 validation regex
     final ipRegExp = RegExp(
-      r'^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|2[0-5]|(2[0-4][0-9]|22[0-4])(25[0-5]|2[0-4][0-9]|(25[0-5]|[0-9])(\d{2}){1,3}\d+)(25[0-5]|[0-9])(\d{1,3}\d+)?(25[0-5])?(\d{2,3})?:[0-9]{1,3}))?:(25[0-5]))(?::[0-9])(25[0-5]|2[0-4][0-9]|(2[0-5]|(2[0-4][0-9]|22[0-4])(25[0-5])?$',
+      r'^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$',
     );
 
     if (!ipRegExp.hasMatch(value)) {
@@ -39,6 +40,14 @@ class Validators {
       return 'Please enter password';
     }
     if (value.length < 5) {
+      return 'Password must be at least 5 characters';
+    }
+    return null;
+  }
+
+  static String? validateOptionalPassword(String? value) {
+    // Optional password - can be empty or null
+    if (value != null && value.isNotEmpty && value.length < 5) {
       return 'Password must be at least 5 characters';
     }
     return null;

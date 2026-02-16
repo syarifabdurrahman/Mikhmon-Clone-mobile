@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../navigation/app_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/routeros_service.dart';
 import '../../services/models.dart';
@@ -169,7 +168,7 @@ class _HotspotUsersScreenState extends State<HotspotUsersScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go(AppRouter.dashboardRoute),
+          onPressed: () => context.go('/dashboard'),
         ),
         title: Text(
           'Hotspot Users',

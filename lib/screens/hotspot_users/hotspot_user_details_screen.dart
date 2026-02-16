@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../services/routeros_service.dart';
+import 'edit_hotspot_user_screen.dart';
 
 class HotspotUserDetailsScreen extends StatefulWidget {
   final HotspotUser user;
@@ -398,8 +399,11 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                 title: const Text('Edit User'),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Edit functionality coming soon')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditHotspotUserScreen(user: _user),
+                    ),
                   );
                 },
               ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
-import '../../navigation/app_router.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../services/routeros_service.dart';
@@ -67,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
           RouterOSService().setDemoMode(_demoMode);
 
           if (mounted) {
-            context.go(AppRouter.dashboardRoute);
+            context.go('/dashboard');
           }
         }
       } catch (e) {
@@ -94,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go(AppRouter.initialRoute),
+          onPressed: () => context.go('/'),
         ),
         title: Text(
           'Mikhmon Clone',
