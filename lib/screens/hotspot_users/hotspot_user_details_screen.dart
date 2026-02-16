@@ -84,9 +84,11 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
           IconButton(
             icon: const Icon(Icons.edit_rounded),
             onPressed: () {
-              // Navigate to edit user screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit functionality coming soon')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditHotspotUserScreen(user: _user.toMap()),
+                ),
               );
             },
           ),
@@ -402,7 +404,7 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditHotspotUserScreen(user: _user),
+                      builder: (context) => EditHotspotUserScreen(user: _user.toMap()),
                     ),
                   );
                 },

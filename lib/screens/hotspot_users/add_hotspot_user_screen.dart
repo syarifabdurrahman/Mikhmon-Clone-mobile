@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
-import '../../services/routeros_service.dart';
 import '../../utils/validators.dart';
+import '../../providers/app_providers.dart';
 
-class AddHotspotUserScreen extends StatefulWidget {
+class AddHotspotUserScreen extends ConsumerStatefulWidget {
   const AddHotspotUserScreen({super.key});
 
   @override
-  State<AddHotspotUserScreen> createState() => _AddHotspotUserScreenState();
+  ConsumerState<AddHotspotUserScreen> createState() => _AddHotspotUserScreenState();
 }
 
-class _AddHotspotUserScreenState extends State<AddHotspotUserScreen> {
+class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -48,29 +50,13 @@ class _AddHotspotUserScreenState extends State<AddHotspotUserScreen> {
     });
 
     try {
-      final routerOSService = RouterOSService();
+      final usersNotifier = ref.read(hotspotUsersProvider.notifier);
 
       // Check if demo mode is enabled
-      if (routerOSService.isDemoMode) {
-        // Simulate loading delay
-        await Future.delayed(const Duration(milliseconds: 800));
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('User "${_usernameController.text}" created (demo mode)'),
-              backgroundColor: AppTheme.primaryColor,
-            ),
-          );
-          Navigator.pop(context);
-        }
-        return;
-      }
-
-      final client = routerOSService.client;
-
-      if (client != null) {
-        await client.addHotspotUser(
+      final service = ref.read(routerOSServiceProvider);
+      if (service.isDemoMode) {
+        // Add user using the provider
+        await usersNotifier.addUser(
           username: _usernameController.text.trim(),
           password: _passwordController.text,
           profile: _selectedProfile,
@@ -86,20 +72,22 @@ class _AddHotspotUserScreenState extends State<AddHotspotUserScreen> {
               backgroundColor: AppTheme.primaryColor,
             ),
           );
-          Navigator.pop(context);
+          context.pop(true); // Return true to indicate success
         }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Not connected to RouterOS'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        return;
+      }
+
+      // For real RouterOS connection (not fully implemented yet)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Add user not implemented for real RouterOS connection yet'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -126,7 +114,7 @@ class _AddHotspotUserScreenState extends State<AddHotspotUserScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: Text(
           'Add Hotspot User',
@@ -408,12 +396,12 @@ class _AddHotspotUserScreenState extends State<AddHotspotUserScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : Row(
+            : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.person_add_rounded),
-                  const SizedBox(width: 8),
-                  const Text(
+                  Icon(Icons.person_add_rounded),
+                  SizedBox(width: 8),
+                  Text(
                     'Create User',
                     style: TextStyle(
                       fontSize: 16,

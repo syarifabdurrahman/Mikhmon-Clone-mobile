@@ -69,11 +69,16 @@ class HotspotUser {
   });
 
   factory HotspotUser.fromJson(Map<String, dynamic> json) {
+    // Sync active field with disabled field
+    // Active when: (disabled is not 'true') OR (active is 'true')
+    final isDisabled = json['disabled'] == 'true';
+    final isActive = json['active'] == 'true' || !isDisabled;
+
     return HotspotUser(
       id: json['.id'] ?? '',
       name: json['name'] ?? '',
       profile: json['profile'] ?? 'default',
-      active: json['active'] == 'true',
+      active: isActive,
       uptime: json['uptime'],
       bytesIn: int.tryParse(json['bytes-in'] ?? '0'),
       bytesOut: int.tryParse(json['bytes-out'] ?? '0'),
@@ -83,6 +88,23 @@ class HotspotUser {
   }
 
   String get dataUsed => '${((bytesIn ?? 0) + (bytesOut ?? 0)) / 1024 / 1024} MB';
+
+  Map<String, dynamic> toMap() {
+    // Keep disabled in sync with active
+    final disabledValue = (!active).toString();
+    return {
+      '.id': id,
+      'name': name,
+      'profile': profile,
+      'active': active.toString(),
+      'uptime': uptime ?? '0',
+      'bytes-in': (bytesIn ?? 0).toString(),
+      'bytes-out': (bytesOut ?? 0).toString(),
+      'limit-bytes-in': (limitBytesIn ?? 0).toString(),
+      'limit-bytes-out': (limitBytesOut ?? 0).toString(),
+      'disabled': disabledValue,
+    };
+  }
 }
 
 class InterfaceStats {
@@ -115,4 +137,54 @@ class InterfaceStats {
 
   String get txData => '${(txByte ?? 0) / 1024 / 1024} MB';
   String get rxData => '${(rxByte ?? 0) / 1024 / 1024} MB';
+}
+
+class HotspotActiveUser {
+  final String id;
+  final String username;
+  final String address;
+  final String macAddress;
+  final String loginTime;
+  final String uptime;
+  final int bytesIn;
+  final int bytesOut;
+  final String? server;
+  final String profile;
+
+  HotspotActiveUser({
+    required this.id,
+    required this.username,
+    required this.address,
+    required this.macAddress,
+    required this.loginTime,
+    required this.uptime,
+    required this.bytesIn,
+    required this.bytesOut,
+    this.server,
+    required this.profile,
+  });
+
+  factory HotspotActiveUser.fromJson(Map<String, dynamic> json) {
+    return HotspotActiveUser(
+      id: json['.id'] ?? '',
+      username: json['user'] ?? '',
+      address: json['address'] ?? '',
+      macAddress: json['mac-address'] ?? '',
+      loginTime: json['login-time'] ?? '0',
+      uptime: json['uptime'] ?? '0',
+      bytesIn: int.tryParse(json['bytes-in'] ?? '0') ?? 0,
+      bytesOut: int.tryParse(json['bytes-out'] ?? '0') ?? 0,
+      server: json['server'],
+      profile: json['profile'] ?? 'default',
+    );
+  }
+
+  String get dataUsed => _formatBytes(bytesIn + bytesOut);
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
+  }
 }

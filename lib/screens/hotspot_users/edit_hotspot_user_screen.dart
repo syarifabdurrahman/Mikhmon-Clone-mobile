@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
-import '../../services/routeros_service.dart';
 import '../../utils/validators.dart';
-import '../../services/models.dart';
+import '../../providers/app_providers.dart';
 
-class EditHotspotUserScreen extends StatefulWidget {
-  final HotspotUser user;
+class EditHotspotUserScreen extends ConsumerStatefulWidget {
+  final Map<String, dynamic> user;
 
   const EditHotspotUserScreen({super.key, required this.user});
 
   @override
-  State<EditHotspotUserScreen> createState() => _EditHotspotUserScreenState();
+  ConsumerState<EditHotspotUserScreen> createState() => _EditHotspotUserScreenState();
 }
 
-class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
+class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _commentController = TextEditingController();
 
-  String _selectedProfile = 'default';
+  late String _selectedProfile;
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -32,8 +32,8 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedProfile = widget.user.profile;
-    _commentController.text = '';
+    _selectedProfile = widget.user['profile'] ?? 'default';
+    _commentController.text = widget.user['comment'] ?? '';
   }
 
   @override
@@ -53,36 +53,15 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
     });
 
     try {
-      final routerOSService = RouterOSService();
+      final usersNotifier = ref.read(hotspotUsersProvider.notifier);
 
       // Check if demo mode is enabled
-      if (routerOSService.isDemoMode) {
-        // Simulate loading delay
-        await Future.delayed(const Duration(milliseconds: 800));
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('User "${widget.user.name}" updated (demo mode)'),
-              backgroundColor: AppTheme.primaryColor,
-            ),
-          );
-          Navigator.pop(context);
-        }
-        return;
-      }
-
-      final client = routerOSService.client;
-
-      if (client != null) {
-        // Note: RouterOS doesn't have native update, we use remove+add pattern
-        // Remove old user
-        await client.removeHotspotUser(widget.user.id);
-
-        // Add with updated properties
-        await client.addHotspotUser(
-          username: widget.user.name,
-          password: _passwordController.text,
+      final service = ref.read(routerOSServiceProvider);
+      if (service.isDemoMode) {
+        // Update user in demo mode
+        await usersNotifier.updateUser(
+          id: widget.user['.id'],
+          username: widget.user['name'],
           profile: _selectedProfile,
           comment: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
         );
@@ -90,24 +69,26 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('User "${widget.user.name}" updated successfully'),
+              content: Text('User "${widget.user['name']}" updated successfully'),
               backgroundColor: AppTheme.primaryColor,
             ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true); // Return true to indicate success
         }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Not connected to RouterOS'),
-              backgroundColor: AppTheme.errorColor,
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        return;
+      }
+
+      // For real RouterOS connection (not implemented yet)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Update user not implemented for real RouterOS connection yet'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -195,7 +176,7 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Edit user "${widget.user.name}"',
+                'Edit user "${widget.user['name']}"',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.w600,
@@ -237,7 +218,7 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    widget.user.name,
+                    widget.user['name'] ?? '',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: AppTheme.onSurfaceColor,
                           fontWeight: FontWeight.bold,
@@ -257,7 +238,7 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'New Password',
+          'New Password (Optional)',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: AppTheme.onSurfaceColor,
                 fontWeight: FontWeight.w600,
@@ -270,7 +251,7 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
           textInputAction: TextInputAction.next,
           autocorrect: false,
           decoration: InputDecoration(
-            hintText: 'Enter new password for the user',
+            hintText: 'Enter new password (leave empty to keep current)',
             prefixIcon: const Icon(Icons.lock_rounded, size: 20),
             suffixIcon: IconButton(
               icon: Icon(
@@ -283,7 +264,7 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
               },
             ),
           ),
-          validator: Validators.validatePassword,
+          validator: Validators.validateOptionalPassword,
         ),
       ],
     );
@@ -380,12 +361,12 @@ class _EditHotspotUserScreenState extends State<EditHotspotUserScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : Row(
+            : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.save_rounded),
-                  const SizedBox(width: 8),
-                  const Text(
+                  Icon(Icons.save_rounded),
+                  SizedBox(width: 8),
+                  Text(
                     'Update User',
                     style: TextStyle(
                       fontSize: 16,

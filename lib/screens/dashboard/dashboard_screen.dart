@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/routeros_service.dart';
 import '../../services/models.dart';
+import 'widgets/resource_card_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -23,17 +24,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDashboardData();
   }
 
-  Future<void> _loadDashboardData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _loadDashboardData({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       // Check if demo mode is enabled
       if (_routerOSService.isDemoMode) {
-        // Simulate loading delay
-        await Future.delayed(const Duration(milliseconds: 800));
+        // Simulate loading delay for initial load
+        if (showLoading) {
+          await Future.delayed(const Duration(milliseconds: 800));
+        }
 
         if (mounted) {
           setState(() {
@@ -59,14 +64,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && showLoading) {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
         });
       }
     } finally {
-      if (mounted) {
+      if (mounted && showLoading) {
         setState(() {
           _isLoading = false;
         });
@@ -75,6 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   SystemResources _getDemoResources() {
+    // Return static base resources - individual widgets handle dynamic updates
     return SystemResources(
       platform: 'Mikrotik Cloud Hosted Router',
       boardName: 'CHR-demo',
@@ -114,7 +120,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _isLoading ? null : _loadDashboardData,
+            onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
           ),
           IconButton(
             icon: const Icon(Icons.settings_rounded),
@@ -194,7 +200,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadDashboardData,
+      onRefresh: () => _loadDashboardData(showLoading: false),
       color: AppTheme.primaryColor,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -302,22 +308,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildResourceCard(
-                Icons.memory_rounded,
-                'CPU Load',
-                '${_resources!.cpuLoad}%',
-                _resources!.cpuLoad / 100,
-              ),
+              child: CpuLoadCard(initialResources: _resources),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildResourceCard(
-                Icons.storage_rounded,
-                'Memory',
-                '${(_resources!.totalMemory - _resources!.freeMemory) / 1024 / 1024} MB',
-                _resources!.memoryUsagePercent / 100,
-                subtitle:
-                    '${_resources!.totalMemory / 1024 / 1024} MB Total',
+              child: MemoryCard(initialResources: _resources),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: DiskCard(initialResources: _resources),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildQuickActionCard(
+                Icons.people_rounded,
+                'All Users',
+                subtitle: 'View All',
+                onTap: () {
+                  context.go('/users');
+                },
               ),
             ),
           ],
@@ -326,23 +339,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           children: [
             Expanded(
-              child: _buildResourceCard(
-                Icons.sd_storage_rounded,
-                'Disk',
-                '${(_resources!.totalHddSpace - _resources!.freeHddSpace) / 1024 / 1024} MB',
-                _resources!.hddUsagePercent / 100,
-                subtitle:
-                    '${_resources!.totalHddSpace / 1024 / 1024} MB Total',
+              child: _buildQuickActionCard(
+                Icons.wifi_rounded,
+                'Active Users',
+                subtitle: 'View Connected',
+                onTap: () {
+                  context.go('/users/active');
+                },
+                color: Colors.green,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildQuickActionCard(
-                Icons.people_rounded,
-                'Hotspot Users',
-                subtitle: 'View All',
+                Icons.person_add_rounded,
+                'Add User',
+                subtitle: 'Create New',
                 onTap: () {
-                  context.go('/users');
+                  context.push('/users/add');
                 },
               ),
             ),
@@ -352,85 +366,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildResourceCard(
-    IconData icon,
-    String title,
-    String value,
-    double usagePercent, {
-    String? subtitle,
-  }) {
-    return Card(
-      color: AppTheme.surfaceColor,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  icon,
-                  color: AppTheme.primaryColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
-                    ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: usagePercent.clamp(0.0, 1.0),
-                backgroundColor: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  usagePercent > 0.8
-                      ? AppTheme.errorColor
-                      : AppTheme.primaryColor,
-                ),
-                minHeight: 6,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildQuickActionCard(
     IconData icon,
     String title, {
     String? subtitle,
     VoidCallback? onTap,
+    Color? color,
   }) {
+    final cardColor = color ?? AppTheme.primaryColor;
+
     return Card(
       color: AppTheme.surfaceColor,
       elevation: 0,
@@ -447,7 +391,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Icon(
                 icon,
-                color: AppTheme.primaryColor,
+                color: cardColor,
                 size: 20,
               ),
               const SizedBox(height: 8),
@@ -463,7 +407,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.primaryColor,
+                        color: cardColor,
                         fontWeight: FontWeight.w500,
                       ),
                 ),
@@ -500,7 +444,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Add Hotspot User',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  context.go('/users');
+                  context.push('/users/add');
                 },
               ),
               Divider(

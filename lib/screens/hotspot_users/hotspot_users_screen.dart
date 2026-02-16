@@ -1,165 +1,70 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
-import '../../services/routeros_service.dart';
+import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import 'hotspot_user_details_screen.dart';
 import 'add_hotspot_user_screen.dart';
+import 'edit_hotspot_user_screen.dart';
 
-class HotspotUsersScreen extends StatefulWidget {
+class HotspotUsersScreen extends ConsumerStatefulWidget {
   const HotspotUsersScreen({super.key});
 
   @override
-  State<HotspotUsersScreen> createState() => _HotspotUsersScreenState();
+  ConsumerState<HotspotUsersScreen> createState() => _HotspotUsersScreenState();
 }
 
-class _HotspotUsersScreenState extends State<HotspotUsersScreen> {
-  final _routerOSService = RouterOSService();
-  bool _isLoading = false;
-  String? _errorMessage;
-  List<HotspotUser> _users = [];
+class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
   String _searchQuery = '';
   UserStatusFilter _statusFilter = UserStatusFilter.all;
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
-    _loadUsers();
+    _scrollController.addListener(_onScroll);
   }
 
-  Future<void> _loadUsers() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreUsers();
+    }
+  }
+
+  Future<void> _loadMoreUsers() async {
+    if (_isLoadingMore) return;
+
+    final paginatedUsers = ref.read(hotspotUsersProvider).value;
+    if (paginatedUsers == null || !paginatedUsers.hasMore) return;
+
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _isLoadingMore = true;
     });
 
     try {
-      // Check if demo mode is enabled
-      if (_routerOSService.isDemoMode) {
-        // Simulate loading delay
-        await Future.delayed(const Duration(milliseconds: 800));
-
-        if (mounted) {
-          setState(() {
-            _users = _getDemoUsers();
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-
-      final client = _routerOSService.client;
-      if (client != null) {
-        final usersData = await client.getHotspotUsersList();
-
-        if (mounted) {
-          setState(() {
-            _users = usersData.map((data) => HotspotUser.fromJson(data)).toList();
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Not connected to RouterOS';
-            _isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
+      await ref.read(hotspotUsersProvider.notifier).loadMore();
+    } finally {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
+          _isLoadingMore = false;
         });
       }
     }
   }
 
-  List<HotspotUser> _getDemoUsers() {
-    return [
-      HotspotUser(
-        id: '*1',
-        name: 'john_doe',
-        profile: 'premium',
-        active: true,
-        uptime: '2h 15m',
-        bytesIn: 524288000,
-        bytesOut: 1048576000,
-        limitBytesIn: null,
-        limitBytesOut: null,
-      ),
-      HotspotUser(
-        id: '*2',
-        name: 'jane_smith',
-        profile: 'default',
-        active: true,
-        uptime: '45m',
-        bytesIn: 104857600,
-        bytesOut: 209715200,
-        limitBytesIn: 524288000,
-        limitBytesOut: 1048576000,
-      ),
-      HotspotUser(
-        id: '*3',
-        name: 'guest_user',
-        profile: 'trial',
-        active: false,
-        uptime: null,
-        bytesIn: 0,
-        bytesOut: 0,
-        limitBytesIn: 104857600,
-        limitBytesOut: 209715200,
-      ),
-      HotspotUser(
-        id: '*4',
-        name: 'admin_test',
-        profile: 'unlimited',
-        active: true,
-        uptime: '1d 3h',
-        bytesIn: 1073741824,
-        bytesOut: 2147483648,
-        limitBytesIn: null,
-        limitBytesOut: null,
-      ),
-      HotspotUser(
-        id: '*5',
-        name: 'expired_user',
-        profile: 'default',
-        active: false,
-        uptime: null,
-        bytesIn: 52428800,
-        bytesOut: 104857600,
-        limitBytesIn: 104857600,
-        limitBytesOut: 209715200,
-      ),
-    ];
-  }
-
-  List<HotspotUser> get _filteredUsers {
-    var filtered = _users;
-
-    // Apply status filter
-    if (_statusFilter == UserStatusFilter.active) {
-      filtered = filtered.where((u) => u.active).toList();
-    } else if (_statusFilter == UserStatusFilter.inactive) {
-      filtered = filtered.where((u) => !u.active).toList();
-    }
-
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where((u) =>
-              u.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              u.profile.toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
-    }
-
-    return filtered;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final usersAsync = ref.watch(hotspotUsersProvider);
+    final service = ref.watch(routerOSServiceProvider);
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -178,19 +83,126 @@ class _HotspotUsersScreenState extends State<HotspotUsersScreen> {
               ),
         ),
         actions: [
+          if (service.isDemoMode)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primaryColor.withValues(alpha: 0.2),
+                    AppTheme.primaryColor.withValues(alpha: 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.science_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'DEMO',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _isLoading ? null : _loadUsers,
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list_rounded),
-            onPressed: _showFilterDialog,
+            onPressed: () {
+              ref.read(hotspotUsersProvider.notifier).refresh();
+            },
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          _buildSearchAndFilter(),
+          Expanded(
+            child: usersAsync.when(
+              data: (paginatedUsers) {
+                // Convert Map data to HotspotUser objects
+                final users = paginatedUsers.users.map((data) => HotspotUser.fromJson(data)).toList();
+                final filteredUsers = _filterUsers(users);
+
+                if (filteredUsers.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () => ref.read(hotspotUsersProvider.notifier).refresh(),
+                  color: AppTheme.primaryColor,
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: filteredUsers.length + (paginatedUsers.hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == filteredUsers.length) {
+                        return _buildLoadingIndicator();
+                      }
+                      return _buildUserCard(filteredUsers[index]);
+                    },
+                  ),
+                );
+              },
+              loading: () => const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                ),
+              ),
+              error: (error, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 64,
+                      color: AppTheme.errorColor,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading users',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: AppTheme.onSurfaceColor,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToAddUser(),
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AddHotspotUserScreen(),
+            ),
+          );
+          // If user was added successfully, the provider will automatically update
+          // No need to manually refresh - Riverpod handles this
+        },
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: AppTheme.onPrimaryColor,
         icon: const Icon(Icons.person_add_rounded),
@@ -199,278 +211,287 @@ class _HotspotUsersScreenState extends State<HotspotUsersScreen> {
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildSearchAndFilter() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'Search by username or profile...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: AppTheme.backgroundColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                size: 64,
-                color: AppTheme.errorColor,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading users',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.onBackgroundColor,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: SegmentedButton<UserStatusFilter>(
+                  segments: const [
+                    ButtonSegment(
+                      value: UserStatusFilter.all,
+                      label: Text('All'),
+                      icon: Icon(Icons.people_rounded, size: 18),
                     ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                    ButtonSegment(
+                      value: UserStatusFilter.active,
+                      label: Text('Active'),
+                      icon: Icon(Icons.check_circle_rounded, size: 18),
                     ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _loadUsers,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: AppTheme.onPrimaryColor,
+                    ButtonSegment(
+                      value: UserStatusFilter.inactive,
+                      label: Text('Inactive'),
+                      icon: Icon(Icons.cancel_rounded, size: 18),
+                    ),
+                  ],
+                  selected: {_statusFilter},
+                  onSelectionChanged: (Set<UserStatusFilter> newSelection) {
+                    setState(() {
+                      _statusFilter = newSelection.first;
+                    });
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppTheme.primaryColor;
+                      }
+                      return AppTheme.backgroundColor;
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppTheme.onPrimaryColor;
+                      }
+                      return AppTheme.onSurfaceColor;
+                    }),
+                  ),
                 ),
-                child: const Text('Retry'),
               ),
             ],
           ),
-        ),
-      );
-    }
-
-    if (_users.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.people_outline_rounded,
-              size: 64,
-              color: AppTheme.onSurfaceColor,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No hotspot users found',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.onBackgroundColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add your first hotspot user to get started',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
-                  ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        if (_routerOSService.isDemoMode) _buildDemoBanner(),
-        _buildSearchBar(),
-        _buildStatusChips(),
-        Expanded(
-          child: _filteredUsers.isEmpty
-              ? Center(
-                  child: Text(
-                    'No users match your filters',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
-                        ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadUsers,
-                  color: AppTheme.primaryColor,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: _filteredUsers.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final user = _filteredUsers[index];
-                      return _buildUserCard(user);
-                    },
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-        },
-        decoration: InputDecoration(
-          hintText: 'Search by name or profile...',
-          prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear_rounded),
-                  onPressed: () {
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                  },
-                )
-              : null,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChips() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _buildStatusChip('All', UserStatusFilter.all),
-          const SizedBox(width: 8),
-          _buildStatusChip('Active', UserStatusFilter.active),
-          const SizedBox(width: 8),
-          _buildStatusChip('Inactive', UserStatusFilter.inactive),
         ],
       ),
     );
   }
 
-  Widget _buildStatusChip(String label, UserStatusFilter filter) {
-    final isSelected = _statusFilter == filter;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _statusFilter = filter;
-        });
-      },
-      backgroundColor: AppTheme.surfaceColor,
-      selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-      checkmarkColor: AppTheme.primaryColor,
-      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: isSelected ? AppTheme.primaryColor : AppTheme.onSurfaceColor,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+  List<HotspotUser> _filterUsers(List<HotspotUser> users) {
+    var filtered = users;
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((user) {
+        return user.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            user.profile.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    // Apply status filter
+    switch (_statusFilter) {
+      case UserStatusFilter.active:
+        filtered = filtered.where((user) => user.active).toList();
+        break;
+      case UserStatusFilter.inactive:
+        filtered = filtered.where((user) => !user.active).toList();
+        break;
+      case UserStatusFilter.all:
+        break;
+    }
+
+    return filtered;
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.person_off_rounded,
+            size: 64,
+            color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
           ),
+          const SizedBox(height: 16),
+          Text(
+            'No hotspot users found',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.onSurfaceColor,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _searchQuery.isNotEmpty || _statusFilter != UserStatusFilter.all
+                ? 'Try adjusting your search or filter'
+                : 'Add your first user to get started',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      ),
     );
   }
 
   Widget _buildUserCard(HotspotUser user) {
     return Card(
+      margin: const EdgeInsets.only(bottom: 12),
       color: AppTheme.surfaceColor,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: user.active
               ? AppTheme.primaryColor.withValues(alpha: 0.3)
               : AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-          width: user.active ? 2 : 1,
+          width: 1,
         ),
       ),
       child: InkWell(
-        onTap: () => _navigateToUserDetails(user),
-        onLongPress: () => _showUserOptions(user),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HotspotUserDetailsScreen(user: user),
+            ),
+          );
+        },
+        onLongPress: () => _showUserContextMenu(user),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: user.active
-                          ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                          : AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: user.active ? AppTheme.primaryColor : AppTheme.onSurfaceColor,
-                      size: 20,
-                    ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: user.active
+                        ? [
+                            AppTheme.primaryColor,
+                            AppTheme.primaryColor.withValues(alpha: 0.7),
+                          ]
+                        : [
+                            AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+                            AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+                          ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.person_rounded,
+                  color: user.active ? Colors.white : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.onSurfaceColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
                       children: [
-                        Text(
-                          user.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: AppTheme.onSurfaceColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: user.active
+                                ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                                : AppTheme.onSurfaceColor.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: user.active
+                                  ? AppTheme.primaryColor.withValues(alpha: 0.3)
+                                  : AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            user.profile.toUpperCase(),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: user.active
+                                      ? AppTheme.primaryColor
+                                      : AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10,
+                                ),
+                          ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(width: 8),
+                        Icon(
+                          user.active ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                          size: 16,
+                          color: user.active
+                              ? Colors.green
+                              : AppTheme.onSurfaceColor.withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(width: 4),
                         Text(
-                          user.profile,
+                          user.active ? 'Connected' : 'Disconnected',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                                color: user.active
+                                    ? Colors.green
+                                    : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
                               ),
                         ),
                       ],
                     ),
-                  ),
-                  _buildStatusBadge(user.active),
-                ],
-              ),
-              if (user.active && user.uptime != null) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 14,
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Uptime: ${user.uptime}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                          ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.data_usage_rounded,
-                      size: 14,
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      user.dataUsed,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                          ),
-                    ),
                   ],
                 ),
-              ],
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+              ),
             ],
           ),
         ),
@@ -478,238 +499,130 @@ class _HotspotUsersScreenState extends State<HotspotUsersScreen> {
     );
   }
 
-  Widget _buildStatusBadge(bool active) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: active
-            ? AppTheme.primaryColor.withValues(alpha: 0.15)
-            : AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: active
-              ? AppTheme.primaryColor.withValues(alpha: 0.5)
-              : AppTheme.onSurfaceColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Text(
-        active ? 'Active' : 'Inactive',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: active ? AppTheme.primaryColor : AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-            ),
-      ),
-    );
-  }
-
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Users'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Status',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                  ),
-            ),
-            const SizedBox(height: 16),
-            SegmentedButton<UserStatusFilter>(
-              segments: const [
-                ButtonSegment(
-                  value: UserStatusFilter.all,
-                  label: Text('All'),
-                  icon: Icon(Icons.list_rounded, size: 18),
-                ),
-                ButtonSegment(
-                  value: UserStatusFilter.active,
-                  label: Text('Active'),
-                  icon: Icon(Icons.check_circle_rounded, size: 18),
-                ),
-                ButtonSegment(
-                  value: UserStatusFilter.inactive,
-                  label: Text('Inactive'),
-                  icon: Icon(Icons.cancel_rounded, size: 18),
-                ),
-              ],
-              selected: {_statusFilter},
-              onSelectionChanged: (Set<UserStatusFilter> newSelection) {
-                setState(() {
-                  _statusFilter = newSelection.first;
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showUserOptions(HotspotUser user) {
+  void _showUserContextMenu(HotspotUser user) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+      backgroundColor: AppTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             ListTile(
               leading: const Icon(Icons.visibility_rounded),
               title: const Text('View Details'),
               onTap: () {
-                Navigator.pop(context);
-                _navigateToUserDetails(user);
+                Navigator.pop(sheetContext);
+                Navigator.push(
+                  context,  // Use outer context
+                  MaterialPageRoute(
+                    builder: (context) => HotspotUserDetailsScreen(user: user),
+                  ),
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.edit_rounded),
               title: const Text('Edit User'),
-              onTap: () {
-                Navigator.pop(context);
-                // Navigate to edit user screen
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                // Convert HotspotUser to Map and navigate to edit screen
+                final userData = {
+                  '.id': user.id,
+                  'name': user.name,
+                  'profile': user.profile,
+                  'active': user.active.toString(),
+                  'uptime': user.uptime ?? '0',
+                  'bytes-in': (user.bytesIn ?? 0).toString(),
+                  'bytes-out': (user.bytesOut ?? 0).toString(),
+                  'limit-uptime': '0',
+                  'disabled': (!user.active).toString(),
+                  'comment': '',
+                };
+                await Navigator.push(
+                  context,  // Use outer context
+                  MaterialPageRoute(
+                    builder: (context) => EditHotspotUserScreen(user: userData),
+                  ),
+                );
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete_rounded, color: AppTheme.errorColor),
-              title: Text('Delete User', style: TextStyle(color: AppTheme.errorColor)),
+              leading: Icon(
+                user.active ? Icons.wifi_off_rounded : Icons.wifi_rounded,
+                color: user.active ? AppTheme.errorColor : AppTheme.primaryColor,
+              ),
+              title: Text(user.active ? 'Disable User' : 'Enable User'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_rounded, color: AppTheme.errorColor),
+              title: const Text('Delete User'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _confirmDeleteUser(user);
               },
             ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
-  }
-
-  void _navigateToUserDetails(HotspotUser user) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => HotspotUserDetailsScreen(user: user),
-      ),
-    ).then((_) => _loadUsers()); // Refresh list when returning from details
-  }
-
-  void _navigateToAddUser() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AddHotspotUserScreen(),
-      ),
-    ).then((_) => _loadUsers());
   }
 
   void _confirmDeleteUser(HotspotUser user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
         title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete user "${user.name}"?'),
+        content: Text('Are you sure you want to delete user "${user.name}"? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _deleteUser(user);
+              if (!mounted) return;
+              final messenger = ScaffoldMessenger.of(context);
+              await ref.read(hotspotUsersProvider.notifier).deleteUser(user.id);
+              if (mounted) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('User "${user.name}" deleted successfully'),
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                );
+              }
             },
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.errorColor,
             ),
             child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteUser(HotspotUser user) async {
-    try {
-      // Skip actual deletion in demo mode
-      if (_routerOSService.isDemoMode) {
-        if (mounted) {
-          setState(() {
-            _users.removeWhere((u) => u.id == user.id);
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('User "${user.name}" removed (demo mode)'),
-              backgroundColor: AppTheme.primaryColor,
-            ),
-          );
-        }
-        return;
-      }
-
-      final client = _routerOSService.client;
-      if (client != null) {
-        await client.removeHotspotUser(user.id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('User "${user.name}" deleted successfully'),
-              backgroundColor: AppTheme.primaryColor,
-            ),
-          );
-          _loadUsers();
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete user: $e'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
-  Widget _buildDemoBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primaryColor.withValues(alpha: 0.2),
-            AppTheme.primaryColor.withValues(alpha: 0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.science_rounded,
-            color: AppTheme.primaryColor,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Demo Mode - Showing simulated users',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
           ),
         ],
       ),

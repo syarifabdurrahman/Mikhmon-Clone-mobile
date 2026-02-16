@@ -22,24 +22,39 @@ class RouterOSClient {
   Future<void> connect() async {
     try {
       _socket = await Socket.connect(host, int.parse(port));
-      _socket!.write('/login');
 
-      final response = await _readResponse();
-      if (response.contains('!trap')) {
-        throw Exception('Connection failed: Invalid response');
-      }
+      // Handle login with or without password
+      if (password.isEmpty) {
+        // Login without password - just send username
+        _socket!.write('/login');
+        _socket!.write('=name=$username');
+        _socket!.write('\n');
 
-      final challenge = _extractChallenge(response);
-      final hashedPassword = _hashPassword(challenge, password);
+        final loginResponse = await _readResponse();
+        if (loginResponse.contains('!trap') || loginResponse.contains('!error')) {
+          throw Exception('Authentication failed: Invalid credentials');
+        }
+      } else {
+        // Login with password - use challenge-response
+        _socket!.write('/login');
 
-      _socket!.write('/login');
-      _socket!.write('=name=$username');
-      _socket!.write('=response=$hashedPassword');
-      _socket!.write('\n');
+        final response = await _readResponse();
+        if (response.contains('!trap')) {
+          throw Exception('Connection failed: Invalid response');
+        }
 
-      final loginResponse = await _readResponse();
-      if (loginResponse.contains('!trap') || loginResponse.contains('!error')) {
-        throw Exception('Authentication failed: Invalid credentials');
+        final challenge = _extractChallenge(response);
+        final hashedPassword = _hashPassword(challenge, password);
+
+        _socket!.write('/login');
+        _socket!.write('=name=$username');
+        _socket!.write('=response=$hashedPassword');
+        _socket!.write('\n');
+
+        final loginResponse = await _readResponse();
+        if (loginResponse.contains('!trap') || loginResponse.contains('!error')) {
+          throw Exception('Authentication failed: Invalid credentials');
+        }
       }
 
       _isConnected = true;
@@ -244,6 +259,31 @@ class RouterOSClient {
       }
     } catch (e) {
       throw Exception('Failed to remove hotspot user: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getHotspotActiveUsers() async {
+    try {
+      _socket!.write('/ip/hotspot/active/print\n');
+      final response = await _readResponse();
+      return _parseUserListResponse(response);
+    } catch (e) {
+      throw Exception('Failed to fetch active hotspot users: $e');
+    }
+  }
+
+  Future<void> logoutHotspotUser(String id) async {
+    try {
+      _socket!.write('/ip/hotspot/active/remove');
+      _socket!.write('=.id=$id');
+      _socket!.write('\n');
+
+      final response = await _readResponse();
+      if (response.contains('!trap') || response.contains('!error')) {
+        throw Exception('Failed to logout user: $response');
+      }
+    } catch (e) {
+      throw Exception('Failed to logout hotspot user: $e');
     }
   }
 
