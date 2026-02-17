@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
+import '../../services/routeros_service.dart';
 import '../../services/models.dart';
 import 'hotspot_user_details_screen.dart';
 import 'add_hotspot_user_screen.dart';
@@ -15,11 +16,15 @@ class HotspotUsersScreen extends ConsumerStatefulWidget {
   ConsumerState<HotspotUsersScreen> createState() => _HotspotUsersScreenState();
 }
 
-class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
+class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
+    with AutomaticKeepAliveClientMixin {
   String _searchQuery = '';
   UserStatusFilter _statusFilter = UserStatusFilter.all;
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingMore = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -62,73 +67,34 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final usersAsync = ref.watch(hotspotUsersProvider);
     final service = ref.watch(routerOSServiceProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/dashboard'),
-        ),
-        title: Text(
-          'Hotspot Users',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        actions: [
-          if (service.isDemoMode)
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.primaryColor.withValues(alpha: 0.2),
-                    AppTheme.primaryColor.withValues(alpha: 0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.science_rounded,
-                    color: AppTheme.primaryColor,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'DEMO',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              ref.read(hotspotUsersProvider.notifier).refresh();
-            },
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(service),
       body: Column(
         children: [
-          _buildSearchAndFilter(),
+          _SearchAndFilterBar(
+            searchQuery: _searchQuery,
+            statusFilter: _statusFilter,
+            onSearchChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+            onClearSearch: () {
+              setState(() {
+                _searchQuery = '';
+              });
+            },
+            onFilterChanged: (filter) {
+              setState(() {
+                _statusFilter = filter;
+              });
+            },
+          ),
           Expanded(
             child: usersAsync.when(
               data: (paginatedUsers) {
@@ -147,11 +113,24 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
                     itemCount: filteredUsers.length + (paginatedUsers.hasMore ? 1 : 0),
+                    // Performance optimization: estimated item height
+                    itemExtent: 100,
+                    // Performance optimization: repaint boundaries
+                    addRepaintBoundaries: true,
+                    // Performance optimization: cache extent
+                    cacheExtent: 500,
                     itemBuilder: (context, index) {
                       if (index == filteredUsers.length) {
-                        return _buildLoadingIndicator();
+                        return const _LoadingIndicator();
                       }
-                      return _buildUserCard(filteredUsers[index]);
+                      return RepaintBoundary(
+                        key: ValueKey(filteredUsers[index].id),
+                        child: _UserCard(
+                          user: filteredUsers[index],
+                          onTap: () => _navigateToUserDetails(filteredUsers[index]),
+                          onLongPress: () => _showUserContextMenu(filteredUsers[index]),
+                        ),
+                      );
                     },
                   ),
                 );
@@ -161,48 +140,13 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                 ),
               ),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 64,
-                      color: AppTheme.errorColor,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading users',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppTheme.onSurfaceColor,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+              error: (error, stack) => _buildErrorState(error.toString()),
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddHotspotUserScreen(),
-            ),
-          );
-          // If user was added successfully, the provider will automatically update
-          // No need to manually refresh - Riverpod handles this
-        },
+        onPressed: () => _navigateToAddUser(),
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: AppTheme.onPrimaryColor,
         icon: const Icon(Icons.person_add_rounded),
@@ -211,93 +155,66 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
     );
   }
 
-  Widget _buildSearchAndFilter() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  PreferredSizeWidget _buildAppBar(RouterOSService service) {
+    return AppBar(
+      backgroundColor: AppTheme.surfaceColor,
+      foregroundColor: AppTheme.onSurfaceColor,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded),
+        onPressed: () => context.go('/dashboard'),
       ),
-      child: Column(
+      title: const Text(
+        'Hotspot Users',
+        style: TextStyle(
+          color: AppTheme.onSurfaceColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      actions: [
+        if (service.isDemoMode) _buildDemoBadge(),
+        IconButton(
+          icon: const Icon(Icons.refresh_rounded),
+          onPressed: () {
+            ref.read(hotspotUsersProvider.notifier).refresh();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDemoBadge() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.2),
+            AppTheme.primaryColor.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: const Row(
         children: [
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Search by username or profile...',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () {
-                        setState(() {
-                          _searchQuery = '';
-                        });
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: AppTheme.backgroundColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
+          Icon(
+            Icons.science_rounded,
+            color: AppTheme.primaryColor,
+            size: 16,
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: SegmentedButton<UserStatusFilter>(
-                  segments: const [
-                    ButtonSegment(
-                      value: UserStatusFilter.all,
-                      label: Text('All'),
-                      icon: Icon(Icons.people_rounded, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: UserStatusFilter.active,
-                      label: Text('Active'),
-                      icon: Icon(Icons.check_circle_rounded, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: UserStatusFilter.inactive,
-                      label: Text('Inactive'),
-                      icon: Icon(Icons.cancel_rounded, size: 18),
-                    ),
-                  ],
-                  selected: {_statusFilter},
-                  onSelectionChanged: (Set<UserStatusFilter> newSelection) {
-                    setState(() {
-                      _statusFilter = newSelection.first;
-                    });
-                  },
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return AppTheme.primaryColor;
-                      }
-                      return AppTheme.backgroundColor;
-                    }),
-                    foregroundColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return AppTheme.onPrimaryColor;
-                      }
-                      return AppTheme.onSurfaceColor;
-                    }),
-                  ),
-                ),
-              ),
-            ],
+          SizedBox(width: 6),
+          Text(
+            'DEMO',
+            style: TextStyle(
+              color: AppTheme.primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -309,9 +226,10 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
 
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
       filtered = filtered.where((user) {
-        return user.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            user.profile.toLowerCase().contains(_searchQuery.toLowerCase());
+        return user.name.toLowerCase().contains(query) ||
+            user.profile.toLowerCase().contains(query);
       }).toList();
     }
 
@@ -331,6 +249,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
   }
 
   Widget _buildEmptyState() {
+    final hasFilters = _searchQuery.isNotEmpty || _statusFilter != UserStatusFilter.all;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -341,160 +261,70 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
             color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'No hotspot users found',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.onSurfaceColor,
-                ),
+            style: TextStyle(
+              color: AppTheme.onSurfaceColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            _searchQuery.isNotEmpty || _statusFilter != UserStatusFilter.all
-                ? 'Try adjusting your search or filter'
-                : 'Add your first user to get started',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                ),
+            hasFilters ? 'Try adjusting your search or filter' : 'Add your first user to get started',
+            style: TextStyle(
+              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLoadingIndicator() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-        ),
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 64,
+            color: AppTheme.errorColor,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Error loading users',
+            style: TextStyle(
+              color: AppTheme.onSurfaceColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            style: TextStyle(
+              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildUserCard(HotspotUser user) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: AppTheme.surfaceColor,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: user.active
-              ? AppTheme.primaryColor.withValues(alpha: 0.3)
-              : AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-          width: 1,
-        ),
+  Future<void> _navigateToAddUser() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddHotspotUserScreen(),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HotspotUserDetailsScreen(user: user),
-            ),
-          );
-        },
-        onLongPress: () => _showUserContextMenu(user),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: user.active
-                        ? [
-                            AppTheme.primaryColor,
-                            AppTheme.primaryColor.withValues(alpha: 0.7),
-                          ]
-                        : [
-                            AppTheme.onSurfaceColor.withValues(alpha: 0.3),
-                            AppTheme.onSurfaceColor.withValues(alpha: 0.2),
-                          ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.person_rounded,
-                  color: user.active ? Colors.white : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppTheme.onSurfaceColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: user.active
-                                ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                                : AppTheme.onSurfaceColor.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: user.active
-                                  ? AppTheme.primaryColor.withValues(alpha: 0.3)
-                                  : AppTheme.onSurfaceColor.withValues(alpha: 0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            user.profile.toUpperCase(),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: user.active
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.onSurfaceColor.withValues(alpha: 0.6),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 10,
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          user.active ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-                          size: 16,
-                          color: user.active
-                              ? Colors.green
-                              : AppTheme.onSurfaceColor.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          user.active ? 'Connected' : 'Disconnected',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: user.active
-                                    ? Colors.green
-                                    : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
-                              ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
-              ),
-            ],
-          ),
-        ),
+    );
+  }
+
+  void _navigateToUserDetails(HotspotUser user) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HotspotUserDetailsScreen(user: user),
       ),
     );
   }
@@ -506,88 +336,49 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(2),
+      builder: (sheetContext) => _UserContextMenu(
+        user: user,
+        onViewDetails: () {
+          Navigator.pop(sheetContext);
+          _navigateToUserDetails(user);
+        },
+        onEdit: () async {
+          Navigator.pop(sheetContext);
+          final userData = {
+            '.id': user.id,
+            'name': user.name,
+            'profile': user.profile,
+            'active': user.active.toString(),
+            'uptime': user.uptime ?? '0',
+            'bytes-in': (user.bytesIn ?? 0).toString(),
+            'bytes-out': (user.bytesOut ?? 0).toString(),
+            'limit-uptime': '0',
+            'disabled': (!user.active).toString(),
+            'comment': '',
+          };
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EditHotspotUserScreen(user: userData),
+            ),
+          );
+        },
+        onToggleStatus: () async {
+          Navigator.pop(sheetContext);
+          await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
+                backgroundColor: AppTheme.primaryColor,
               ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.visibility_rounded),
-              title: const Text('View Details'),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                Navigator.push(
-                  context,  // Use outer context
-                  MaterialPageRoute(
-                    builder: (context) => HotspotUserDetailsScreen(user: user),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit_rounded),
-              title: const Text('Edit User'),
-              onTap: () async {
-                Navigator.pop(sheetContext);
-                // Convert HotspotUser to Map and navigate to edit screen
-                final userData = {
-                  '.id': user.id,
-                  'name': user.name,
-                  'profile': user.profile,
-                  'active': user.active.toString(),
-                  'uptime': user.uptime ?? '0',
-                  'bytes-in': (user.bytesIn ?? 0).toString(),
-                  'bytes-out': (user.bytesOut ?? 0).toString(),
-                  'limit-uptime': '0',
-                  'disabled': (!user.active).toString(),
-                  'comment': '',
-                };
-                await Navigator.push(
-                  context,  // Use outer context
-                  MaterialPageRoute(
-                    builder: (context) => EditHotspotUserScreen(user: userData),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                user.active ? Icons.wifi_off_rounded : Icons.wifi_rounded,
-                color: user.active ? AppTheme.errorColor : AppTheme.primaryColor,
-              ),
-              title: Text(user.active ? 'Disable User' : 'Enable User'),
-              onTap: () async {
-                Navigator.pop(sheetContext);
-                await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
-                      backgroundColor: AppTheme.primaryColor,
-                    ),
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_rounded, color: AppTheme.errorColor),
-              title: const Text('Delete User'),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _confirmDeleteUser(user);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
+            );
+          }
+        },
+        onDelete: () {
+          Navigator.pop(sheetContext);
+          _confirmDeleteUser(user);
+        },
       ),
     );
   }
@@ -630,4 +421,351 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen> {
   }
 }
 
+// Extracted search and filter bar widget for better performance
+class _SearchAndFilterBar extends StatelessWidget {
+  final String searchQuery;
+  final UserStatusFilter statusFilter;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onClearSearch;
+  final ValueChanged<UserStatusFilter> onFilterChanged;
+
+  const _SearchAndFilterBar({
+    required this.searchQuery,
+    required this.statusFilter,
+    required this.onSearchChanged,
+    required this.onClearSearch,
+    required this.onFilterChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              hintText: 'Search by username or profile...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded),
+                      onPressed: onClearSearch,
+                    )
+                  : null,
+              filled: true,
+              fillColor: AppTheme.backgroundColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: onSearchChanged,
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<UserStatusFilter>(
+            segments: const [
+              ButtonSegment(
+                value: UserStatusFilter.all,
+                label: Text('All'),
+                icon: Icon(Icons.people_rounded, size: 18),
+              ),
+              ButtonSegment(
+                value: UserStatusFilter.active,
+                label: Text('Active'),
+                icon: Icon(Icons.check_circle_rounded, size: 18),
+              ),
+              ButtonSegment(
+                value: UserStatusFilter.inactive,
+                label: Text('Inactive'),
+                icon: Icon(Icons.cancel_rounded, size: 18),
+              ),
+            ],
+            selected: {statusFilter},
+            onSelectionChanged: (newSelection) => onFilterChanged(newSelection.first),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppTheme.primaryColor;
+                }
+                return AppTheme.backgroundColor;
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return AppTheme.onPrimaryColor;
+                }
+                return AppTheme.onSurfaceColor;
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Extracted user card widget for better performance with RepaintBoundary
+class _UserCard extends StatelessWidget {
+  final HotspotUser user;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _UserCard({
+    required this.user,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: AppTheme.surfaceColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: user.active
+              ? AppTheme.primaryColor.withValues(alpha: 0.3)
+              : AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              _UserAvatar(active: user.active),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _UserInfo(user: user),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Extracted user avatar widget
+class _UserAvatar extends StatelessWidget {
+  final bool active;
+
+  const _UserAvatar({required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: active ? _activeAvatarColors : _inactiveAvatarColors,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        Icons.person_rounded,
+        color: active ? Colors.white : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+      ),
+    );
+  }
+}
+
+// Extracted user info widget
+class _UserInfo extends StatelessWidget {
+  final HotspotUser user;
+
+  const _UserInfo({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          user.name,
+          style: const TextStyle(
+            color: AppTheme.onSurfaceColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        _UserStatusBadge(user: user),
+      ],
+    );
+  }
+}
+
+// Extracted user status badge widget
+class _UserStatusBadge extends StatelessWidget {
+  final HotspotUser user;
+
+  const _UserStatusBadge({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: user.active
+                ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                : AppTheme.onSurfaceColor.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: user.active
+                  ? AppTheme.primaryColor.withValues(alpha: 0.3)
+                  : AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            user.profile.toUpperCase(),
+            style: TextStyle(
+              color: user.active
+                  ? AppTheme.primaryColor
+                  : AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Icon(
+          user.active ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+          size: 16,
+          color: user.active ? Colors.green : AppTheme.onSurfaceColor.withValues(alpha: 0.4),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          user.active ? 'Connected' : 'Disconnected',
+          style: TextStyle(
+            color: user.active ? Colors.green : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Extracted loading indicator widget
+class _LoadingIndicator extends StatelessWidget {
+  const _LoadingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        ),
+      ),
+    );
+  }
+}
+
+// Extracted user context menu widget
+class _UserContextMenu extends StatelessWidget {
+  final HotspotUser user;
+  final VoidCallback onViewDetails;
+  final VoidCallback onEdit;
+  final VoidCallback onToggleStatus;
+  final VoidCallback onDelete;
+
+  const _UserContextMenu({
+    required this.user,
+    required this.onViewDetails,
+    required this.onEdit,
+    required this.onToggleStatus,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildDragHandle(),
+          ListTile(
+            leading: const Icon(Icons.visibility_rounded),
+            title: const Text('View Details'),
+            onTap: onViewDetails,
+          ),
+          ListTile(
+            leading: const Icon(Icons.edit_rounded),
+            title: const Text('Edit User'),
+            onTap: onEdit,
+          ),
+          ListTile(
+            leading: Icon(
+              user.active ? Icons.wifi_off_rounded : Icons.wifi_rounded,
+              color: user.active ? AppTheme.errorColor : AppTheme.primaryColor,
+            ),
+            title: Text(user.active ? 'Disable User' : 'Enable User'),
+            onTap: onToggleStatus,
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_rounded, color: AppTheme.errorColor),
+            title: const Text('Delete User'),
+            onTap: onDelete,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDragHandle() {
+    return Center(
+      child: Container(
+        width: 40,
+        height: 4,
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+    );
+  }
+}
+
 enum UserStatusFilter { all, active, inactive }
+
+// Constants for avatar gradients
+const List<Color> _activeAvatarColors = [
+  AppTheme.primaryColor,
+  Color(0xFF1976D2),
+];
+
+const List<Color> _inactiveAvatarColors = [
+  Color(0x4DFFFFFF),
+  Color(0x33FFFFFF),
+];
