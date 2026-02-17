@@ -362,6 +362,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuickActionCard(
+                Icons.card_membership_rounded,
+                'User Profiles',
+                subtitle: 'Manage Profiles',
+                onTap: () {
+                  context.go('/profiles');
+                },
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildQuickActionCard(
+                Icons.settings_rounded,
+                'Settings',
+                subtitle: 'Configure',
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Settings feature coming soon')),
+                  );
+                },
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -457,6 +487,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Icons.arrow_forward_ios_rounded,
                 () {
                   context.go('/users');
+                },
+              ),
+              Divider(
+                height: 1,
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+              ),
+              _buildActionButton(
+                Icons.card_membership_rounded,
+                'User Profiles',
+                Icons.arrow_forward_ios_rounded,
+                () {
+                  context.go('/profiles');
                 },
               ),
               Divider(

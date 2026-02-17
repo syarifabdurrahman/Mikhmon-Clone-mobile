@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/routeros_service.dart';
+import '../services/models.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/hotspot_active_users_screen.dart';
 import '../screens/hotspot_users/add_hotspot_user_screen.dart';
+import '../screens/hotspot_users/user_profiles_screen.dart';
 
 // Secure Storage Provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -132,6 +134,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/users/:id',
         name: 'user_details',
         builder: (context, state) => const HotspotUsersScreen(),
+      ),
+      GoRoute(
+        path: '/profiles',
+        name: 'profiles',
+        builder: (context, state) => const UserProfilesScreen(),
       ),
     ],
   );
@@ -692,5 +699,110 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     } else {
       return '${secs}s';
     }
+  }
+}
+
+// User Profiles Provider
+final userProfileProvider = AsyncNotifierProvider<UserProfileNotifier, List<UserProfile>>(() {
+  return UserProfileNotifier();
+});
+
+// In-memory storage for demo mode profiles
+List<UserProfile> _demoProfilesCache = [];
+bool _demoProfilesInitialized = false;
+
+class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
+  @override
+  Future<List<UserProfile>> build() async {
+    final service = ref.read(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      if (!_demoProfilesInitialized) {
+        _demoProfilesCache = _getDemoProfiles();
+        _demoProfilesInitialized = true;
+      }
+      return List.from(_demoProfilesCache);
+    }
+
+    // For real RouterOS, fetch from API (not implemented yet)
+    return [];
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = AsyncValue.data(List.from(_demoProfilesCache));
+  }
+
+  Future<void> addProfile(UserProfile profile) async {
+    _demoProfilesCache.add(profile);
+    state = AsyncValue.data(List.from(_demoProfilesCache));
+  }
+
+  Future<void> updateProfile(UserProfile updatedProfile) async {
+    final index = _demoProfilesCache.indexWhere((p) => p.id == updatedProfile.id);
+    if (index != -1) {
+      _demoProfilesCache[index] = updatedProfile;
+      state = AsyncValue.data(List.from(_demoProfilesCache));
+    }
+  }
+
+  Future<void> deleteProfile(String id) async {
+    _demoProfilesCache.removeWhere((p) => p.id == id);
+    state = AsyncValue.data(List.from(_demoProfilesCache));
+  }
+
+  List<UserProfile> _getDemoProfiles() {
+    return [
+      UserProfile(
+        id: '*1',
+        name: 'default',
+        rateLimitUpload: 'unlimited',
+        rateLimitDownload: 'unlimited',
+        validity: 'unlimited',
+        price: 0.0,
+        sharedUsers: 1,
+        autologout: true,
+      ),
+      UserProfile(
+        id: '*2',
+        name: '1hour',
+        rateLimitUpload: '512k',
+        rateLimitDownload: '1M',
+        validity: '1h',
+        price: 1.0,
+        sharedUsers: 1,
+        autologout: true,
+      ),
+      UserProfile(
+        id: '*3',
+        name: '1day',
+        rateLimitUpload: '256k',
+        rateLimitDownload: '512k',
+        validity: '1d',
+        price: 2.50,
+        sharedUsers: 1,
+        autologout: true,
+      ),
+      UserProfile(
+        id: '*4',
+        name: '1week',
+        rateLimitUpload: '128k',
+        rateLimitDownload: '256k',
+        validity: '7d',
+        price: 10.0,
+        sharedUsers: 1,
+        autologout: true,
+      ),
+      UserProfile(
+        id: '*5',
+        name: '1month',
+        rateLimitUpload: '64k',
+        rateLimitDownload: '128k',
+        validity: '30d',
+        price: 25.0,
+        sharedUsers: 1,
+        autologout: true,
+      ),
+    ];
   }
 }

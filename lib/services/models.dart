@@ -1,3 +1,116 @@
+class UserProfile {
+  final String id;
+  final String name;
+  final String? rateLimitUpload; // in kbps (e.g., "512k" or "unlimited")
+  final String? rateLimitDownload; // in kbps
+  final String? validity; // time duration (e.g., "1h", "1d", "unlimited")
+  final double? price; // selling price
+  final int? sharedUsers; // number of shared users (0 = unlimited)
+  final bool? autologout; // auto logout when limit reached
+  final DateTime? expiresAt; // expire date/time
+
+  UserProfile({
+    required this.id,
+    required this.name,
+    this.rateLimitUpload,
+    this.rateLimitDownload,
+    this.validity,
+    this.price,
+    this.sharedUsers,
+    this.autologout,
+    this.expiresAt,
+  });
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      id: json['.id'] ?? json['id'] ?? '',
+      name: json['name'] ?? 'default',
+      rateLimitUpload: json['rate-limit-upload'],
+      rateLimitDownload: json['rate-limit-download'],
+      validity: json['validity'],
+      price: json['price'] != null ? double.tryParse(json['price'].toString()) : null,
+      sharedUsers: json['shared-users'] != null ? int.tryParse(json['shared-users'].toString()) : null,
+      autologout: json['autologout'] == 'true',
+      expiresAt: json['expires-at'] != null
+          ? DateTime.tryParse(json['expires-at'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '.id': id,
+      'name': name,
+      'rate-limit-upload': rateLimitUpload,
+      'rate-limit-download': rateLimitDownload,
+      'validity': validity,
+      'price': price?.toString(),
+      'shared-users': sharedUsers?.toString(),
+      'autologout': autologout?.toString() ?? 'false',
+      'expires-at': expiresAt?.toIso8601String(),
+    };
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'rate-limit-upload': rateLimitUpload,
+      'rate-limit-download': rateLimitDownload,
+      'validity': validity,
+      'price': price?.toString(),
+      'shared-users': sharedUsers?.toString(),
+      'autologout': autologout?.toString() ?? 'false',
+    };
+  }
+
+  // Display getters
+  String get rateLimitDisplay {
+    if (rateLimitUpload == null && rateLimitDownload == null) return 'Unlimited';
+    final upload = rateLimitUpload ?? 'unlimited';
+    final download = rateLimitDownload ?? 'unlimited';
+    return '$upload/$download';
+  }
+
+  String get validityDisplay {
+    if (validity == null || validity == 'unlimited' || validity == '0') return 'Unlimited';
+    return validity!;
+  }
+
+  String get priceDisplay {
+    if (price == null || price == 0) return 'Free';
+    return '\$${price!.toStringAsFixed(2)}';
+  }
+
+  String get sharedUsersDisplay {
+    if (sharedUsers == null || sharedUsers == 0) return 'Unlimited';
+    return '$sharedUsers user${sharedUsers! > 1 ? 's' : ''}';
+  }
+
+  UserProfile copyWith({
+    String? id,
+    String? name,
+    String? rateLimitUpload,
+    String? rateLimitDownload,
+    String? validity,
+    double? price,
+    int? sharedUsers,
+    bool? autologout,
+    DateTime? expiresAt,
+  }) {
+    return UserProfile(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      rateLimitUpload: rateLimitUpload ?? this.rateLimitUpload,
+      rateLimitDownload: rateLimitDownload ?? this.rateLimitDownload,
+      validity: validity ?? this.validity,
+      price: price ?? this.price,
+      sharedUsers: sharedUsers ?? this.sharedUsers,
+      autologout: autologout ?? this.autologout,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
+  }
+}
+
 class SystemResources {
   final String platform;
   final String boardName;
