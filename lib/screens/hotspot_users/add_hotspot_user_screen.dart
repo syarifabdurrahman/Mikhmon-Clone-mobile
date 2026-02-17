@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
+import '../../services/models.dart';
 
 class AddHotspotUserScreen extends ConsumerStatefulWidget {
   const AddHotspotUserScreen({super.key});
 
   @override
-  ConsumerState<AddHotspotUserScreen> createState() => _AddHotspotUserScreenState();
+  ConsumerState<AddHotspotUserScreen> createState() =>
+      _AddHotspotUserScreenState();
 }
 
 class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
@@ -19,17 +21,10 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
   final _confirmPasswordController = TextEditingController();
   final _commentController = TextEditingController();
 
-  String _selectedProfile = 'default';
+  String? _selectedProfileId;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
-  final List<String> _profiles = [
-    'default',
-    'premium',
-    'trial',
-    'unlimited',
-  ];
 
   @override
   void dispose() {
@@ -51,6 +46,13 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
 
     try {
       final usersNotifier = ref.read(hotspotUsersProvider.notifier);
+      final profiles = ref.read(userProfileProvider).value ?? [];
+
+      // Get the profile name from the selected profile
+      final selectedProfile = profiles.firstWhere(
+        (p) => p.id == _selectedProfileId,
+        orElse: () => UserProfile(id: 'default', name: 'default'),
+      );
 
       // Check if demo mode is enabled
       final service = ref.read(routerOSServiceProvider);
@@ -59,7 +61,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         await usersNotifier.addUser(
           username: _usernameController.text.trim(),
           password: _passwordController.text,
-          profile: _selectedProfile,
+          profile: selectedProfile.name,
           comment: _commentController.text.trim().isEmpty
               ? null
               : _commentController.text.trim(),
@@ -68,7 +70,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('User "${_usernameController.text}" created successfully'),
+              content: Text(
+                  'User "${_usernameController.text}" created successfully'),
               backgroundColor: AppTheme.primaryColor,
             ),
           );
@@ -81,7 +84,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Add user not implemented for real RouterOS connection yet'),
+            content: Text(
+                'Add user not implemented for real RouterOS connection yet'),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -245,7 +249,9 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
             prefixIcon: const Icon(Icons.lock_rounded),
             suffixIcon: IconButton(
               icon: Icon(
-                _obscurePassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                _obscurePassword
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
               ),
               onPressed: () {
                 setState(() {
@@ -282,7 +288,9 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
             prefixIcon: const Icon(Icons.lock_rounded),
             suffixIcon: IconButton(
               icon: Icon(
-                _obscureConfirmPassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                _obscureConfirmPassword
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
               ),
               onPressed: () {
                 setState(() {
@@ -306,6 +314,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
   }
 
   Widget _buildProfileSelector() {
+    final profilesAsync = ref.watch(userProfileProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -317,31 +327,101 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
               ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _selectedProfile,
-          decoration: InputDecoration(
-            hintText: 'Select profile',
-            prefixIcon: const Icon(Icons.card_membership_rounded),
-          ),
-          items: _profiles.map((profile) {
-            return DropdownMenuItem(
-              value: profile,
-              child: Text(profile.toUpperCase()),
+        profilesAsync.when(
+          data: (profiles) {
+            if (profiles.isEmpty) {
+              return Card(
+                color: AppTheme.surfaceColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          color: AppTheme.primaryColor),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'No profiles available. Please create a profile first.',
+                          style: TextStyle(
+                              color: AppTheme.onSurfaceColor
+                                  .withValues(alpha: 0.7)),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/profiles'),
+                        child: const Text('Create Profile'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return DropdownButtonFormField<String>(
+              itemHeight:
+                  null, // Allow the height to expand based on the Column
+              isExpanded:
+                  true, // Good practice to prevent horizontal overflow too
+
+              initialValue: _selectedProfileId ?? profiles.first.id,
+              decoration: InputDecoration(
+                hintText: 'Select profile',
+                prefixIcon: const Icon(Icons.card_membership_rounded),
+              ),
+              items: profiles.map((profile) {
+                return DropdownMenuItem(
+                  value: profile.id,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        profile.name.toUpperCase(),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 15),
+                      )
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedProfileId = value;
+                  });
+                }
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select a profile';
+                }
+                return null;
+              },
             );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _selectedProfile = value;
-              });
-            }
           },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please select a profile';
-            }
-            return null;
-          },
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (_, __) => Card(
+            color: AppTheme.surfaceColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: AppTheme.errorColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Failed to load profiles',
+                      style: TextStyle(color: AppTheme.errorColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -385,7 +465,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: AppTheme.onPrimaryColor,
-          disabledBackgroundColor: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+          disabledBackgroundColor:
+              AppTheme.onSurfaceColor.withValues(alpha: 0.1),
         ),
         child: _isLoading
             ? const SizedBox(

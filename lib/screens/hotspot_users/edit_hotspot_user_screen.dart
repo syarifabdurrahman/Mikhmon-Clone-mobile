@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
+import '../../services/models.dart';
 
 class EditHotspotUserScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
@@ -10,7 +11,8 @@ class EditHotspotUserScreen extends ConsumerStatefulWidget {
   const EditHotspotUserScreen({super.key, required this.user});
 
   @override
-  ConsumerState<EditHotspotUserScreen> createState() => _EditHotspotUserScreenState();
+  ConsumerState<EditHotspotUserScreen> createState() =>
+      _EditHotspotUserScreenState();
 }
 
 class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
@@ -18,21 +20,14 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
   final _passwordController = TextEditingController();
   final _commentController = TextEditingController();
 
-  late String _selectedProfile;
+  String? _selectedProfileId;
   bool _isLoading = false;
   bool _obscurePassword = true;
-
-  final List<String> _profiles = [
-    'default',
-    'premium',
-    'trial',
-    'unlimited',
-  ];
 
   @override
   void initState() {
     super.initState();
-    _selectedProfile = widget.user['profile'] ?? 'default';
+    // Profile will be set after profiles are loaded
     _commentController.text = widget.user['comment'] ?? '';
   }
 
@@ -54,6 +49,13 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
 
     try {
       final usersNotifier = ref.read(hotspotUsersProvider.notifier);
+      final profiles = ref.read(userProfileProvider).value ?? [];
+
+      // Get the profile name from the selected profile
+      final selectedProfile = profiles.firstWhere(
+        (p) => p.id == _selectedProfileId,
+        orElse: () => UserProfile(id: 'default', name: 'default'),
+      );
 
       // Check if demo mode is enabled
       final service = ref.read(routerOSServiceProvider);
@@ -62,14 +64,17 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         await usersNotifier.updateUser(
           id: widget.user['.id'],
           username: widget.user['name'],
-          profile: _selectedProfile,
-          comment: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
+          profile: selectedProfile.name,
+          comment: _commentController.text.trim().isEmpty
+              ? null
+              : _commentController.text.trim(),
         );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('User "${widget.user['name']}" updated successfully'),
+              content:
+                  Text('User "${widget.user['name']}" updated successfully'),
               backgroundColor: AppTheme.primaryColor,
             ),
           );
@@ -82,7 +87,8 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Update user not implemented for real RouterOS connection yet'),
+            content: const Text(
+                'Update user not implemented for real RouterOS connection yet'),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -255,7 +261,9 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
             prefixIcon: const Icon(Icons.lock_rounded, size: 20),
             suffixIcon: IconButton(
               icon: Icon(
-                _obscurePassword ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                _obscurePassword
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
               ),
               onPressed: () {
                 setState(() {
@@ -271,6 +279,8 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
   }
 
   Widget _buildProfileSelector() {
+    final profilesAsync = ref.watch(userProfileProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -282,31 +292,111 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
               ),
         ),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _selectedProfile,
-          decoration: InputDecoration(
-            hintText: 'Select profile',
-            prefixIcon: const Icon(Icons.card_membership_rounded, size: 20),
-          ),
-          items: _profiles.map((profile) {
-            return DropdownMenuItem(
-              value: profile,
-              child: Text(profile.toUpperCase()),
+        profilesAsync.when(
+          data: (profiles) {
+            if (profiles.isEmpty) {
+              return Card(
+                color: AppTheme.surfaceColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          color: AppTheme.primaryColor),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'No profiles available. Please create a profile first.',
+                          style: TextStyle(
+                              color: AppTheme.onSurfaceColor
+                                  .withValues(alpha: 0.7)),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Create Profile'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Find the current profile ID based on the user's profile name
+            final currentProfileName = widget.user['profile'] ?? 'default';
+            final currentProfileId = profiles
+                .where((p) => p.name == currentProfileName)
+                .firstOrNull
+                ?.id;
+
+            return DropdownButtonFormField<String>(
+              initialValue:
+                  _selectedProfileId ?? currentProfileId ?? profiles.first.id,
+              decoration: InputDecoration(
+                hintText: 'Select profile',
+                prefixIcon: const Icon(Icons.card_membership_rounded, size: 20),
+              ),
+              items: profiles.map((profile) {
+                return DropdownMenuItem(
+                  value: profile.id,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        profile.name.toUpperCase(),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        '${profile.priceDisplay} • ${profile.validityDisplay}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedProfileId = value;
+                  });
+                }
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select a profile';
+                }
+                return null;
+              },
             );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _selectedProfile = value;
-              });
-            }
           },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please select a profile';
-            }
-            return null;
-          },
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (_, __) => Card(
+            color: AppTheme.surfaceColor,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: AppTheme.errorColor),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Text(
+                      'Failed to load profiles',
+                      style: TextStyle(color: AppTheme.errorColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -350,7 +440,8 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppTheme.primaryColor,
           foregroundColor: AppTheme.onPrimaryColor,
-          disabledBackgroundColor: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+          disabledBackgroundColor:
+              AppTheme.onSurfaceColor.withValues(alpha: 0.1),
         ),
         child: _isLoading
             ? const SizedBox(
