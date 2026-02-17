@@ -329,48 +329,75 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                 .firstOrNull
                 ?.id;
 
-            return DropdownButtonFormField<String>(
-              initialValue:
-                  _selectedProfileId ?? currentProfileId ?? profiles.first.id,
-              decoration: InputDecoration(
-                hintText: 'Select profile',
-                prefixIcon: const Icon(Icons.card_membership_rounded, size: 20),
-              ),
-              items: profiles.map((profile) {
-                return DropdownMenuItem(
-                  value: profile.id,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
+            final selectedProfile = profiles.firstWhere(
+              (p) => p.id == (_selectedProfileId ?? currentProfileId ?? profiles.first.id),
+              orElse: () => profiles.first,
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedProfileId ?? currentProfileId ?? profiles.first.id,
+                  decoration: InputDecoration(
+                    hintText: 'Select profile',
+                    prefixIcon: const Icon(Icons.card_membership_rounded, size: 20),
+                  ),
+                  items: profiles.map((profile) {
+                    return DropdownMenuItem<String>(
+                      value: profile.id,
+                      child: Text(
                         profile.name.toUpperCase(),
                         style: const TextStyle(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        '${profile.priceDisplay} • ${profile.validityDisplay}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedProfileId = value;
+                      });
+                    }
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select a profile';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: AppTheme.primaryColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${selectedProfile.priceDisplay} • ${selectedProfile.validityDisplay} • ${selectedProfile.rateLimitDisplay}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.8),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedProfileId = value;
-                  });
-                }
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a profile';
-                }
-                return null;
-              },
+                ),
+              ],
             );
           },
           loading: () => const Center(

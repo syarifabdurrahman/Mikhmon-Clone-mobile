@@ -357,45 +357,75 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
               );
             }
 
-            return DropdownButtonFormField<String>(
-              itemHeight:
-                  null, // Allow the height to expand based on the Column
-              isExpanded:
-                  true, // Good practice to prevent horizontal overflow too
+            final selectedProfile = profiles.firstWhere(
+              (p) => p.id == (_selectedProfileId ?? profiles.first.id),
+              orElse: () => profiles.first,
+            );
 
-              initialValue: _selectedProfileId ?? profiles.first.id,
-              decoration: InputDecoration(
-                hintText: 'Select profile',
-                prefixIcon: const Icon(Icons.card_membership_rounded),
-              ),
-              items: profiles.map((profile) {
-                return DropdownMenuItem(
-                  value: profile.id,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedProfileId ?? profiles.first.id,
+                  decoration: InputDecoration(
+                    hintText: 'Select profile',
+                    prefixIcon: const Icon(Icons.card_membership_rounded),
+                  ),
+                  items: profiles.map((profile) {
+                    return DropdownMenuItem<String>(
+                      value: profile.id,
+                      child: Text(
                         profile.name.toUpperCase(),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 15),
-                      )
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedProfileId = value;
+                      });
+                    }
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select a profile';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: AppTheme.primaryColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${selectedProfile.priceDisplay} • ${selectedProfile.validityDisplay} • ${selectedProfile.rateLimitDisplay}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedProfileId = value;
-                  });
-                }
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select a profile';
-                }
-                return null;
-              },
+                ),
+              ],
             );
           },
           loading: () => const Center(
