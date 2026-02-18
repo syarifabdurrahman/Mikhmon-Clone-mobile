@@ -55,6 +55,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           // For real connection, attempt login with credentials
           // Use default port 8728 if not specified
           final port = _portController.text.trim().isEmpty ? '8728' : _portController.text.trim();
+
+          // Log connection attempt
+          debugPrint('=== LOGIN ATTEMPT ===');
+          debugPrint('Host: ${_ipController.text}:$port');
+          debugPrint('Username: ${_usernameController.text}');
+          debugPrint('Demo Mode: $_demoMode');
+
           await ref.read(authStateProvider.notifier).login(
                 host: _ipController.text,
                 port: port,
@@ -62,16 +69,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 password: _passwordController.text,
                 rememberMe: _rememberMe,
               );
+
+          debugPrint('=== LOGIN SUCCESS ===');
         }
 
         if (mounted) {
           context.go('/dashboard');
         }
       } catch (e) {
+        debugPrint('=== LOGIN FAILED ===');
+        debugPrint('Error: $e');
+        debugPrint('Error Type: ${e.runtimeType}');
+
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Connection failed. Please check your credentials.';
+            // Show actual error message
+            _errorMessage = e.toString();
           });
         }
       }
@@ -182,8 +196,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               keyboardType: TextInputType.number,
                               textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
-                                labelText: 'Port (Optional)',
-                                hintText: '8728',
+                                labelText: 'Port (Optional - HTTP:80)',
+                                hintText: '80',
                                 prefixIcon: const Icon(Icons.wifi_rounded, size: 20),
                               ),
                               validator: Validators.validatePort,

@@ -58,6 +58,15 @@ class AuthNotifier extends AsyncNotifier<bool> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      // Connect to RouterOS first
+      final service = ref.read(routerOSServiceProvider);
+      await service.connectWithCredentials(
+        host: host,
+        port: port,
+        username: username,
+        password: password,
+      );
+
       // Store credentials if remember me is checked
       if (rememberMe) {
         final storage = ref.read(secureStorageProvider);
@@ -66,10 +75,6 @@ class AuthNotifier extends AsyncNotifier<bool> {
         await storage.write(key: 'username', value: username);
         await storage.write(key: 'password', value: password);
       }
-
-      // Connect to RouterOS
-      final service = ref.read(routerOSServiceProvider);
-      await service.connect();
 
       return true;
     });
@@ -396,9 +401,27 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       return;
     }
 
-    // For real RouterOS, you would implement the update logic here
-    // This typically involves removing and re-adding the user with updated properties
-    throw UnimplementedError('Update user not implemented for real RouterOS connection');
+    final client = service.client;
+    if (client == null) {
+      throw Exception('Not connected to RouterOS');
+    }
+
+    // Get current user data to preserve disabled status and password
+    final allUsers = await client.getHotspotUsersList();
+    final currentUser = allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
+
+    // Update user using remove and re-add approach
+    await client.updateHotspotUser(
+      id: id,
+      username: username,
+      password: currentUser['password'] ?? username,
+      profile: profile,
+      comment: comment,
+      disabled: currentUser['disabled'] == 'true',
+    );
+
+    // Refresh the list
+    ref.invalidate(hotspotUsersProvider);
   }
 
   Future<void> toggleUserStatus(String id) async {
@@ -433,7 +456,25 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       return;
     }
 
-    throw UnimplementedError('Toggle user status not implemented for real RouterOS connection');
+    final client = service.client;
+    if (client == null) {
+      throw Exception('Not connected to RouterOS');
+    }
+
+    // Get current user status
+    final allUsers = await client.getHotspotUsersList();
+    final currentUser = allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
+    final isCurrentlyDisabled = currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
+
+    // Toggle the status
+    await client.setHotspotUserStatus(
+      id: id,
+      disabled: !isCurrentlyDisabled,
+    );
+
+    // Refresh the list
+    ref.invalidate(hotspotUsersProvider);
+    ref.invalidate(hotspotActiveUsersProvider);
   }
 
   void resetDemoUsers() {
@@ -730,31 +771,132 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       return List.from(_demoProfilesCache);
     }
 
-    // For real RouterOS, fetch from API (not implemented yet)
-    return [];
+    // Fetch from real RouterOS API
+    final client = service.client;
+    if (client == null) {
+      return [];
+    }
+
+    final profilesData = await client.getUserProfiles();
+
+    // Convert API data to UserProfile objects
+    return profilesData.map((data) {
+      // Parse rate-limit (format: "upload/download" or "unlimited")
+      final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
+      String upload = 'unlimited';
+      String download = 'unlimited';
+
+      if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
+        final parts = rateLimit.split('/');
+        if (parts.length == 2) {
+          upload = parts[0];
+          download = parts[1];
+        }
+      }
+
+      return UserProfile(
+        id: data['.id'] as String? ?? '',
+        name: data['name'] as String? ?? 'unknown',
+        rateLimitUpload: upload,
+        rateLimitDownload: download,
+        validity: data['on-logout'] as String? ?? 'unlimited',
+        price: 0.0, // Price is stored separately, not in RouterOS
+        sharedUsers: 1,
+        autologout: true,
+      );
+    }).toList();
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = AsyncValue.data(List.from(_demoProfilesCache));
-  }
+    final service = ref.read(routerOSServiceProvider);
 
-  Future<void> addProfile(UserProfile profile) async {
-    _demoProfilesCache.add(profile);
-    state = AsyncValue.data(List.from(_demoProfilesCache));
-  }
-
-  Future<void> updateProfile(UserProfile updatedProfile) async {
-    final index = _demoProfilesCache.indexWhere((p) => p.id == updatedProfile.id);
-    if (index != -1) {
-      _demoProfilesCache[index] = updatedProfile;
+    if (service.isDemoMode) {
       state = AsyncValue.data(List.from(_demoProfilesCache));
+    } else {
+      state = AsyncValue.data(await build());
     }
   }
 
+  Future<void> addProfile(UserProfile profile) async {
+    final service = ref.read(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      _demoProfilesCache.add(profile);
+      state = AsyncValue.data(List.from(_demoProfilesCache));
+      return;
+    }
+
+    final client = service.client;
+    if (client == null) {
+      throw Exception('Not connected to RouterOS');
+    }
+
+    // Build rate-limit string
+    final rateLimit = profile.rateLimitUpload == 'unlimited' && profile.rateLimitDownload == 'unlimited'
+        ? null
+        : '${profile.rateLimitUpload}/${profile.rateLimitDownload}';
+
+    await client.addUserProfile(
+      name: profile.name,
+      rateLimit: rateLimit,
+      uptimeLimit: profile.validity,
+    );
+
+    // Refresh the list
+    ref.invalidate(userProfileProvider);
+  }
+
+  Future<void> updateProfile(UserProfile updatedProfile) async {
+    final service = ref.read(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      final index = _demoProfilesCache.indexWhere((p) => p.id == updatedProfile.id);
+      if (index != -1) {
+        _demoProfilesCache[index] = updatedProfile;
+        state = AsyncValue.data(List.from(_demoProfilesCache));
+      }
+      return;
+    }
+
+    final client = service.client;
+    if (client == null) {
+      throw Exception('Not connected to RouterOS');
+    }
+
+    // Build rate-limit string
+    final rateLimit = updatedProfile.rateLimitUpload == 'unlimited' && updatedProfile.rateLimitDownload == 'unlimited'
+        ? null
+        : '${updatedProfile.rateLimitUpload}/${updatedProfile.rateLimitDownload}';
+
+    await client.updateUserProfile(
+      id: updatedProfile.id,
+      name: updatedProfile.name,
+      rateLimit: rateLimit,
+    );
+
+    // Refresh the list
+    ref.invalidate(userProfileProvider);
+  }
+
   Future<void> deleteProfile(String id) async {
-    _demoProfilesCache.removeWhere((p) => p.id == id);
-    state = AsyncValue.data(List.from(_demoProfilesCache));
+    final service = ref.read(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      _demoProfilesCache.removeWhere((p) => p.id == id);
+      state = AsyncValue.data(List.from(_demoProfilesCache));
+      return;
+    }
+
+    final client = service.client;
+    if (client == null) {
+      throw Exception('Not connected to RouterOS');
+    }
+
+    await client.removeUserProfile(id);
+
+    // Refresh the list
+    ref.invalidate(userProfileProvider);
   }
 
   List<UserProfile> _getDemoProfiles() {

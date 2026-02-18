@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/routeros_service.dart';
 import '../../services/models.dart';
+import '../../providers/app_providers.dart';
 import 'widgets/resource_card_widgets.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  final _routerOSService = RouterOSService();
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   SystemResources? _resources;
@@ -33,8 +34,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     try {
+      debugPrint('=== DASHBOARD LOADING ===');
+      final service = ref.read(routerOSServiceProvider);
+      debugPrint('Demo Mode: ${service.isDemoMode}');
+      debugPrint('Is Connected: ${service.isConnected}');
+
       // Check if demo mode is enabled
-      if (_routerOSService.isDemoMode) {
+      if (service.isDemoMode) {
+        debugPrint('Using demo mode data');
         // Simulate loading delay for initial load
         if (showLoading) {
           await Future.delayed(const Duration(milliseconds: 800));
@@ -48,22 +55,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return;
       }
 
-      if (!_routerOSService.isConnected) {
-        await _routerOSService.connect();
+      if (!service.isConnected) {
+        debugPrint('Not connected, connecting...');
+        await service.connect();
       }
 
-      final client = _routerOSService.client;
+      final client = service.client;
+      debugPrint('Client: ${client != null ? "Available" : "NULL"}');
 
       if (client != null && mounted) {
+        debugPrint('Fetching system resources...');
         final resourcesData = await client.getSystemResources();
+        debugPrint('Resources data: $resourcesData');
 
         if (mounted) {
           setState(() {
             _resources = SystemResources.fromJson(resourcesData);
           });
+          debugPrint('Dashboard loaded successfully!');
         }
       }
     } catch (e) {
+      debugPrint('=== DASHBOARD ERROR ===');
+      debugPrint('Error: $e');
+      debugPrint('Error Type: ${e.runtimeType}');
       if (mounted && showLoading) {
         setState(() {
           _errorMessage = e.toString();
@@ -207,7 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_routerOSService.isDemoMode) _buildDemoBanner(),
+            if (ref.read(routerOSServiceProvider).isDemoMode) _buildDemoBanner(),
             _buildSystemInfoCard(),
             const SizedBox(height: 16),
             _buildResourceCards(),

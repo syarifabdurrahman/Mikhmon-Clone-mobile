@@ -76,6 +76,7 @@ class _VoucherGenerationScreenState
 
   // Loading state
   bool _isGenerating = false;
+  bool _generationSuccessful = false;
   String? _generationStatus;
   int _generatedCount = 0;
 
@@ -131,6 +132,7 @@ class _VoucherGenerationScreenState
       _charType = CharType.lower;
       _selectedProfile = null;
       _isGenerating = false;
+      _generationSuccessful = false;
       _generationStatus = null;
       _generatedCount = 0;
     });
@@ -143,6 +145,7 @@ class _VoucherGenerationScreenState
     }
 
     if (_selectedProfile == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a profile')),
       );
@@ -164,7 +167,8 @@ class _VoucherGenerationScreenState
 
         // Generate random voucher
         final username = _generateUsername(i);
-        final password = _userMode == UserMode.vc ? username : _generatePassword();
+        final password =
+            _userMode == UserMode.vc ? username : _generatePassword();
 
         // Build comment
         final comment = _buildComment();
@@ -185,50 +189,81 @@ class _VoucherGenerationScreenState
 
       setState(() {
         _isGenerating = false;
+        _generationSuccessful = true;
+        _generationStatus = 'Generated $qty vouchers successfully!';
+      });
+    } else {
+      // Real RouterOS API call
+      final service = ref.read(routerOSServiceProvider);
+      final client = service.client;
+
+      if (client == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Not connected to RouterOS. Please login first.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _isGenerating = true;
+        _generationStatus = 'Generating vouchers on RouterOS...';
+        _generatedCount = 0;
       });
 
-      // Clear status message immediately
-      if (mounted) {
+      try {
+        // Generate vouchers one by one to avoid overwhelming the router
+        for (int i = 1; i <= qty; i++) {
+          // Update progress
+          setState(() {
+            _generatedCount = i;
+            _generationStatus = 'Generated $i of $qty vouchers...';
+          });
+
+          // Generate random voucher
+          final username = _generateUsername(i);
+          final password =
+              _userMode == UserMode.vc ? username : _generatePassword();
+          final comment = _buildComment();
+
+          // Add user via RouterOS API
+          await client.addHotspotUser(
+            username: username,
+            password: password,
+            profile: _selectedProfile ?? 'default',
+            comment: comment,
+          );
+
+          // Small delay between requests to avoid overwhelming the router
+          if (i < qty) {
+            await Future.delayed(const Duration(milliseconds: 200));
+          }
+        }
+
         setState(() {
+          _isGenerating = false;
+          _generationSuccessful = true;
+          _generationStatus = 'Successfully generated $qty vouchers!';
+        });
+      } catch (e) {
+        setState(() {
+          _isGenerating = false;
           _generationStatus = null;
         });
 
-        // Show snackbar with view option
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Generated $qty vouchers successfully!'),
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: 'View Users',
-              onPressed: () {
-                Navigator.pop(context);
-              },
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to generate vouchers: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
             ),
-          ),
-        );
-      }
-    } else {
-      // TODO: Implement actual API call for RouterOS
-      setState(() {
-        _isGenerating = true;
-        _generationStatus = 'Connecting to RouterOS...';
-      });
-
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      setState(() {
-        _isGenerating = false;
-        _generationStatus = null;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('RouterOS API integration coming soon!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+          );
+        }
       }
     }
   }
@@ -282,7 +317,8 @@ class _VoucherGenerationScreenState
     final mode = _userMode == UserMode.up ? 'up' : 'vc';
     final code = DateTime.now().millisecondsSinceEpoch % 1000;
     final date = DateTime.now();
-    final dateStr = '${date.month}.${date.day}.${date.year.toString().substring(2)}';
+    final dateStr =
+        '${date.month}.${date.day}.${date.year.toString().substring(2)}';
     final comment = _commentController.text;
 
     return '$mode-$code-$dateStr-$comment';
@@ -295,6 +331,7 @@ class _VoucherGenerationScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E2E),
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: const Color(0xFF2A2A3C),
         title: const Text(
@@ -311,7 +348,12 @@ class _VoucherGenerationScreenState
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 100 + MediaQuery.of(context).padding.bottom,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
@@ -325,17 +367,20 @@ class _VoucherGenerationScreenState
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                      const Icon(Icons.info_outline,
+                          color: Colors.orange, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Demo Mode: Vouchers will be generated locally',
-                          style: TextStyle(color: Colors.orange.shade200, fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.orange.shade200, fontSize: 12),
                         ),
                       ),
                     ],
@@ -368,7 +413,8 @@ class _VoucherGenerationScreenState
                         DropdownMenuItem(value: 'all', child: Text('all')),
                       ],
                       icon: Icons.router,
-                      onChanged: (value) => setState(() => _selectedServer = value ?? 'all'),
+                      onChanged: (value) =>
+                          setState(() => _selectedServer = value ?? 'all'),
                     ),
 
                     const SizedBox(height: 16),
@@ -410,7 +456,8 @@ class _VoucherGenerationScreenState
                         );
                       }).toList(),
                       icon: Icons.text_fields,
-                      onChanged: (value) => setState(() => _nameLength = value ?? 4),
+                      onChanged: (value) =>
+                          setState(() => _nameLength = value ?? 4),
                     ),
 
                     const SizedBox(height: 16),
@@ -436,7 +483,8 @@ class _VoucherGenerationScreenState
                         );
                       }).toList(),
                       icon: Icons.font_download,
-                      onChanged: (value) => setState(() => _charType = value ?? CharType.lower),
+                      onChanged: (value) =>
+                          setState(() => _charType = value ?? CharType.lower),
                     ),
 
                     const SizedBox(height: 16),
@@ -455,8 +503,10 @@ class _VoucherGenerationScreenState
                           }).toList(),
                           icon: Icons.pie_chart,
                           hint: const Text('Select Profile'),
-                          onChanged: (value) => setState(() => _selectedProfile = value),
-                          validator: (value) => value == null ? 'Please select a profile' : null,
+                          onChanged: (value) =>
+                              setState(() => _selectedProfile = value),
+                          validator: (value) =>
+                              value == null ? 'Please select a profile' : null,
                         );
                       },
                       loading: () => const Center(
@@ -466,10 +516,12 @@ class _VoucherGenerationScreenState
                         label: 'Profile',
                         value: _selectedProfile,
                         items: const [
-                          DropdownMenuItem(value: 'default', child: Text('default')),
+                          DropdownMenuItem(
+                              value: 'default', child: Text('default')),
                         ],
                         icon: Icons.pie_chart,
-                        onChanged: (value) => setState(() => _selectedProfile = value),
+                        onChanged: (value) =>
+                            setState(() => _selectedProfile = value),
                       ),
                     ),
                   ],
@@ -523,7 +575,9 @@ class _VoucherGenerationScreenState
               if (_generationStatus != null)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
+                  padding: _generationSuccessful
+                      ? const EdgeInsets.fromLTRB(12, 12, 12, 8)
+                      : const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: _isGenerating
@@ -536,36 +590,78 @@ class _VoucherGenerationScreenState
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
-                    children: [
-                      if (_isGenerating)
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                  child: _generationSuccessful
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle,
+                                    color: Colors.green, size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _generationStatus!,
+                                    style: TextStyle(
+                                      color: Colors.green.shade200,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  ref.invalidate(hotspotUsersProvider);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
+                                child: const Text('Show Users'),
+                              ),
+                            ),
+                          ],
                         )
-                      else
-                        const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _generationStatus!,
-                          style: TextStyle(
-                            color: _isGenerating
-                                ? Colors.blue.shade200
-                                : Colors.green.shade200,
-                          ),
+                      : Row(
+                          children: [
+                            if (_isGenerating)
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            else
+                              const Icon(Icons.check_circle,
+                                  color: Colors.green, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _generationStatus!,
+                                style: TextStyle(
+                                  color: _isGenerating
+                                      ? Colors.blue.shade200
+                                      : Colors.green.shade200,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
+
+              const SizedBox(height: 24),
 
               // Generate Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
+                height: 56,
+                child: ElevatedButton(
                   onPressed: _isGenerating ? null : _generateVouchers,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6C63FF),
@@ -575,20 +671,31 @@ class _VoucherGenerationScreenState
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: _isGenerating
+                  child: _isGenerating
                       ? const SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 24,
+                          height: 24,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 3,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Icon(Icons.confirmation_number),
-                  label: Text(
-                    _isGenerating ? 'Generating...' : 'Generate Vouchers',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.confirmation_number),
+                            SizedBox(width: 8),
+                            Text(
+                              'Generate Vouchers',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
 
@@ -597,8 +704,8 @@ class _VoucherGenerationScreenState
               // Reset Button
               SizedBox(
                 width: double.infinity,
-                height: 44,
-                child: OutlinedButton.icon(
+                height: 56,
+                child: OutlinedButton(
                   onPressed: _isGenerating ? null : _resetForm,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
@@ -607,8 +714,21 @@ class _VoucherGenerationScreenState
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reset Form'),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.refresh),
+                      SizedBox(width: 8),
+                      Text(
+                        'Reset Form',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -723,7 +843,8 @@ class _VoucherGenerationScreenState
         hintText: helperText,
         hintStyle: TextStyle(color: Colors.grey.shade600),
         prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
-        suffix: Text('($min - $max)', style: TextStyle(color: Colors.grey.shade500)),
+        suffix: Text('($min - $max)',
+            style: TextStyle(color: Colors.grey.shade500)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey.shade700),
