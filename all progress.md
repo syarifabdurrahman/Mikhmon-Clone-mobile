@@ -17,6 +17,7 @@
 | **Edit User Screen**        | ✅     | Update user profiles                                  |
 | **Add User Screen**         | ✅     | Create new hotspot users                              |
 | **Performance Optimizations**| ✅    | RepaintBoundary, itemExtent, widget extraction        |
+| **Voucher Generation**      | ✅     | Bulk user creation with custom username format        |
 
 ---
 
@@ -38,11 +39,6 @@
   - View authorized/bypassed hosts
   - Show MAC address, IP address, client ID
   - Filter by authorization status
-- **Voucher Generation** - Bulk user creation
-  - Generate multiple users at once
-  - Custom username format
-  - Profile-based pricing
-  - Print template selection
 - **Voucher Printing** - Print with customizable templates
   - Default template (full size)
   - Small template (compact)
@@ -96,7 +92,7 @@
 
 1. ~~**Hotspot Active**~~ ✅ COMPLETED - Monitor currently connected users
 2. ~~**User Profiles**~~ ✅ COMPLETED - Profile management with pricing
-3. **Voucher Generation** - Bulk create users
+3. ~~**Voucher Generation**~~ ✅ COMPLETED - Bulk create users with custom format
    - Major productivity feature
    - Common use case for hotspot operators
 4. **Dashboard Income Widget** - Show daily/monthly revenue
@@ -181,10 +177,10 @@ Choose a feature to implement:
 
 1. ~~**Hotspot Active**~~ ✅ DONE
 2. ~~**User Profiles Management**~~ ✅ DONE
-3. **Voucher Generator** - Bulk user creation
+3. ~~**Voucher Generator**~~ ✅ DONE
 4. **Dashboard Income** - Revenue tracking widgets
 5. **Settings Screen** - Theme and configuration
 
 ---
 
-_Last Updated: 2026-02-17_
+_Last Updated: 2026-02-18_

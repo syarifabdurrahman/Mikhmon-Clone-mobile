@@ -13,6 +13,7 @@ import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/hotspot_active_users_screen.dart';
 import '../screens/hotspot_users/add_hotspot_user_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
+import '../screens/hotspot_users/voucher_generation_screen.dart';
 
 // Secure Storage Provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -129,6 +130,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/users/add',
         name: 'add_user',
         builder: (context, state) => const AddHotspotUserScreen(),
+      ),
+      GoRoute(
+        path: '/users/generate',
+        name: 'generate_vouchers',
+        builder: (context, state) => const VoucherGenerationScreen(),
       ),
       GoRoute(
         path: '/users/:id',

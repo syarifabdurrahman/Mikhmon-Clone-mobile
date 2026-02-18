@@ -8,6 +8,7 @@ import '../../services/models.dart';
 import 'hotspot_user_details_screen.dart';
 import 'add_hotspot_user_screen.dart';
 import 'edit_hotspot_user_screen.dart';
+import 'voucher_generation_screen.dart';
 
 class HotspotUsersScreen extends ConsumerStatefulWidget {
   const HotspotUsersScreen({super.key});
@@ -145,12 +146,31 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToAddUser(),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: AppTheme.onPrimaryColor,
-        icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Add User'),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Generate Vouchers Button
+          FloatingActionButton.extended(
+            heroTag: 'generate_vouchers',
+            onPressed: () => _navigateToGenerateVouchers(),
+            backgroundColor: AppTheme.secondaryColor,
+            foregroundColor: AppTheme.onSecondaryColor,
+            icon: const Icon(Icons.confirmation_number_rounded),
+            label: const Text('Generate Vouchers'),
+          ),
+          const SizedBox(height: 12),
+          // Add User Button
+          FloatingActionButton.extended(
+            heroTag: 'add_user',
+            onPressed: () => _navigateToAddUser(),
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: AppTheme.onPrimaryColor,
+            icon: const Icon(Icons.person_add_rounded),
+            label: const Text('Add User'),
+          ),
+        ],
       ),
     );
   }
@@ -316,6 +336,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       context,
       MaterialPageRoute(
         builder: (context) => const AddHotspotUserScreen(),
+      ),
+    );
+  }
+
+  Future<void> _navigateToGenerateVouchers() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const VoucherGenerationScreen(),
       ),
     );
   }
