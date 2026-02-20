@@ -110,24 +110,54 @@ class ResourceCard extends StatelessWidget {
   }
 }
 
-// Individual refreshable widget for CPU Load
-class CpuLoadCard extends StatefulWidget {
-  final SystemResources? initialResources;
+// Real-time CPU Load card that listens to resources updates
+class CpuLoadCard extends StatelessWidget {
+  final ValueNotifier<SystemResources?> resourcesNotifier;
+  final bool isDemoMode;
 
-  const CpuLoadCard({super.key, required this.initialResources});
+  const CpuLoadCard({
+    super.key,
+    required this.resourcesNotifier,
+    this.isDemoMode = false,
+  });
 
   @override
-  State<CpuLoadCard> createState() => _CpuLoadCardState();
+  Widget build(BuildContext context) {
+    if (isDemoMode) {
+      // Demo mode: show random values with local timer
+      return _DemoCpuLoadCard();
+    }
+
+    // Real mode: show actual data from router
+    return ValueListenableBuilder<SystemResources?>(
+      valueListenable: resourcesNotifier,
+      builder: (context, resources, _) {
+        final cpuLoad = resources?.cpuLoad ?? 0;
+        return ResourceCard(
+          icon: Icons.memory_rounded,
+          title: 'CPU Load',
+          value: '$cpuLoad%',
+          usagePercent: cpuLoad / 100,
+        );
+      },
+    );
+  }
 }
 
-class _CpuLoadCardState extends State<CpuLoadCard> {
+// Demo mode CPU card with random values
+class _DemoCpuLoadCard extends StatefulWidget {
+  @override
+  State<_DemoCpuLoadCard> createState() => _DemoCpuLoadCardState();
+}
+
+class _DemoCpuLoadCardState extends State<_DemoCpuLoadCard> {
   late int _cpuLoad;
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _cpuLoad = widget.initialResources?.cpuLoad ?? 0;
+    _cpuLoad = 5 + Random().nextInt(36);
     _startAutoRefresh();
   }
 
@@ -158,17 +188,54 @@ class _CpuLoadCardState extends State<CpuLoadCard> {
   }
 }
 
-// Individual refreshable widget for Memory
-class MemoryCard extends StatefulWidget {
-  final SystemResources? initialResources;
+// Real-time Memory card that listens to resources updates
+class MemoryCard extends StatelessWidget {
+  final ValueNotifier<SystemResources?> resourcesNotifier;
+  final bool isDemoMode;
 
-  const MemoryCard({super.key, required this.initialResources});
+  const MemoryCard({
+    super.key,
+    required this.resourcesNotifier,
+    this.isDemoMode = false,
+  });
 
   @override
-  State<MemoryCard> createState() => _MemoryCardState();
+  Widget build(BuildContext context) {
+    if (isDemoMode) {
+      // Demo mode: show random values with local timer
+      return _DemoMemoryCard();
+    }
+
+    // Real mode: show actual data from router
+    return ValueListenableBuilder<SystemResources?>(
+      valueListenable: resourcesNotifier,
+      builder: (context, resources, _) {
+        final freeMemory = resources?.freeMemory ?? 0;
+        final totalMemory = resources?.totalMemory ?? 0;
+        final usedMemory = totalMemory - freeMemory;
+        final memoryUsagePercent = totalMemory > 0
+            ? ((totalMemory - freeMemory) / totalMemory).toDouble()
+            : 0.0;
+
+        return ResourceCard(
+          icon: Icons.storage_rounded,
+          title: 'Memory',
+          value: '${(usedMemory / 1024 / 1024).toStringAsFixed(1)} MB',
+          usagePercent: memoryUsagePercent,
+          subtitle: '${(totalMemory / 1024 / 1024).toStringAsFixed(0)} MB Total',
+        );
+      },
+    );
+  }
 }
 
-class _MemoryCardState extends State<MemoryCard> {
+// Demo mode Memory card with random values
+class _DemoMemoryCard extends StatefulWidget {
+  @override
+  State<_DemoMemoryCard> createState() => _DemoMemoryCardState();
+}
+
+class _DemoMemoryCardState extends State<_DemoMemoryCard> {
   late int _freeMemory;
   late int _totalMemory;
   Timer? _refreshTimer;
@@ -176,8 +243,8 @@ class _MemoryCardState extends State<MemoryCard> {
   @override
   void initState() {
     super.initState();
-    _freeMemory = widget.initialResources?.freeMemory ?? 0;
-    _totalMemory = widget.initialResources?.totalMemory ?? 0;
+    _totalMemory = 2097152;
+    _freeMemory = 1048576;
     _startAutoRefresh();
   }
 
@@ -203,7 +270,7 @@ class _MemoryCardState extends State<MemoryCard> {
   }
 
   double get memoryUsagePercent => _totalMemory > 0
-      ? ((_totalMemory - _freeMemory) / _totalMemory * 100)
+      ? ((_totalMemory - _freeMemory) / _totalMemory)
       : 0;
 
   @override
@@ -212,24 +279,61 @@ class _MemoryCardState extends State<MemoryCard> {
     return ResourceCard(
       icon: Icons.storage_rounded,
       title: 'Memory',
-      value: '${(usedMemory / 1024 / 1024).toStringAsFixed(2)} MB',
-      usagePercent: memoryUsagePercent / 100,
-      subtitle: '${(_totalMemory / 1024 / 1024).toStringAsFixed(2)} MB Total',
+      value: '${(usedMemory / 1024 / 1024).toStringAsFixed(1)} MB',
+      usagePercent: memoryUsagePercent,
+      subtitle: '${(_totalMemory / 1024 / 1024).toStringAsFixed(0)} MB Total',
     );
   }
 }
 
-// Individual refreshable widget for Disk
-class DiskCard extends StatefulWidget {
-  final SystemResources? initialResources;
+// Real-time Disk card that listens to resources updates
+class DiskCard extends StatelessWidget {
+  final ValueNotifier<SystemResources?> resourcesNotifier;
+  final bool isDemoMode;
 
-  const DiskCard({super.key, required this.initialResources});
+  const DiskCard({
+    super.key,
+    required this.resourcesNotifier,
+    this.isDemoMode = false,
+  });
 
   @override
-  State<DiskCard> createState() => _DiskCardState();
+  Widget build(BuildContext context) {
+    if (isDemoMode) {
+      // Demo mode: show random values with local timer
+      return _DemoDiskCard();
+    }
+
+    // Real mode: show actual data from router
+    return ValueListenableBuilder<SystemResources?>(
+      valueListenable: resourcesNotifier,
+      builder: (context, resources, _) {
+        final freeHddSpace = resources?.freeHddSpace ?? 0;
+        final totalHddSpace = resources?.totalHddSpace ?? 0;
+        final usedHdd = totalHddSpace - freeHddSpace;
+        final hddUsagePercent = totalHddSpace > 0
+            ? ((totalHddSpace - freeHddSpace) / totalHddSpace).toDouble()
+            : 0.0;
+
+        return ResourceCard(
+          icon: Icons.sd_storage_rounded,
+          title: 'Disk',
+          value: '${(usedHdd / 1024 / 1024).toStringAsFixed(1)} MB',
+          usagePercent: hddUsagePercent,
+          subtitle: '${(totalHddSpace / 1024 / 1024).toStringAsFixed(0)} MB Total',
+        );
+      },
+    );
+  }
 }
 
-class _DiskCardState extends State<DiskCard> {
+// Demo mode Disk card with random values
+class _DemoDiskCard extends StatefulWidget {
+  @override
+  State<_DemoDiskCard> createState() => _DemoDiskCardState();
+}
+
+class _DemoDiskCardState extends State<_DemoDiskCard> {
   late int _freeHddSpace;
   late int _totalHddSpace;
   Timer? _refreshTimer;
@@ -237,8 +341,8 @@ class _DiskCardState extends State<DiskCard> {
   @override
   void initState() {
     super.initState();
-    _freeHddSpace = widget.initialResources?.freeHddSpace ?? 0;
-    _totalHddSpace = widget.initialResources?.totalHddSpace ?? 0;
+    _totalHddSpace = 104857600;
+    _freeHddSpace = 52428800;
     _startAutoRefresh();
   }
 
@@ -264,7 +368,7 @@ class _DiskCardState extends State<DiskCard> {
   }
 
   double get hddUsagePercent => _totalHddSpace > 0
-      ? ((_totalHddSpace - _freeHddSpace) / _totalHddSpace * 100)
+      ? ((_totalHddSpace - _freeHddSpace) / _totalHddSpace)
       : 0;
 
   @override
@@ -273,9 +377,9 @@ class _DiskCardState extends State<DiskCard> {
     return ResourceCard(
       icon: Icons.sd_storage_rounded,
       title: 'Disk',
-      value: '${(usedHdd / 1024 / 1024).toStringAsFixed(2)} MB',
-      usagePercent: hddUsagePercent / 100,
-      subtitle: '${(_totalHddSpace / 1024 / 1024).toStringAsFixed(2)} MB Total',
+      value: '${(usedHdd / 1024 / 1024).toStringAsFixed(1)} MB',
+      usagePercent: hddUsagePercent,
+      subtitle: '${(_totalHddSpace / 1024 / 1024).toStringAsFixed(0)} MB Total',
     );
   }
 }

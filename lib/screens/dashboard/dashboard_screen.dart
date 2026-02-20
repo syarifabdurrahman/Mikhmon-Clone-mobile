@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,11 +19,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   SystemResources? _resources;
+  Timer? _refreshTimer;
+  late final ValueNotifier<SystemResources?> _resourcesNotifier;
 
   @override
   void initState() {
     super.initState();
+    _resourcesNotifier = ValueNotifier<SystemResources?>(null);
     _loadDashboardData();
+    _startPeriodicRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _resourcesNotifier.dispose();
+    super.dispose();
+  }
+
+  /// Start periodic refresh every 3 seconds
+  void _startPeriodicRefresh() {
+    final service = ref.read(routerOSServiceProvider);
+
+    // Only refresh periodically in real mode (not demo)
+    if (service.isDemoMode) {
+      debugPrint('[Dashboard] Demo mode - skipping periodic refresh');
+      return;
+    }
+
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        debugPrint('[Dashboard] Periodic refresh triggered');
+        _fetchAndCacheResources();
+      }
+    });
+
+    debugPrint('[Dashboard] Started periodic refresh (every 3 seconds)');
+  }
+
+  /// Update the resources notifier when resources change
+  void _updateResourcesNotifier() {
+    _resourcesNotifier.value = _resources;
   }
 
   Future<void> _loadDashboardData({bool showLoading = true}) async {
@@ -36,6 +73,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     try {
       debugPrint('=== DASHBOARD LOADING ===');
       final service = ref.read(routerOSServiceProvider);
+      final cache = ref.read(cacheServiceProvider);
       debugPrint('Demo Mode: ${service.isDemoMode}');
       debugPrint('Is Connected: ${service.isConnected}');
 
@@ -51,28 +89,57 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           setState(() {
             _resources = _getDemoResources();
           });
+          _updateResourcesNotifier();
         }
         return;
       }
 
-      if (!service.isConnected) {
-        debugPrint('Not connected, connecting...');
-        await service.connect();
-      }
-
-      final client = service.client;
-      debugPrint('Client: ${client != null ? "Available" : "NULL"}');
-
-      if (client != null && mounted) {
-        debugPrint('Fetching system resources...');
-        final resourcesData = await client.getSystemResources();
-        debugPrint('Resources data: $resourcesData');
-
+      // Check if we have pre-fetched data from login (fastest path)
+      final authState = ref.read(authStateProvider);
+      if (authState.value?.systemResources != null) {
+        debugPrint('Using pre-fetched resources from login');
         if (mounted) {
           setState(() {
-            _resources = SystemResources.fromJson(resourcesData);
+            _resources = SystemResources.fromJson(authState.value!.systemResources!);
+            _isLoading = false;
           });
-          debugPrint('Dashboard loaded successfully!');
+          _updateResourcesNotifier();
+        }
+        // Clear the pre-fetched data so future refreshes fetch new data
+        ref.read(authStateProvider.notifier).clearPrefetchedResources();
+        // Background refresh to get latest data
+        _fetchAndCacheResources();
+        return;
+      }
+
+      // Check cache for instant data display (second fastest path)
+      final cachedResources = cache.getSystemResources();
+      final isStale = cache.isCacheStale();
+      if (cachedResources != null) {
+        debugPrint('Using cached resources (stale: $isStale)');
+        if (mounted) {
+          setState(() {
+            _resources = SystemResources.fromJson(cachedResources);
+            _isLoading = false;
+          });
+          _updateResourcesNotifier();
+        }
+        // If cache is stale or this is a manual refresh, fetch fresh data
+        if (showLoading || isStale) {
+          _fetchAndCacheResources();
+        }
+        return;
+      }
+
+      // Fetch new data if we're connected (slowest path - first time ever)
+      if (service.isConnected) {
+        await _fetchAndCacheResources();
+      } else {
+        debugPrint('Not connected - waiting for login');
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Not connected to RouterOS. Please login again.';
+          });
         }
       }
     } catch (e) {
@@ -89,6 +156,52 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (mounted && showLoading) {
         setState(() {
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Fetch resources from RouterOS and cache them
+  Future<void> _fetchAndCacheResources() async {
+    try {
+      final service = ref.read(routerOSServiceProvider);
+      final cache = ref.read(cacheServiceProvider);
+
+      if (!service.isConnected) {
+        debugPrint('[Refresh] Not connected, skipping fetch');
+        return;
+      }
+
+      final client = service.client;
+      if (client == null) {
+        debugPrint('[Refresh] Client is null, skipping fetch');
+        return;
+      }
+
+      debugPrint('[Refresh] Fetching fresh system resources...');
+      final resourcesData = await client.getSystemResources();
+      debugPrint('[Refresh] Resources data: $resourcesData');
+
+      // Save to cache
+      await cache.saveSystemResources(resourcesData);
+      debugPrint('[Refresh] Resources cached');
+
+      // Update UI if mounted
+      if (mounted) {
+        setState(() {
+          _resources = SystemResources.fromJson(resourcesData);
+          _errorMessage = null;
+        });
+        _updateResourcesNotifier();
+        debugPrint('[Refresh] Dashboard updated successfully!');
+      }
+    } catch (e) {
+      debugPrint('[Refresh] Error fetching resources: $e');
+      // Don't show error on background refresh failures
+      // Only show error if there's no cached data
+      if (_resources == null && mounted) {
+        setState(() {
+          _errorMessage = e.toString();
         });
       }
     }
@@ -323,11 +436,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           children: [
             Expanded(
-              child: CpuLoadCard(initialResources: _resources),
+              child: CpuLoadCard(
+                resourcesNotifier: _resourcesNotifier,
+                isDemoMode: ref.read(routerOSServiceProvider).isDemoMode,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: MemoryCard(initialResources: _resources),
+              child: MemoryCard(
+                resourcesNotifier: _resourcesNotifier,
+                isDemoMode: ref.read(routerOSServiceProvider).isDemoMode,
+              ),
             ),
           ],
         ),
@@ -335,7 +454,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Row(
           children: [
             Expanded(
-              child: DiskCard(initialResources: _resources),
+              child: DiskCard(
+                resourcesNotifier: _resourcesNotifier,
+                isDemoMode: ref.read(routerOSServiceProvider).isDemoMode,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

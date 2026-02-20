@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/routeros_service.dart';
 import '../services/models.dart';
+import '../services/cache_service.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
@@ -27,26 +28,54 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   );
 });
 
+// Cache Service Provider
+final cacheServiceProvider = Provider<CacheService>((ref) {
+  final cache = CacheService();
+  // Initialize cache
+  cache.init().catchError((e) {
+    debugPrint('[CacheService] Failed to initialize: $e');
+  });
+  return cache;
+});
+
 // RouterOS Service Provider
 final routerOSServiceProvider = Provider<RouterOSService>((ref) {
   return RouterOSService();
 });
 
 // Authentication State Provider
-final authStateProvider = AsyncNotifierProvider<AuthNotifier, bool>(() {
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, AuthState>(() {
   return AuthNotifier();
 });
 
-class AuthNotifier extends AsyncNotifier<bool> {
-  @override
-  Future<bool> build() async {
-    // Check if user has saved credentials
-    final storage = ref.read(secureStorageProvider);
-    final host = await storage.read(key: 'router_ip');
-    final username = await storage.read(key: 'username');
-    final password = await storage.read(key: 'password');
+class AuthState {
+  final bool isAuthenticated;
+  final Map<String, dynamic>? systemResources;
+  final String? error;
 
-    return host != null && username != null && password != null;
+  const AuthState({
+    required this.isAuthenticated,
+    this.systemResources,
+    this.error,
+  });
+
+  AuthState copyWith({
+    bool? isAuthenticated,
+    Map<String, dynamic>? systemResources,
+    String? error,
+  }) {
+    return AuthState(
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      systemResources: systemResources ?? this.systemResources,
+      error: error ?? this.error,
+    );
+  }
+}
+
+class AuthNotifier extends AsyncNotifier<AuthState> {
+  @override
+  Future<AuthState> build() async {
+    return const AuthState(isAuthenticated: false);
   }
 
   Future<void> login({
@@ -60,12 +89,38 @@ class AuthNotifier extends AsyncNotifier<bool> {
     state = await AsyncValue.guard(() async {
       // Connect to RouterOS first
       final service = ref.read(routerOSServiceProvider);
-      await service.connectWithCredentials(
+
+      // Check if demo mode
+      if (service.isDemoMode) {
+        return const AuthState(
+          isAuthenticated: true,
+          systemResources: null, // Will be loaded by dashboard
+        );
+      }
+
+      // Real connection
+      final client = await service.connectWithCredentials(
         host: host,
         port: port,
         username: username,
         password: password,
       );
+
+      // Pre-fetch system resources during login for seamless experience
+      Map<String, dynamic>? resources;
+      try {
+        debugPrint('[Auth] Pre-fetching system resources...');
+        resources = await client.getSystemResources();
+        debugPrint('[Auth] System resources fetched successfully');
+
+        // Save to cache for instant loading next time
+        final cache = ref.read(cacheServiceProvider);
+        await cache.saveSystemResources(resources);
+        debugPrint('[Auth] System resources cached');
+      } catch (e) {
+        debugPrint('[Auth] Warning: Failed to pre-fetch resources: $e');
+        // Continue anyway - dashboard will retry or use cache
+      }
 
       // Store credentials if remember me is checked
       if (rememberMe) {
@@ -76,7 +131,10 @@ class AuthNotifier extends AsyncNotifier<bool> {
         await storage.write(key: 'password', value: password);
       }
 
-      return true;
+      return AuthState(
+        isAuthenticated: true,
+        systemResources: resources,
+      );
     });
   }
 
@@ -89,14 +147,25 @@ class AuthNotifier extends AsyncNotifier<bool> {
       // Clear credentials
       await service.clearCredentials();
 
-      return false;
+      return const AuthState(isAuthenticated: false);
     });
   }
 
   Future<void> setDemoMode(bool enabled) async {
     final service = ref.read(routerOSServiceProvider);
     service.setDemoMode(enabled);
-    state = AsyncValue.data(enabled);
+    state = AsyncValue.data(AuthState(
+      isAuthenticated: enabled,
+      systemResources: null,
+    ));
+  }
+
+  // Clear pre-fetched resources after dashboard has consumed them
+  void clearPrefetchedResources() {
+    final currentState = state.value;
+    if (currentState != null) {
+      state = AsyncValue.data(currentState.copyWith(systemResources: null));
+    }
   }
 }
 
