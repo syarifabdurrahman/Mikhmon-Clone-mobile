@@ -138,17 +138,98 @@ class SystemResources {
 
   factory SystemResources.fromJson(Map<String, dynamic> json) {
     return SystemResources(
-      platform: json['platform'] ?? 'Unknown',
-      boardName: json['board-name'] ?? 'Unknown',
-      version: json['version'] ?? 'Unknown',
-      cpuFrequency: int.tryParse(json['cpu-frequency'] ?? '0') ?? 0,
-      cpuLoad: int.tryParse(json['cpu-load'] ?? '0') ?? 0,
-      freeMemory: int.tryParse(json['free-memory'] ?? '0') ?? 0,
-      totalMemory: int.tryParse(json['total-memory'] ?? '0') ?? 0,
-      freeHddSpace: int.tryParse(json['free-hdd-space'] ?? '0') ?? 0,
-      totalHddSpace: int.tryParse(json['total-hdd-space'] ?? '0') ?? 0,
-      uptimeSeconds: int.tryParse(json['uptime'] ?? '0') ?? 0,
+      platform: json['platform'] ?? json['platform-text'] ?? 'Unknown',
+      boardName: json['board-name'] ?? json['board-name-text'] ?? 'Unknown',
+      version: json['version'] ?? json['version-text'] ?? 'Unknown',
+      cpuFrequency: _parseSizeToInt(json['cpu-frequency'] ?? json['cpu-frequency-text'] ?? '0'),
+      cpuLoad: int.tryParse(json['cpu-load']?.toString().replaceAll('%', '') ?? '0') ?? 0,
+      freeMemory: _parseSizeToInt(json['free-memory'] ?? json['free-memory-text'] ?? '0'),
+      totalMemory: _parseSizeToInt(json['total-memory'] ?? json['total-memory-text'] ?? '0'),
+      freeHddSpace: _parseSizeToInt(json['free-hdd-space'] ?? json['free-hdd-space-text'] ?? '0'),
+      totalHddSpace: _parseSizeToInt(json['total-hdd-space'] ?? json['total-hdd-space-text'] ?? '0'),
+      uptimeSeconds: _parseUptime(json['uptime'] ?? json['uptime-text'] ?? '0'),
     );
+  }
+
+  static int _parseSizeToInt(String value) {
+    if (value.isEmpty) return 0;
+
+    // Try parsing as integer first
+    final asInt = int.tryParse(value);
+    if (asInt != null) return asInt;
+
+    // Parse format like "1048576KiB" or "1GiB" or "512MiB"
+    final regex = RegExp(r'(\d+(?:\.\d+)?)\s*([KMGT]?i?B?)', caseSensitive: false);
+    final match = regex.firstMatch(value);
+
+    if (match != null) {
+      final number = double.tryParse(match.group(1)!) ?? 0;
+      final unit = (match.group(2) ?? '').toUpperCase();
+
+      switch (unit) {
+        case 'KI':
+        case 'KIB':
+          return (number * 1024).toInt();
+        case 'K':
+          return (number * 1000).toInt();
+        case 'MI':
+        case 'MIB':
+          return (number * 1024 * 1024).toInt();
+        case 'M':
+          return (number * 1000 * 1000).toInt();
+        case 'GI':
+        case 'GIB':
+          return (number * 1024 * 1024 * 1024).toInt();
+        case 'G':
+          return (number * 1000 * 1000 * 1000).toInt();
+        case 'TI':
+        case 'TIB':
+          return (number * 1024 * 1024 * 1024 * 1024).toInt();
+        case 'T':
+          return (number * 1000 * 1000 * 1000 * 1000).toInt();
+        default:
+          return number.toInt();
+      }
+    }
+
+    // Remove any non-numeric characters and try parsing
+    final cleaned = value.replaceAll(RegExp(r'[^\d.]'), '');
+    return (double.tryParse(cleaned) ?? 0).toInt();
+  }
+
+  static int _parseUptime(String uptime) {
+    if (uptime.isEmpty) return 0;
+
+    // Try parsing as integer first (in case it's already in seconds)
+    final asInt = int.tryParse(uptime);
+    if (asInt != null) return asInt;
+
+    // Parse format like "2d 3h 45m 30s" or "3h 45m" or "45m"
+    int seconds = 0;
+    final regex = RegExp(r'(\d+)([dhms])');
+    final matches = regex.allMatches(uptime);
+
+    for (final match in matches) {
+      final value = int.parse(match.group(1)!);
+      final unit = match.group(2);
+
+      switch (unit) {
+        case 'd':
+          seconds += value * 86400;
+          break;
+        case 'h':
+          seconds += value * 3600;
+          break;
+        case 'm':
+          seconds += value * 60;
+          break;
+        case 's':
+          seconds += value;
+          break;
+      }
+    }
+
+    return seconds;
   }
 
   double get memoryUsagePercent =>

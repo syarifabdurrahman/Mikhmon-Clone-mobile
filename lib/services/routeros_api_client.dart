@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 
 class RouterOSClient {
@@ -11,10 +10,12 @@ class RouterOSClient {
   final String password;
   bool _isConnected = false;
   Socket? _socket;
-  Completer<String>? _responseCompleter;
-  final StringBuffer _responseBuffer = StringBuffer();
+  Completer<List<Map<String, dynamic>>>? _responseCompleter;
+  final List<int> _readBuffer = [];
+  final List<Map<String, dynamic>> _currentResponse = [];
+  Map<String, dynamic>? _currentItem;
+  bool _awaitingDone = false;
 
-  // Enable debug logging
   static const bool _debug = true;
 
   void _log(String message) {
@@ -51,49 +52,21 @@ class RouterOSClient {
 
       _log('✓ Socket connected successfully');
 
-      // Set up socket listener
       _setupSocketListener();
 
-      // Flush any initial data
-      _responseBuffer.clear();
+      // RouterOS v6.43+ login - send in one sentence
+      _writeWord('/login');
+      _writeWord('=name=$username');
+      _writeWord('=password=$password');
+      _writeWord(''); // Empty word to terminate sentence
 
-      // Handle login with or without password
-      if (password.isEmpty) {
-        _log('Attempting login without password...');
-        // Login without password - just send username
-        _writeCommand('/login', {'name': username});
+      final response = await _readResponse();
+      _log('Login response received: ${response.length} items');
 
-        final loginResponse = await _readResponse();
-        _log('Login response: $loginResponse');
-        if (loginResponse.contains('!trap') || loginResponse.contains('!error')) {
-          throw Exception('Authentication failed: Invalid credentials');
-        }
-      } else {
-        _log('Attempting login with password (challenge-response)...');
-        // Login with password - use challenge-response
-        _writeCommand('/login');
-
-        final response = await _readResponse();
-        _log('Challenge response: $response');
-        if (response.contains('!trap')) {
-          throw Exception('Connection failed: Invalid response');
-        }
-
-        final challenge = _extractChallenge(response);
-        _log('Extracted challenge: $challenge');
-
-        final hashedPassword = _hashPassword(challenge, password);
-        _log('Hashed password: $hashedPassword');
-
-        _writeCommand('/login', {
-          'name': username,
-          'response': hashedPassword,
-        });
-
-        final loginResponse = await _readResponse();
-        _log('Final login response: $loginResponse');
-        if (loginResponse.contains('!trap') || loginResponse.contains('!error')) {
-          throw Exception('Authentication failed: Invalid credentials');
+      // Check for error
+      for (final item in response) {
+        if (item.containsKey('message')) {
+          throw Exception('Authentication failed: ${item['message']}');
         }
       }
 
@@ -110,201 +83,286 @@ class RouterOSClient {
   void _setupSocketListener() {
     _socket?.listen(
       (data) {
-        final response = String.fromCharCodes(data);
-        _log('Received raw data: ${response.length} bytes');
-        _log('Raw data (hex): ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}');
-        _responseBuffer.write(response);
-        _log('Buffer so far: ${_responseBuffer.toString()}');
-
-        // Check if response is complete (ends with !done or empty line after data)
-        final bufferStr = _responseBuffer.toString();
-        if (bufferStr.contains('!done') ||
-            (bufferStr.contains('!re') && bufferStr.endsWith('\n'))) {
-          _log('Response complete, completing future');
-          _responseCompleter?.complete(_responseBuffer.toString());
-        }
+        _readBuffer.addAll(data);
+        _log('Received ${data.length} bytes, buffer size: ${_readBuffer.length}');
+        _processBuffer();
       },
       onError: (error) {
         _log('Socket error: $error');
-        _responseCompleter?.completeError(error);
+        if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
+          _responseCompleter!.completeError(error);
+        }
+        _isConnected = false;
+        _awaitingDone = false;
       },
       onDone: () {
         _log('Socket closed by server');
-        if (!_responseCompleter!.isCompleted) {
-          _responseCompleter?.complete(_responseBuffer.toString());
+        if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
+          _responseCompleter!.complete(List.from(_currentResponse));
         }
         _isConnected = false;
+        _awaitingDone = false;
       },
     );
   }
 
-  void _writeCommand(String command, [Map<String, String>? params]) {
+  void _processBuffer() {
+    while (_readBuffer.isNotEmpty) {
+      final length = _readLength();
+      if (length == null) {
+        _log('Need more data to read length');
+        return;
+      }
+
+      // Check if we have the full word
+      if (_readBuffer.length < _encodedLength(length) + length) {
+        _log('Need more data: have ${_readBuffer.length}, need ${_encodedLength(length) + length}');
+        return;
+      }
+
+      // Remove the length bytes
+      final lengthBytes = _encodedLength(length);
+      _readBuffer.removeRange(0, lengthBytes);
+
+      // Extract the word
+      final wordBytes = _readBuffer.sublist(0, length);
+      final word = utf8.decode(wordBytes);
+      _readBuffer.removeRange(0, length);
+
+      _log('Read word: "$word" (${word.length} chars)');
+
+      // Empty word - end of sentence
+      if (word.isEmpty) {
+        _log('Received empty word (end of sentence)');
+        continue;
+      }
+
+      // Process the word
+      _processWord(word);
+    }
+  }
+
+  int? _readLength() {
+    if (_readBuffer.isEmpty) return null;
+
+    final firstByte = _readBuffer[0];
+
+    if (firstByte < 0x80) {
+      // 1 byte length
+      return firstByte;
+    } else if (firstByte < 0xC0) {
+      // 2 byte length
+      if (_readBuffer.length < 2) return null;
+      return ((_readBuffer[0] & 0x3F) << 8) | _readBuffer[1];
+    } else if (firstByte < 0xE0) {
+      // 3 byte length
+      if (_readBuffer.length < 3) return null;
+      return ((_readBuffer[0] & 0x1F) << 16) | (_readBuffer[1] << 8) | _readBuffer[2];
+    } else if (firstByte < 0xF0) {
+      // 4 byte length
+      if (_readBuffer.length < 4) return null;
+      return ((_readBuffer[0] & 0x0F) << 24) | (_readBuffer[1] << 16) | (_readBuffer[2] << 8) | _readBuffer[3];
+    } else if (firstByte == 0xF0) {
+      // 5 byte length
+      if (_readBuffer.length < 5) return null;
+      return (_readBuffer[1] << 24) | (_readBuffer[2] << 16) | (_readBuffer[3] << 8) | _readBuffer[4];
+    }
+
+    // Control byte - not supported
+    _log('Unknown control byte: $firstByte');
+    return null;
+  }
+
+  int _encodedLength(int length) {
+    if (length < 0x80) return 1;
+    if (length < 0x4000) return 2;
+    if (length < 0x200000) return 3;
+    if (length < 0x10000000) return 4;
+    return 5;
+  }
+
+  void _encodeLength(int length, List<int> buffer) {
+    if (length < 0x80) {
+      buffer.add(length);
+    } else if (length < 0x4000) {
+      buffer.add(0x80 | (length >> 8));
+      buffer.add(length & 0xFF);
+    } else if (length < 0x200000) {
+      buffer.add(0xC0 | (length >> 16));
+      buffer.add((length >> 8) & 0xFF);
+      buffer.add(length & 0xFF);
+    } else if (length < 0x10000000) {
+      buffer.add(0xE0 | (length >> 24));
+      buffer.add((length >> 16) & 0xFF);
+      buffer.add((length >> 8) & 0xFF);
+      buffer.add(length & 0xFF);
+    } else {
+      buffer.add(0xF0);
+      buffer.add((length >> 24) & 0xFF);
+      buffer.add((length >> 16) & 0xFF);
+      buffer.add((length >> 8) & 0xFF);
+      buffer.add(length & 0xFF);
+    }
+  }
+
+  void _processWord(String word) {
+    if (word.startsWith('!re')) {
+      // New record starting
+      _currentItem = {};
+      _log('Starting new record');
+    } else if (word.startsWith('!done')) {
+      // End of response
+      _log('Received !done');
+      if (_currentItem != null) {
+        _currentResponse.add(_currentItem!);
+        _currentItem = null;
+      }
+      if (_awaitingDone && _responseCompleter != null && !_responseCompleter!.isCompleted) {
+        _log('Completing response with ${_currentResponse.length} items');
+        _responseCompleter!.complete(List.from(_currentResponse));
+        _currentResponse.clear();
+        _awaitingDone = false;
+        _responseCompleter = null;
+      }
+    } else if (word.startsWith('!trap')) {
+      // Error response
+      _log('Received !trap (error)');
+      if (_currentItem != null) {
+        _currentResponse.add(_currentItem!);
+        _currentItem = null;
+      }
+      if (_awaitingDone && _responseCompleter != null && !_responseCompleter!.isCompleted) {
+        _responseCompleter!.complete(List.from(_currentResponse));
+        _currentResponse.clear();
+        _awaitingDone = false;
+        _responseCompleter = null;
+      }
+    } else if (word.startsWith('!fatal')) {
+      // Fatal error
+      _log('Received !fatal (fatal error)');
+      if (_currentItem != null) {
+        _currentResponse.add(_currentItem!);
+        _currentItem = null;
+      }
+      if (_awaitingDone && _responseCompleter != null && !_responseCompleter!.isCompleted) {
+        _responseCompleter!.complete(List.from(_currentResponse));
+        _currentResponse.clear();
+        _awaitingDone = false;
+        _responseCompleter = null;
+      }
+    } else if (word.startsWith('=')) {
+      // Attribute
+      if (_currentItem != null) {
+        final equalIndex = word.indexOf('=', 1);
+        if (equalIndex > 1) {
+          final key = word.substring(1, equalIndex);
+          final value = word.substring(equalIndex + 1);
+          _currentItem![key] = value;
+          _log('  $key = $value');
+        } else {
+          final key = word.substring(1);
+          _currentItem![key] = '';
+          _log('  $key = (empty)');
+        }
+      }
+    } else if (word.startsWith('.tag=')) {
+      // Tag attribute (for queries)
+      if (_currentItem != null) {
+        final value = word.substring(5);
+        _currentItem!['.tag'] = value;
+      }
+    }
+  }
+
+  void _writeWord(String word) {
     if (_socket == null) {
-      _log('Socket is null, cannot write command');
       throw Exception('Not connected to RouterOS');
     }
 
-    final cmdBuffer = StringBuffer();
-    cmdBuffer.write(command);
-    if (params != null) {
-      params.forEach((key, value) {
-        cmdBuffer.write('=$key=$value');
-      });
-    }
-    cmdBuffer.write('\n');
+    final bytes = utf8.encode(word);
+    final length = bytes.length;
 
-    final cmdString = cmdBuffer.toString();
-    _log('Sending command: $cmdString');
-    _socket!.write(cmdString);
+    final data = <int>[];
+    _encodeLength(length, data);
+    data.addAll(bytes);
+
+    _socket!.add(data);
+    _log('Wrote word: "$word" ($length bytes)');
   }
 
-  Future<String> _readResponse() async {
-    if (_socket == null) return '';
-
-    _responseBuffer.clear();
-    _responseCompleter = Completer<String>();
+  Future<List<Map<String, dynamic>>> _readResponse() async {
+    _currentResponse.clear();
+    _currentItem = null;
+    _awaitingDone = true;
+    _responseCompleter = Completer<List<Map<String, dynamic>>>();
 
     return _responseCompleter!.future.timeout(
-      const Duration(seconds: 30),
+      const Duration(seconds: 10),
       onTimeout: () {
-        if (!_responseCompleter!.isCompleted) {
-          _responseCompleter!.complete(_responseBuffer.toString());
+        _log('Response timeout after 10 seconds');
+        _awaitingDone = false;
+        if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
+          _responseCompleter!.complete(List.from(_currentResponse));
         }
-        return _responseBuffer.toString();
+        return List.from(_currentResponse);
       },
     );
-  }
-
-  String _extractChallenge(String response) {
-    final regExp = RegExp(r'=ret=([a-f0-9]+)');
-    final match = regExp.firstMatch(response);
-    return match?.group(1) ?? '';
-  }
-
-  String _hashPassword(String challenge, String password) {
-    if (challenge.isEmpty) return '00';
-
-    // RouterOS uses a specific challenge-response mechanism
-    // 1. Create a 256-byte buffer with password at the beginning
-    // 2. MD5 hash the buffer
-    // 3. XOR the hash with the challenge
-    // 4. Return as hex string
-
-    final passwordBytes = utf8.encode(password);
-    final challengeBytes = _hexToBytes(challenge);
-
-    // Create 256-byte buffer and put password at beginning
-    final buffer = List<int>.filled(256, 0);
-    for (int i = 0; i < passwordBytes.length && i < 256; i++) {
-      buffer[i] = passwordBytes[i];
-    }
-
-    // MD5 hash the buffer
-    final digest = md5.convert(buffer);
-    final hashBytes = digest.bytes.toList();
-
-    // XOR with challenge
-    for (int i = 0; i < challengeBytes.length && i < hashBytes.length; i++) {
-      hashBytes[i] ^= challengeBytes[i];
-    }
-
-    return _bytesToHex(hashBytes);
-  }
-
-  List<int> _hexToBytes(String hex) {
-    final result = <int>[];
-    for (int i = 0; i < hex.length; i += 2) {
-      result.add(int.parse(hex.substring(i, i + 2), radix: 16));
-    }
-    return result;
-  }
-
-  String _bytesToHex(List<int> bytes) {
-    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
-  }
-
-  Future<Map<String, dynamic>> getHotspotUsers() async {
-    try {
-      _writeCommand('/ip/hotspot/user/print');
-      final response = await _readResponse();
-      return _parseResponse(response);
-    } catch (e) {
-      throw Exception('Failed to fetch hotspot users: $e');
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> getHotspotUsersList() async {
-    try {
-      _writeCommand('/ip/hotspot/user/print');
-      final response = await _readResponse();
-      return _parseUserListResponse(response);
-    } catch (e) {
-      throw Exception('Failed to fetch hotspot users list: $e');
-    }
-  }
-
-  List<Map<String, dynamic>> _parseUserListResponse(String response) {
-    final lines = response.split('\n');
-    final users = <Map<String, dynamic>>[];
-    Map<String, dynamic>? currentUser;
-
-    for (final line in lines) {
-      if (line.startsWith('!re')) {
-        // Start of a new record
-        if (currentUser != null) {
-          users.add(currentUser);
-        }
-        currentUser = {};
-      } else if (line.startsWith('=') && currentUser != null) {
-        final parts = line.substring(1).split('=');
-        if (parts.length >= 2) {
-          currentUser[parts[0]] = parts.sublist(1).join('=');
-        }
-      }
-    }
-
-    if (currentUser != null) {
-      users.add(currentUser);
-    }
-
-    return users;
   }
 
   Future<Map<String, dynamic>> getSystemResources() async {
     try {
       _ensureConnected();
-      _writeCommand('/system/resource/print');
+      _writeWord('/system/resource/print');
+      _writeWord(''); // Empty word to terminate sentence
       final response = await _readResponse();
-      return _parseResponse(response);
+      _log('System resources response: ${response.length} items');
+      if (response.isNotEmpty) {
+        return response.first;
+      }
+      return {};
     } catch (e) {
+      _log('Failed to fetch system resources: $e');
       throw Exception('Failed to fetch system resources: $e');
     }
   }
 
-  Future<Map<String, dynamic>> getInterfaceStats() async {
+  Future<List<Map<String, dynamic>>> getHotspotUsersList() async {
     try {
-      _writeCommand('/interface/print');
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/print');
+      _writeWord(''); // Empty word to terminate sentence
       final response = await _readResponse();
-      return _parseResponse(response);
+      _log('Got ${response.length} hotspot users');
+      return response;
     } catch (e) {
-      throw Exception('Failed to fetch interface stats: $e');
+      throw Exception('Failed to fetch hotspot users list: $e');
     }
   }
 
-  Map<String, dynamic> _parseResponse(String response) {
-    final lines = response.split('\n');
-    final data = <String, dynamic>{};
-
-    for (final line in lines) {
-      if (line.startsWith('=')) {
-        final parts = line.substring(1).split('=');
-        if (parts.length >= 2) {
-          data[parts[0]] = parts.sublist(1).join('=');
-        }
-      }
+  Future<List<Map<String, dynamic>>> getHotspotActiveUsers() async {
+    try {
+      _ensureConnected();
+      _writeWord('/ip/hotspot/active/print');
+      _writeWord(''); // Empty word to terminate sentence
+      final response = await _readResponse();
+      _log('Got ${response.length} active users');
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch active hotspot users: $e');
     }
+  }
 
-    return data;
+  Future<List<Map<String, dynamic>>> getUserProfiles() async {
+    try {
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/profile/print');
+      _writeWord(''); // Empty word to terminate sentence
+      final response = await _readResponse();
+      _log('Got ${response.length} user profiles');
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch user profiles: $e');
+    }
   }
 
   Future<void> addHotspotUser({
@@ -314,19 +372,19 @@ class RouterOSClient {
     String? comment,
   }) async {
     try {
-      final params = {
-        'name': username,
-        'password': password,
-        'profile': profile,
-      };
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/add');
+      _writeWord('=name=$username');
+      _writeWord('=password=$password');
+      _writeWord('=profile=$profile');
       if (comment != null) {
-        params['comment'] = comment;
+        _writeWord('=comment=$comment');
       }
-      _writeCommand('/ip/hotspot/user/add', params);
+      _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to add user: $response');
+      if (_hasError(response)) {
+        throw Exception('Failed to add user: ${response.first}');
       }
     } catch (e) {
       throw Exception('Failed to add hotspot user: $e');
@@ -335,49 +393,56 @@ class RouterOSClient {
 
   Future<void> removeHotspotUser(String id) async {
     try {
-      _writeCommand('/ip/hotspot/user/remove', {'.id': id});
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/remove');
+      _writeWord('=.id=$id');
+      _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to remove user: $response');
+      if (_hasError(response)) {
+        throw Exception('Failed to remove user: ${response.first}');
       }
     } catch (e) {
       throw Exception('Failed to remove hotspot user: $e');
     }
   }
 
-  Future<List<Map<String, dynamic>>> getHotspotActiveUsers() async {
-    try {
-      _writeCommand('/ip/hotspot/active/print');
-      final response = await _readResponse();
-      return _parseUserListResponse(response);
-    } catch (e) {
-      throw Exception('Failed to fetch active hotspot users: $e');
-    }
-  }
-
   Future<void> logoutHotspotUser(String id) async {
     try {
-      _writeCommand('/ip/hotspot/active/remove', {'.id': id});
+      _ensureConnected();
+      _writeWord('/ip/hotspot/active/remove');
+      _writeWord('=.id=$id');
+      _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to logout user: $response');
+      if (_hasError(response)) {
+        throw Exception('Failed to logout user: ${response.first}');
       }
     } catch (e) {
       throw Exception('Failed to logout hotspot user: $e');
     }
   }
 
-  Future<void> disconnect() async {
-    _responseCompleter?.complete('');
-    _socket?.close();
-    _socket = null;
-    _isConnected = false;
-    _responseBuffer.clear();
+  Future<void> setHotspotUserStatus({
+    required String id,
+    required bool disabled,
+  }) async {
+    try {
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/set');
+      _writeWord('=.id=$id');
+      _writeWord('=disabled=${disabled ? "yes" : "no"}');
+      _writeWord(''); // Empty word to terminate sentence
+
+      final response = await _readResponse();
+      if (_hasError(response)) {
+        throw Exception('Failed to set user status: ${response.first}');
+      }
+    } catch (e) {
+      throw Exception('Failed to set hotspot user status: $e');
+    }
   }
 
-  // Update hotspot user - RouterOS doesn't have direct update, so we remove and re-add
   Future<void> updateHotspotUser({
     required String id,
     required String username,
@@ -387,62 +452,30 @@ class RouterOSClient {
     bool disabled = false,
   }) async {
     try {
+      _ensureConnected();
       // First remove the existing user
       await removeHotspotUser(id);
 
       // Then add the updated user
-      final params = {
-        'name': username,
-        'password': password,
-        'profile': profile,
-        'disabled': disabled ? 'yes' : 'no',
-      };
+      _writeWord('/ip/hotspot/user/add');
+      _writeWord('=name=$username');
+      _writeWord('=password=$password');
+      _writeWord('=profile=$profile');
+      _writeWord('=disabled=${disabled ? "yes" : "no"}');
       if (comment != null) {
-        params['comment'] = comment;
+        _writeWord('=comment=$comment');
       }
-      _writeCommand('/ip/hotspot/user/add', params);
+      _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to update user: $response');
+      if (_hasError(response)) {
+        throw Exception('Failed to update user: ${response.first}');
       }
     } catch (e) {
       throw Exception('Failed to update hotspot user: $e');
     }
   }
 
-  // Set hotspot user disabled status (enable/disable)
-  Future<void> setHotspotUserStatus({
-    required String id,
-    required bool disabled,
-  }) async {
-    try {
-      _writeCommand('/ip/hotspot/user/set', {
-        '.id': id,
-        'disabled': disabled ? 'yes' : 'no',
-      });
-
-      final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to set user status: $response');
-      }
-    } catch (e) {
-      throw Exception('Failed to set hotspot user status: $e');
-    }
-  }
-
-  // Get user profiles
-  Future<List<Map<String, dynamic>>> getUserProfiles() async {
-    try {
-      _writeCommand('/ip/hotspot/user/profile/print');
-      final response = await _readResponse();
-      return _parseUserListResponse(response);
-    } catch (e) {
-      throw Exception('Failed to fetch user profiles: $e');
-    }
-  }
-
-  // Add user profile
   Future<void> addUserProfile({
     required String name,
     String? rateLimit,
@@ -450,63 +483,92 @@ class RouterOSClient {
     String? dataLimit,
   }) async {
     try {
-      final params = <String, String>{'name': name};
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/profile/add');
+      _writeWord('=name=$name');
       if (rateLimit != null) {
-        params['rate-limit'] = rateLimit;
+        _writeWord('=rate-limit=$rateLimit');
       }
       if (uptimeLimit != null) {
-        params['on-logout'] = uptimeLimit;
+        _writeWord('=on-logout=$uptimeLimit');
       }
       if (dataLimit != null) {
-        params['on-login'] = dataLimit;
+        _writeWord('=on-login=$dataLimit');
       }
-      _writeCommand('/ip/hotspot/user/profile/add', params);
+      _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to add user profile: $response');
+      if (_hasError(response)) {
+        throw Exception('Failed to add user profile: ${response.first}');
       }
     } catch (e) {
       throw Exception('Failed to add user profile: $e');
     }
   }
 
-  // Update user profile
   Future<void> updateUserProfile({
     required String id,
     String? name,
     String? rateLimit,
   }) async {
     try {
-      final params = <String, String>{'.id': id};
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/profile/set');
+      _writeWord('=.id=$id');
       if (name != null) {
-        params['name'] = name;
+        _writeWord('=name=$name');
       }
       if (rateLimit != null) {
-        params['rate-limit'] = rateLimit;
+        _writeWord('=rate-limit=$rateLimit');
       }
-      _writeCommand('/ip/hotspot/user/profile/set', params);
+      _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to update user profile: $response');
+      if (_hasError(response)) {
+        throw Exception('Failed to update user profile: ${response.first}');
       }
     } catch (e) {
       throw Exception('Failed to update user profile: $e');
     }
   }
 
-  // Remove user profile
   Future<void> removeUserProfile(String id) async {
     try {
-      _writeCommand('/ip/hotspot/user/profile/remove', {'.id': id});
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/profile/remove');
+      _writeWord('=.id=$id');
+      _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
-      if (response.contains('!trap') || response.contains('!error')) {
-        throw Exception('Failed to remove user profile: $response');
+      if (_hasError(response)) {
+        throw Exception('Failed to remove user profile: ${response.first}');
       }
     } catch (e) {
       throw Exception('Failed to remove user profile: $e');
     }
+  }
+
+  bool _hasError(List<Map<String, dynamic>> response) {
+    for (final item in response) {
+      if (item.containsKey('message') || item.containsKey('detail')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> disconnect() async {
+    _awaitingDone = false;
+    if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
+      _responseCompleter!.complete([]);
+    }
+    _responseCompleter = null;
+    _socket?.close();
+    _socket = null;
+    _isConnected = false;
+    _readBuffer.clear();
+    _currentResponse.clear();
+    _currentItem = null;
+    _log('Disconnected');
   }
 }

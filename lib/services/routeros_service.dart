@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
-import 'routeros_http_client.dart';
+import 'routeros_api_client.dart';
 
 class RouterOSService {
   static final RouterOSService _instance = RouterOSService._internal();
@@ -8,7 +8,7 @@ class RouterOSService {
   RouterOSService._internal();
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  RouterOSHttpClient? _client;
+  RouterOSClient? _client;
   bool _demoMode = false;
 
   // Store connection parameters for reconnect
@@ -17,7 +17,7 @@ class RouterOSService {
   String? _lastUsername;
   String? _lastPassword;
 
-  RouterOSHttpClient? get client => _client;
+  RouterOSClient? get client => _client;
   bool get isConnected => _client?.isConnected ?? false;
   bool get isDemoMode => _demoMode;
 
@@ -26,7 +26,7 @@ class RouterOSService {
   }
 
   // Direct connection with provided credentials (for initial login)
-  Future<RouterOSHttpClient> connectWithCredentials({
+  Future<RouterOSClient> connectWithCredentials({
     required String host,
     required String port,
     required String username,
@@ -38,12 +38,12 @@ class RouterOSService {
     _lastUsername = username;
     _lastPassword = password;
 
-    // For HTTP, always use port 80 unless specified otherwise
-    final httpPort = port.isEmpty || port == '8728' ? '80' : port;
+    // For RouterOS API, default to port 8728
+    final apiPort = port.isEmpty ? '8728' : port;
 
-    _client = RouterOSHttpClient(
+    _client = RouterOSClient(
       host: host,
-      port: httpPort,
+      port: apiPort,
       username: username,
       password: password,
     );
@@ -53,7 +53,7 @@ class RouterOSService {
   }
 
   // Reconnect using last credentials or storage
-  Future<RouterOSHttpClient> connect() async {
+  Future<RouterOSClient> connect() async {
     // If we have a client (even if disconnected), try to use it
     if (_client != null) {
       debugPrint('[RouterOSService] Reusing existing client');
@@ -71,7 +71,7 @@ class RouterOSService {
     // If not available, try to read from storage
     if (host == null || username == null || password == null) {
       host = await _storage.read(key: 'router_ip');
-      port = await _storage.read(key: 'port') ?? '80';
+      port = await _storage.read(key: 'port') ?? '8728';
       username = await _storage.read(key: 'username');
       password = await _storage.read(key: 'password');
       debugPrint('[RouterOSService] Storage credentials: host=$host, user=$username, password=${password != null ? "***" : "null"}');
@@ -84,7 +84,7 @@ class RouterOSService {
     debugPrint('[RouterOSService] Creating new connection...');
     return await connectWithCredentials(
       host: host,
-      port: port ?? '80',
+      port: port ?? '8728',
       username: username,
       password: password,
     );

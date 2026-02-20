@@ -13,6 +13,7 @@ class ResourceCard extends StatelessWidget {
   final String? subtitle;
 
   const ResourceCard({
+    super.key,
     required this.icon,
     required this.title,
     required this.value,
@@ -201,8 +202,9 @@ class _MemoryCardState extends State<MemoryCard> {
     });
   }
 
-  double get memoryUsagePercent =>
-      _totalMemory > 0 ? ((_totalMemory - _freeMemory) / _totalMemory * 100) : 0;
+  double get memoryUsagePercent => _totalMemory > 0
+      ? ((_totalMemory - _freeMemory) / _totalMemory * 100)
+      : 0;
 
   @override
   Widget build(BuildContext context) {
@@ -261,8 +263,9 @@ class _DiskCardState extends State<DiskCard> {
     });
   }
 
-  double get hddUsagePercent =>
-      _totalHddSpace > 0 ? ((_totalHddSpace - _freeHddSpace) / _totalHddSpace * 100) : 0;
+  double get hddUsagePercent => _totalHddSpace > 0
+      ? ((_totalHddSpace - _freeHddSpace) / _totalHddSpace * 100)
+      : 0;
 
   @override
   Widget build(BuildContext context) {

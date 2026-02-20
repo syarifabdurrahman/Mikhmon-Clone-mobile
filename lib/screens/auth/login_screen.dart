@@ -196,8 +196,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               keyboardType: TextInputType.number,
                               textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
-                                labelText: 'Port (Optional - HTTP:80)',
-                                hintText: '80',
+                                labelText: 'Port (Optional - RouterOS API:8728)',
+                                hintText: '8728',
                                 prefixIcon: const Icon(Icons.wifi_rounded, size: 20),
                               ),
                               validator: Validators.validatePort,
