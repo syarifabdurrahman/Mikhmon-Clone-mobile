@@ -17,6 +17,9 @@ class CacheService {
   static const String _hotspotUsersKey = 'hotspot_users';
   static const String _activeUsersKey = 'active_users';
   static const String _userProfilesKey = 'user_profiles';
+  static const String _salesTransactionsKey = 'sales_transactions';
+  static const String _incomeSummaryKey = 'income_summary';
+  static const String _savedConnectionsKey = 'saved_connections';
   static const String _lastUpdateKey = 'last_update';
 
   /// Initialize Hive cache
@@ -143,6 +146,139 @@ class CacheService {
       debugPrint('[CacheService] User profiles cached (${data.length} profiles)');
     } catch (e) {
       debugPrint('[CacheService] Error saving user profiles: $e');
+    }
+  }
+
+  /// Get sales transactions from cache
+  List<Map<String, dynamic>>? getSalesTransactions() {
+    try {
+      final data = _cacheBox.get(_salesTransactionsKey);
+      if (data != null && data is List) {
+        debugPrint('[CacheService] Sales transactions cache hit (${data.length} transactions)');
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      debugPrint('[CacheService] Sales transactions cache miss');
+      return null;
+    } catch (e) {
+      debugPrint('[CacheService] Error reading sales transactions: $e');
+      return null;
+    }
+  }
+
+  /// Save a single sales transaction to cache
+  Future<void> saveSalesTransaction(Map<String, dynamic> transaction) async {
+    try {
+      final transactions = getSalesTransactions() ?? [];
+      transactions.add(transaction);
+      await _cacheBox.put(_salesTransactionsKey, transactions);
+      debugPrint('[CacheService] Sales transaction cached');
+    } catch (e) {
+      debugPrint('[CacheService] Error saving sales transaction: $e');
+    }
+  }
+
+  /// Save multiple sales transactions to cache
+  Future<void> saveSalesTransactions(List<Map<String, dynamic>> transactions) async {
+    try {
+      await _cacheBox.put(_salesTransactionsKey, transactions);
+      debugPrint('[CacheService] Sales transactions cached (${transactions.length} transactions)');
+    } catch (e) {
+      debugPrint('[CacheService] Error saving sales transactions: $e');
+    }
+  }
+
+  /// Get income summary from cache
+  Map<String, dynamic>? getIncomeSummary() {
+    try {
+      final data = _cacheBox.get(_incomeSummaryKey);
+      if (data != null && data is Map) {
+        debugPrint('[CacheService] Income summary cache hit');
+        return Map<String, dynamic>.from(data);
+      }
+      debugPrint('[CacheService] Income summary cache miss');
+      return null;
+    } catch (e) {
+      debugPrint('[CacheService] Error reading income summary: $e');
+      return null;
+    }
+  }
+
+  /// Save income summary to cache
+  Future<void> saveIncomeSummary(Map<String, dynamic> summary) async {
+    try {
+      await _cacheBox.put(_incomeSummaryKey, summary);
+      debugPrint('[CacheService] Income summary cached');
+    } catch (e) {
+      debugPrint('[CacheService] Error saving income summary: $e');
+    }
+  }
+
+  /// Get saved router connections from cache
+  List<Map<String, dynamic>>? getSavedConnections() {
+    try {
+      final data = _cacheBox.get(_savedConnectionsKey);
+      if (data != null && data is List) {
+        debugPrint('[CacheService] Saved connections cache hit (${data.length} connections)');
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      debugPrint('[CacheService] Saved connections cache miss');
+      return null;
+    } catch (e) {
+      debugPrint('[CacheService] Error reading saved connections: $e');
+      return null;
+    }
+  }
+
+  /// Save router connections to cache
+  Future<void> saveSavedConnections(List<Map<String, dynamic>> connections) async {
+    try {
+      await _cacheBox.put(_savedConnectionsKey, connections);
+      debugPrint('[CacheService] Saved connections cached (${connections.length} connections)');
+    } catch (e) {
+      debugPrint('[CacheService] Error saving saved connections: $e');
+    }
+  }
+
+  /// Add a single router connection to cache
+  Future<void> addSavedConnection(Map<String, dynamic> connection) async {
+    try {
+      final connections = getSavedConnections() ?? [];
+      connections.add(connection);
+      await _cacheBox.put(_savedConnectionsKey, connections);
+      debugPrint('[CacheService] Saved connection added');
+    } catch (e) {
+      debugPrint('[CacheService] Error adding saved connection: $e');
+    }
+  }
+
+  /// Update a router connection in cache
+  Future<void> updateSavedConnection(String id, Map<String, dynamic> updatedConnection) async {
+    try {
+      final connections = getSavedConnections();
+      if (connections == null) return;
+
+      final index = connections.indexWhere((c) => c['id'] == id);
+      if (index != -1) {
+        connections[index] = updatedConnection;
+        await _cacheBox.put(_savedConnectionsKey, connections);
+        debugPrint('[CacheService] Saved connection updated');
+      }
+    } catch (e) {
+      debugPrint('[CacheService] Error updating saved connection: $e');
+    }
+  }
+
+  /// Delete a router connection from cache
+  Future<void> deleteSavedConnection(String id) async {
+    try {
+      final connections = getSavedConnections();
+      if (connections == null) return;
+
+      connections.removeWhere((c) => c['id'] == id);
+      await _cacheBox.put(_savedConnectionsKey, connections);
+      debugPrint('[CacheService] Saved connection deleted');
+    } catch (e) {
+      debugPrint('[CacheService] Error deleting saved connection: $e');
     }
   }
 

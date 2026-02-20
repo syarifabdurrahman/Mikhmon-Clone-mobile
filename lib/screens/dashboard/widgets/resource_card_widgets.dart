@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/models.dart';
+import '../../../providers/app_providers.dart';
 
 // Optimized resource card widget with RepaintBoundary
 class ResourceCard extends StatelessWidget {
@@ -380,6 +382,205 @@ class _DemoDiskCardState extends State<_DemoDiskCard> {
       value: '${(usedHdd / 1024 / 1024).toStringAsFixed(1)} MB',
       usagePercent: hddUsagePercent,
       subtitle: '${(_totalHddSpace / 1024 / 1024).toStringAsFixed(0)} MB Total',
+    );
+  }
+}
+
+// Daily Income card - shows today's revenue
+class DailyIncomeCard extends ConsumerWidget {
+  const DailyIncomeCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      // In demo mode, use the income provider which has demo data
+      return ref.watch(incomeProvider).when(
+        data: (incomeState) {
+          return _IncomeCard(
+            icon: Icons.attach_money_rounded,
+            title: 'Today\'s Income',
+            value: '\$${incomeState.summary.todayIncome.toStringAsFixed(2)}',
+            subtitle: '${incomeState.summary.transactionsToday} transaction${incomeState.summary.transactionsToday != 1 ? 's' : ''}',
+            color: Colors.green,
+          );
+        },
+        loading: () => const _IncomeCard(
+          icon: Icons.attach_money_rounded,
+          title: 'Today\'s Income',
+          value: '\$0.00',
+          subtitle: 'Loading...',
+          color: Colors.green,
+        ),
+        error: (_, __) => const _IncomeCard(
+          icon: Icons.attach_money_rounded,
+          title: 'Today\'s Income',
+          value: '\$0.00',
+          subtitle: 'Error loading',
+          color: Colors.green,
+        ),
+      );
+    }
+
+    return ref.watch(incomeProvider).when(
+      data: (incomeState) {
+        return _IncomeCard(
+          icon: Icons.attach_money_rounded,
+          title: 'Today\'s Income',
+          value: '\$${incomeState.summary.todayIncome.toStringAsFixed(2)}',
+          subtitle: '${incomeState.summary.transactionsToday} transaction${incomeState.summary.transactionsToday != 1 ? 's' : ''}',
+          color: Colors.green,
+        );
+      },
+      loading: () => const _IncomeCard(
+        icon: Icons.attach_money_rounded,
+        title: 'Today\'s Income',
+        value: '\$0.00',
+        subtitle: 'Loading...',
+        color: Colors.green,
+      ),
+      error: (_, __) => const _IncomeCard(
+        icon: Icons.attach_money_rounded,
+        title: 'Today\'s Income',
+        value: '\$0.00',
+        subtitle: 'Error loading',
+        color: Colors.green,
+      ),
+    );
+  }
+}
+
+// Monthly Income card - shows this month's revenue
+class MonthlyIncomeCard extends ConsumerWidget {
+  const MonthlyIncomeCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      // In demo mode, use the income provider which has demo data
+      return ref.watch(incomeProvider).when(
+        data: (incomeState) {
+          return _IncomeCard(
+            icon: Icons.account_balance_wallet_rounded,
+            title: 'This Month',
+            value: '\$${incomeState.summary.thisMonthIncome.toStringAsFixed(2)}',
+            subtitle: '${incomeState.summary.transactionsThisMonth} transaction${incomeState.summary.transactionsThisMonth != 1 ? 's' : ''}',
+            color: Colors.blue,
+          );
+        },
+        loading: () => const _IncomeCard(
+          icon: Icons.account_balance_wallet_rounded,
+          title: 'This Month',
+          value: '\$0.00',
+          subtitle: 'Loading...',
+          color: Colors.blue,
+        ),
+        error: (_, __) => const _IncomeCard(
+          icon: Icons.account_balance_wallet_rounded,
+          title: 'This Month',
+          value: '\$0.00',
+          subtitle: 'Error loading',
+          color: Colors.blue,
+        ),
+      );
+    }
+
+    return ref.watch(incomeProvider).when(
+      data: (incomeState) {
+        return _IncomeCard(
+          icon: Icons.account_balance_wallet_rounded,
+          title: 'This Month',
+          value: '\$${incomeState.summary.thisMonthIncome.toStringAsFixed(2)}',
+          subtitle: '${incomeState.summary.transactionsThisMonth} transaction${incomeState.summary.transactionsThisMonth != 1 ? 's' : ''}',
+          color: Colors.blue,
+        );
+      },
+      loading: () => _IncomeCard(
+        icon: Icons.account_balance_wallet_rounded,
+        title: 'This Month',
+        value: '\$0.00',
+        subtitle: 'Loading...',
+        color: Colors.blue,
+      ),
+      error: (_, __) => _IncomeCard(
+        icon: Icons.account_balance_wallet_rounded,
+        title: 'This Month',
+        value: '\$0.00',
+        subtitle: 'Error loading',
+        color: Colors.blue,
+      ),
+    );
+  }
+}
+
+// Custom Income Card widget without progress bar
+class _IncomeCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final String? subtitle;
+  final Color color;
+
+  const _IncomeCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    this.subtitle,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: AppTheme.surfaceColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                color: AppTheme.onSurfaceColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
+            ),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                style: TextStyle(
+                  color: color.withValues(alpha: 0.8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

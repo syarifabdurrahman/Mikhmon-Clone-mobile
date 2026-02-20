@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/app_providers.dart';
+import '../../services/models.dart';
 
-class WelcomeScreen extends StatefulWidget {
+class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
+  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen>
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -89,7 +92,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                       // Description
                       _buildDescription(),
-                      SizedBox(height: isSmallScreen ? 40 : 64),
+                      const SizedBox(height: 32),
+
+                      // Saved Connections Section
+                      _buildSavedConnectionsSection(),
+                      SizedBox(height: isSmallScreen ? 32 : 48),
 
                       // Buttons Section
                       _buildButtonsSection(),
@@ -233,5 +240,204 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   void _handleLogin() {
     context.go('/login');
+  }
+
+  Widget _buildSavedConnectionsSection() {
+    final connectionsAsync = ref.watch(savedConnectionsProvider);
+
+    return connectionsAsync.when(
+      data: (connections) {
+        if (connections.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.history_rounded,
+                  size: 18,
+                  color: AppTheme.onBackgroundColor.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Quick Login',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...connections.map((conn) => _buildConnectionCard(conn)),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildConnectionCard(RouterConnection connection) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => _showQuickLoginDialog(connection),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.router_rounded,
+                  size: 18,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      connection.name,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.onBackgroundColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      connection.address,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.onBackgroundColor.withValues(alpha: 0.6),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                connection.username,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.onBackgroundColor.withValues(alpha: 0.5),
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showQuickLoginDialog(RouterConnection connection) {
+    final passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: Text(
+          'Connect to ${connection.name}',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppTheme.onBackgroundColor,
+              ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Host: ${connection.host}:${connection.port}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                  ),
+            ),
+            Text(
+              'Username: ${connection.username}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                  ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                hintText: 'Enter router password',
+                prefixIcon: const Icon(Icons.lock_rounded, size: 20),
+              ),
+              autofocus: true,
+              onSubmitted: (value) {
+                Navigator.pop(dialogContext);
+                _quickLogin(connection, value);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.onBackgroundColor.withValues(alpha: 0.6)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _quickLogin(connection, passwordController.text);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: AppTheme.onPrimaryColor,
+            ),
+            child: const Text('Connect'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _quickLogin(RouterConnection connection, String password) async {
+    try {
+      // Set demo mode to false since we're using real connection
+      await ref.read(authStateProvider.notifier).setDemoMode(false);
+
+      await ref.read(authStateProvider.notifier).login(
+            host: connection.host,
+            port: connection.port,
+            username: connection.username,
+            password: password,
+            rememberMe: false,
+          );
+
+      if (mounted) {
+        context.go('/dashboard');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
   }
 }

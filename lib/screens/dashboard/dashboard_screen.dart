@@ -106,7 +106,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _updateResourcesNotifier();
         }
         // Clear the pre-fetched data so future refreshes fetch new data
-        ref.read(authStateProvider.notifier).clearPrefetchedResources();
+        // Delay to avoid modifying provider during widget lifecycle
+        Future.microtask(() =>
+            ref.read(authStateProvider.notifier).clearPrefetchedResources());
         // Background refresh to get latest data
         _fetchAndCacheResources();
         return;
@@ -253,9 +255,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.settings_rounded),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings feature coming soon')),
-              );
+              context.push('/settings');
             },
           ),
         ],
@@ -274,43 +274,55 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                size: 64,
-                color: AppTheme.errorColor,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Connection Error',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.onBackgroundColor,
-                      fontWeight: FontWeight.bold,
+      return SafeArea(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom,
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      size: 64,
+                      color: AppTheme.errorColor,
                     ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Connection Error',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: AppTheme.onBackgroundColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                      textAlign: TextAlign.center,
                     ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _loadDashboardData,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: AppTheme.onPrimaryColor,
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _loadDashboardData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: AppTheme.onPrimaryColor,
+                      ),
+                      child: const Text('Retry'),
+                    ),
+                  ],
                 ),
-                child: const Text('Retry'),
               ),
-            ],
+            ),
           ),
         ),
       );
@@ -339,6 +351,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             _buildSystemInfoCard(),
             const SizedBox(height: 16),
             _buildResourceCards(),
+            const SizedBox(height: 16),
+            _buildIncomeCards(),
             const SizedBox(height: 16),
             _buildQuickActions(),
           ],
@@ -499,6 +513,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildIncomeCards() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Income',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppTheme.onBackgroundColor,
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Expanded(
+              child: DailyIncomeCard(),
+            ),
+            SizedBox(width: 12),
+            const Expanded(
+              child: MonthlyIncomeCard(),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -520,9 +561,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Settings',
                 subtitle: 'Configure',
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settings feature coming soon')),
-                  );
+                  context.push('/settings');
                 },
                 color: Colors.grey,
               ),

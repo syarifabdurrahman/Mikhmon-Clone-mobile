@@ -382,3 +382,183 @@ class HotspotActiveUser {
     return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 }
+
+// Sales transaction model for income tracking
+class SalesTransaction {
+  final String id;
+  final String username;
+  final String profile;
+  final double price;
+  final DateTime timestamp;
+  final String? comment;
+
+  SalesTransaction({
+    required this.id,
+    required this.username,
+    required this.profile,
+    required this.price,
+    required this.timestamp,
+    this.comment,
+  });
+
+  factory SalesTransaction.fromJson(Map<String, dynamic> json) {
+    return SalesTransaction(
+      id: json['id'] ?? json['.id'] ?? '',
+      username: json['username'] ?? json['name'] ?? '',
+      profile: json['profile'] ?? 'default',
+      price: (json['price'] != null)
+          ? (double.tryParse(json['price'].toString()) ?? 0.0)
+          : (json['amount'] != null ? double.tryParse(json['amount'].toString()) ?? 0.0 : 0.0),
+      timestamp: json['timestamp'] != null
+          ? (json['timestamp'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int)
+              : DateTime.tryParse(json['timestamp']) ?? DateTime.now())
+          : DateTime.now(),
+      comment: json['comment'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'profile': profile,
+      'price': price,
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      if (comment != null) 'comment': comment,
+    };
+  }
+
+  Map<String, dynamic> toMap() {
+    return toJson();
+  }
+
+  // Format date as "MMM dd, yyyy"
+  String get formattedDate {
+    return '${_monthName(timestamp.month)} ${timestamp.day}, ${timestamp.year}';
+  }
+
+  // Format time as "HH:mm"
+  String get formattedTime {
+    return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
+  }
+
+  SalesTransaction copyWith({
+    String? id,
+    String? username,
+    String? profile,
+    double? price,
+    DateTime? timestamp,
+    String? comment,
+  }) {
+    return SalesTransaction(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      profile: profile ?? this.profile,
+      price: price ?? this.price,
+      timestamp: timestamp ?? this.timestamp,
+      comment: comment ?? this.comment,
+    );
+  }
+}
+
+// Income summary model
+class IncomeSummary {
+  final double todayIncome;
+  final double thisMonthIncome;
+  final int transactionsToday;
+  final int transactionsThisMonth;
+
+  const IncomeSummary({
+    required this.todayIncome,
+    required this.thisMonthIncome,
+    required this.transactionsToday,
+    required this.transactionsThisMonth,
+  });
+
+  IncomeSummary copyWith({
+    double? todayIncome,
+    double? thisMonthIncome,
+    int? transactionsToday,
+    int? transactionsThisMonth,
+  }) {
+    return IncomeSummary(
+      todayIncome: todayIncome ?? this.todayIncome,
+      thisMonthIncome: thisMonthIncome ?? this.thisMonthIncome,
+      transactionsToday: transactionsToday ?? this.transactionsToday,
+      transactionsThisMonth: transactionsThisMonth ?? this.transactionsThisMonth,
+    );
+  }
+}
+
+// Saved Router Connection model
+class RouterConnection {
+  final String id;
+  final String name;
+  final String host;
+  final String port;
+  final String username;
+  final DateTime createdAt;
+
+  RouterConnection({
+    required this.id,
+    required this.name,
+    required this.host,
+    required this.port,
+    required this.username,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  factory RouterConnection.fromJson(Map<String, dynamic> json) {
+    return RouterConnection(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      host: json['host'] as String,
+      port: json['port'] as String,
+      username: json['username'] as String,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'host': host,
+      'port': port,
+      'username': username,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  String get displayName => name;
+  String get address => '$host:$port';
+
+  RouterConnection copyWith({
+    String? id,
+    String? name,
+    String? host,
+    String? port,
+    String? username,
+    DateTime? createdAt,
+  }) {
+    return RouterConnection(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      host: host ?? this.host,
+      port: port ?? this.port,
+      username: username ?? this.username,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}

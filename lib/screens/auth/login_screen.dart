@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
+import '../../services/models.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -22,7 +23,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
-  bool _rememberMe = false;
+  bool _saveConnection = true;
   bool _demoMode = true;
 
   @override
@@ -40,8 +41,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
   }
 
-  Future<void> _login() async {
-    if (_demoMode || _formKey.currentState!.validate()) {
+  Future<void> _login({RouterConnection? savedConnection}) async {
+    if (_demoMode || _formKey.currentState!.validate() || savedConnection != null) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -52,25 +53,63 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await ref.read(authStateProvider.notifier).setDemoMode(_demoMode);
 
         if (!_demoMode) {
-          // For real connection, attempt login with credentials
-          // Use default port 8728 if not specified
-          final port = _portController.text.trim().isEmpty ? '8728' : _portController.text.trim();
+          String host, port, username, password;
+
+          if (savedConnection != null) {
+            // Use saved connection
+            host = savedConnection.host;
+            port = savedConnection.port;
+            username = savedConnection.username;
+            password = ''; // Password not saved, user needs to enter
+          } else {
+            // Use form fields
+            host = _ipController.text;
+            port = _portController.text.trim().isEmpty ? '8728' : _portController.text.trim();
+            username = _usernameController.text;
+            password = _passwordController.text;
+          }
 
           // Log connection attempt
           debugPrint('=== LOGIN ATTEMPT ===');
-          debugPrint('Host: ${_ipController.text}:$port');
-          debugPrint('Username: ${_usernameController.text}');
+          debugPrint('Host: $host:$port');
+          debugPrint('Username: $username');
           debugPrint('Demo Mode: $_demoMode');
 
           await ref.read(authStateProvider.notifier).login(
-                host: _ipController.text,
+                host: host,
                 port: port,
-                username: _usernameController.text,
-                password: _passwordController.text,
-                rememberMe: _rememberMe,
+                username: username,
+                password: password,
+                rememberMe: false,
               );
 
           debugPrint('=== LOGIN SUCCESS ===');
+
+          // Save connection if requested and not already saved
+          if (_saveConnection && savedConnection == null) {
+            final connections = ref.read(savedConnectionsProvider);
+            final connectionsList = connections.value ?? [];
+
+            // Check if this connection already exists
+            final exists = connectionsList.any((c) =>
+              c.host == host &&
+              c.port == port &&
+              c.username == username
+            );
+
+            if (!exists) {
+              // Generate a name for the connection
+              final name = '$username@${host}_$port';
+
+              await ref.read(savedConnectionsProvider.notifier).addConnection(
+                name: name,
+                host: host,
+                port: port,
+                username: username,
+              );
+              debugPrint('Connection saved: $name');
+            }
+          }
         }
 
         if (mounted) {
@@ -237,15 +276,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Row(
                               children: [
                                 Checkbox(
-                                  value: _rememberMe,
+                                  value: _saveConnection,
                                   onChanged: (value) {
                                     setState(() {
-                                      _rememberMe = value ?? false;
+                                      _saveConnection = value ?? false;
                                     });
                                   },
                                   fillColor: WidgetStateProperty.resolveWith((states) {
                                     if (states.contains(WidgetState.selected)) {
-                                      return AppTheme.primaryColor;
+                                      return Colors.green;
                                     }
                                     return AppTheme.onSurfaceColor.withValues(alpha: 0.2);
                                   }),
@@ -254,11 +293,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 GestureDetector(
                                   onTap: () {
                                     setState(() {
-                                      _rememberMe = !_rememberMe;
+                                      _saveConnection = !_saveConnection;
                                     });
                                   },
                                   child: Text(
-                                    'Remember credentials',
+                                    'Save connection',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
@@ -397,12 +436,191 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    // Saved Connections Section - show only if there are saved connections
+                    _buildSavedConnectionsSection(),
                   ],
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSavedConnectionsSection() {
+    final connectionsAsync = ref.watch(savedConnectionsProvider);
+
+    return connectionsAsync.when(
+      data: (connections) {
+        if (connections.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.history_rounded,
+                  size: 18,
+                  color: AppTheme.onBackgroundColor.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Saved Connections',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...connections.map((conn) => _buildConnectionCard(conn)),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildConnectionCard(RouterConnection connection) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: AppTheme.surfaceColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: _isLoading ? null : () => _showQuickLoginDialog(connection),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.router_rounded,
+                  size: 18,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      connection.name,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.onSurfaceColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      connection.address,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                connection.username,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showQuickLoginDialog(RouterConnection connection) {
+    // Password is required for saved connections
+    final passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: Text(
+          'Connect to ${connection.name}',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppTheme.onSurfaceColor,
+              ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Host: ${connection.host}:${connection.port}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                  ),
+            ),
+            Text(
+              'Username: ${connection.username}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                  ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                hintText: 'Enter router password',
+                prefixIcon: const Icon(Icons.lock_rounded, size: 20),
+              ),
+              autofocus: true,
+              onSubmitted: (value) {
+                Navigator.pop(dialogContext);
+                // Update the password controller and login
+                _passwordController.text = value;
+                _login(savedConnection: connection);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.onSurfaceColor.withValues(alpha: 0.6)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _passwordController.text = passwordController.text;
+              _login(savedConnection: connection);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: AppTheme.onPrimaryColor,
+            ),
+            child: const Text('Connect'),
+          ),
+        ],
       ),
     );
   }

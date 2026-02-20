@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -62,12 +63,24 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
   }
 
   void _startAutoRefresh() {
-    // Refresh every 2 seconds for real-time monitoring
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    final service = ref.read(routerOSServiceProvider);
+
+    // Only refresh periodically in real mode (not demo)
+    // In demo mode, individual cards update themselves
+    if (service.isDemoMode) {
+      debugPrint('[ActiveUsers] Demo mode - skipping periodic refresh');
+      return;
+    }
+
+    // Refresh every 5 seconds to get actual data from router
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted) {
+        debugPrint('[ActiveUsers] Periodic refresh triggered');
         ref.read(hotspotActiveUsersProvider.notifier).refresh();
       }
     });
+
+    debugPrint('[ActiveUsers] Started periodic refresh (every 5 seconds)');
   }
 
   @override
@@ -160,7 +173,18 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                       if (index == filteredUsers.length) {
                         return _buildLoadingIndicator();
                       }
-                      return _buildUserCard(filteredUsers[index]);
+                      final user = filteredUsers[index];
+                      // Use the new widget card that handles its own dynamic updates
+                      return RepaintBoundary(
+                        key: ValueKey(user.id),
+                        child: _UserCardWidget(
+                          user: user,
+                          onTap: () => _showUserDetails(user),
+                          onDetails: () => _showUserDetails(user),
+                          onLogout: () => _confirmLogout(user),
+                          isDemoMode: service.isDemoMode,
+                        ),
+                      );
                     },
                   ),
                 );
@@ -360,217 +384,6 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
           valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
         ),
       ),
-    );
-  }
-
-  Widget _buildUserCard(HotspotActiveUser user) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: AppTheme.surfaceColor,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: AppTheme.primaryColor.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _showUserDetails(user),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppTheme.primaryColor,
-                          AppTheme.primaryColor.withValues(alpha: 0.7),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.person_rounded,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.username,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: AppTheme.onSurfaceColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.computer_rounded,
-                              size: 14,
-                              color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              user.address,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                                    fontFamily: 'monospace',
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.green.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.circle,
-                          size: 8,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Online',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Divider(
-                height: 1,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(
-                      Icons.access_time_rounded,
-                      'Uptime',
-                      user.uptime,
-                      AppTheme.primaryColor,
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-                  ),
-                  Expanded(
-                    child: _buildStatItem(
-                      Icons.download_rounded,
-                      'Download',
-                      user.dataUsed,
-                      Colors.blue,
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
-                  ),
-                  Expanded(
-                    child: _buildStatItem(
-                      Icons.router_rounded,
-                      'Server',
-                      user.server ?? 'N/A',
-                      Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () => _showUserDetails(user),
-                    icon: const Icon(Icons.info_outline_rounded, size: 18),
-                    label: const Text('Details'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _confirmLogout(user),
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text('Logout'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.errorColor.withValues(alpha: 0.1),
-                      foregroundColor: AppTheme.errorColor,
-                      elevation: 0,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          size: 18,
-          color: color,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
-              ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
     );
   }
 
@@ -781,6 +594,317 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Individual user card widget that handles its own dynamic updates
+/// Only the dynamic values (uptime, data used) update, not the entire card
+class _UserCardWidget extends StatefulWidget {
+  final HotspotActiveUser user;
+  final VoidCallback onTap;
+  final VoidCallback onDetails;
+  final VoidCallback onLogout;
+  final bool isDemoMode;
+
+  const _UserCardWidget({
+    required this.user,
+    required this.onTap,
+    required this.onDetails,
+    required this.onLogout,
+    this.isDemoMode = false,
+  });
+
+  @override
+  State<_UserCardWidget> createState() => _UserCardWidgetState();
+}
+
+class _UserCardWidgetState extends State<_UserCardWidget> {
+  late String _displayUptime;
+  late String _displayDataUsed;
+  Timer? _updateTimer;
+  final Random _random = Random();
+
+  // Track initial bytes for demo mode simulation
+  late int _initialBytesIn;
+  late int _initialBytesOut;
+
+  @override
+  void initState() {
+    super.initState();
+    _displayUptime = widget.user.uptime;
+    _displayDataUsed = widget.user.dataUsed;
+    _initialBytesIn = widget.user.bytesIn;
+    _initialBytesOut = widget.user.bytesOut;
+
+    // Start local timer for dynamic updates (every 1 second)
+    _startDynamicUpdates();
+  }
+
+  @override
+  void dispose() {
+    _updateTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startDynamicUpdates() {
+    // Update dynamic values every second independently
+    _updateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          if (widget.isDemoMode) {
+            // Demo mode: simulate data changes
+            _simulateDynamicUpdates();
+          } else {
+            // Real mode: use actual values from user object
+            // (these update when provider refreshes)
+            _displayUptime = widget.user.uptime;
+            _displayDataUsed = widget.user.dataUsed;
+          }
+        });
+      }
+    });
+  }
+
+  void _simulateDynamicUpdates() {
+    // Simulate uptime increment
+    final uptimeParts = widget.user.uptime.split(' ');
+    if (uptimeParts.isNotEmpty) {
+      final lastPart = uptimeParts.last;
+      final value = int.tryParse(lastPart.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
+      final unit = lastPart.replaceAll(RegExp(r'[\d]'), '');
+
+      if (unit.contains('m') || unit.isEmpty) {
+        final newValue = value + 1;
+        final prefix = uptimeParts.sublist(0, uptimeParts.length - 1).join(' ');
+        _displayUptime = '$prefix${uptimeParts.length > 1 ? ' ' : ''}${newValue}m';
+      }
+    }
+
+    // Simulate data usage increase
+    final additionalBytes = _random.nextInt(1024 * 100); // 0-100KB
+    final currentBytesIn = _initialBytesIn + additionalBytes;
+    final currentBytesOut = _initialBytesOut + (additionalBytes ~/ 2);
+    final totalBytes = currentBytesIn + currentBytesOut;
+
+    if (totalBytes < 1024 * 1024) {
+      _displayDataUsed = '${(totalBytes / 1024).toStringAsFixed(1)} KB';
+    } else if (totalBytes < 1024 * 1024 * 1024) {
+      _displayDataUsed = '${(totalBytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    } else {
+      _displayDataUsed = '${(totalBytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: AppTheme.surfaceColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.primaryColor,
+                          AppTheme.primaryColor.withValues(alpha: 0.7),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.person_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.user.username,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AppTheme.onSurfaceColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.computer_rounded,
+                              size: 14,
+                              color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.user.address,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                                    fontFamily: 'monospace',
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.circle,
+                          size: 8,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Online',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.green,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      Icons.access_time_rounded,
+                      'Uptime',
+                      _displayUptime,
+                      AppTheme.primaryColor,
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      Icons.download_rounded,
+                      'Download',
+                      _displayDataUsed,
+                      Colors.blue,
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      Icons.router_rounded,
+                      'Server',
+                      widget.user.server ?? 'N/A',
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: widget.onDetails,
+                    icon: const Icon(Icons.info_outline_rounded, size: 18),
+                    label: const Text('Details'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: widget.onLogout,
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text('Logout'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.errorColor.withValues(alpha: 0.1),
+                      foregroundColor: AppTheme.errorColor,
+                      elevation: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: color,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.onSurfaceColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

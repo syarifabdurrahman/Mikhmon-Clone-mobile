@@ -15,6 +15,7 @@ import '../screens/hotspot_users/hotspot_active_users_screen.dart';
 import '../screens/hotspot_users/add_hotspot_user_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/voucher_generation_screen.dart';
+import '../screens/settings/settings_screen.dart';
 
 // Secure Storage Provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -30,12 +31,7 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
 
 // Cache Service Provider
 final cacheServiceProvider = Provider<CacheService>((ref) {
-  final cache = CacheService();
-  // Initialize cache
-  cache.init().catchError((e) {
-    debugPrint('[CacheService] Failed to initialize: $e');
-  });
-  return cache;
+  return CacheService();
 });
 
 // RouterOS Service Provider
@@ -219,6 +215,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profiles',
         name: 'profiles',
         builder: (context, state) => const UserProfilesScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
   );
@@ -1021,5 +1022,290 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         autologout: true,
       ),
     ];
+  }
+}
+
+// Income/Transactions Provider
+final incomeProvider = AsyncNotifierProvider<IncomeNotifier, IncomeState>(() {
+  return IncomeNotifier();
+});
+
+class IncomeState {
+  final List<SalesTransaction> transactions;
+  final IncomeSummary summary;
+
+  const IncomeState({
+    this.transactions = const [],
+    required this.summary,
+  });
+
+  IncomeState copyWith({
+    List<SalesTransaction>? transactions,
+    IncomeSummary? summary,
+  }) {
+    return IncomeState(
+      transactions: transactions ?? this.transactions,
+      summary: summary ?? this.summary,
+    );
+  }
+}
+
+// In-memory storage for demo mode sales
+List<SalesTransaction> _demoSalesCache = [];
+
+class IncomeNotifier extends AsyncNotifier<IncomeState> {
+  @override
+  Future<IncomeState> build() async {
+    final service = ref.read(routerOSServiceProvider);
+    final cache = ref.read(cacheServiceProvider);
+
+    if (service.isDemoMode) {
+      // Initialize demo sales if empty
+      if (_demoSalesCache.isEmpty) {
+        _demoSalesCache = _getDemoSales();
+      }
+      return IncomeState(
+        transactions: List.from(_demoSalesCache),
+        summary: _calculateIncomeSummary(_demoSalesCache),
+      );
+    }
+
+    // Try to load from cache first
+    final cachedTransactions = cache.getSalesTransactions();
+    final cachedSummary = cache.getIncomeSummary();
+
+    if (cachedTransactions != null && cachedSummary != null) {
+      debugPrint('[Income] Loaded from cache');
+      return IncomeState(
+        transactions: cachedTransactions.map((t) => SalesTransaction.fromJson(t)).toList(),
+        summary: IncomeSummary(
+          todayIncome: (cachedSummary['todayIncome'] as num).toDouble(),
+          thisMonthIncome: (cachedSummary['thisMonthIncome'] as num).toDouble(),
+          transactionsToday: cachedSummary['transactionsToday'] as int,
+          transactionsThisMonth: cachedSummary['transactionsThisMonth'] as int,
+        ),
+      );
+    }
+
+    // Return empty state if no cache
+    return const IncomeState(
+      transactions: [],
+      summary: IncomeSummary(
+        todayIncome: 0.0,
+        thisMonthIncome: 0.0,
+        transactionsToday: 0,
+        transactionsThisMonth: 0,
+      ),
+    );
+  }
+
+  Future<void> recordSale({
+    required String username,
+    required String profile,
+    required double price,
+    String? comment,
+  }) async {
+    final service = ref.read(routerOSServiceProvider);
+    final cache = ref.read(cacheServiceProvider);
+
+    final transaction = SalesTransaction(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      username: username,
+      profile: profile,
+      price: price,
+      timestamp: DateTime.now(),
+      comment: comment,
+    );
+
+    if (service.isDemoMode) {
+      _demoSalesCache.add(transaction);
+      final currentState = state.value;
+      if (currentState != null) {
+        state = AsyncValue.data(IncomeState(
+          transactions: List.from(_demoSalesCache),
+          summary: _calculateIncomeSummary(_demoSalesCache),
+        ));
+      }
+      return;
+    }
+
+    // Save to cache
+    await cache.saveSalesTransaction(transaction.toJson());
+
+    // Refresh state
+    ref.invalidate(incomeProvider);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+
+  IncomeSummary _calculateIncomeSummary(List<SalesTransaction> transactions) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final monthStart = DateTime(now.year, now.month, 1);
+
+    double todayIncome = 0;
+    double thisMonthIncome = 0;
+    int transactionsToday = 0;
+    int transactionsThisMonth = 0;
+
+    for (final transaction in transactions) {
+      if (transaction.timestamp.isAfter(today)) {
+        todayIncome += transaction.price;
+        transactionsToday++;
+      }
+      if (transaction.timestamp.isAfter(monthStart)) {
+        thisMonthIncome += transaction.price;
+        transactionsThisMonth++;
+      }
+    }
+
+    return IncomeSummary(
+      todayIncome: todayIncome,
+      thisMonthIncome: thisMonthIncome,
+      transactionsToday: transactionsToday,
+      transactionsThisMonth: transactionsThisMonth,
+    );
+  }
+
+  List<SalesTransaction> _getDemoSales() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final monthStart = DateTime(now.year, now.month, 1);
+
+    return [
+      // Today's sales
+      SalesTransaction(
+        id: '1',
+        username: 'user001',
+        profile: '1hour',
+        price: 1.0,
+        timestamp: today.add(const Duration(hours: 2)),
+        comment: 'Voucher sale',
+      ),
+      SalesTransaction(
+        id: '2',
+        username: 'user002',
+        profile: '1day',
+        price: 2.50,
+        timestamp: today.add(const Duration(hours: 5)),
+        comment: 'Daily pass',
+      ),
+      SalesTransaction(
+        id: '3',
+        username: 'user003',
+        profile: '1week',
+        price: 10.0,
+        timestamp: today.add(const Duration(hours: 8)),
+      ),
+      // Yesterday's sales
+      SalesTransaction(
+        id: '4',
+        username: 'user004',
+        profile: '1hour',
+        price: 1.0,
+        timestamp: today.subtract(const Duration(days: 1)),
+      ),
+      SalesTransaction(
+        id: '5',
+        username: 'user005',
+        profile: '1day',
+        price: 2.50,
+        timestamp: today.subtract(const Duration(days: 1)),
+      ),
+      // Earlier this month
+      SalesTransaction(
+        id: '6',
+        username: 'user006',
+        profile: '1month',
+        price: 25.0,
+        timestamp: monthStart.add(const Duration(days: 3)),
+      ),
+      SalesTransaction(
+        id: '7',
+        username: 'user007',
+        profile: '1week',
+        price: 10.0,
+        timestamp: monthStart.add(const Duration(days: 7)),
+      ),
+      SalesTransaction(
+        id: '8',
+        username: 'user008',
+        profile: '1day',
+        price: 2.50,
+        timestamp: monthStart.add(const Duration(days: 10)),
+      ),
+    ];
+  }
+
+  void resetDemoSales() {
+    _demoSalesCache = [];
+  }
+}
+
+// Saved Router Connections Provider
+final savedConnectionsProvider = AsyncNotifierProvider<SavedConnectionsNotifier, List<RouterConnection>>(() {
+  return SavedConnectionsNotifier();
+});
+
+class SavedConnectionsNotifier extends AsyncNotifier<List<RouterConnection>> {
+  @override
+  Future<List<RouterConnection>> build() async {
+    final cache = ref.read(cacheServiceProvider);
+    final cachedConnections = cache.getSavedConnections();
+
+    if (cachedConnections != null) {
+      return cachedConnections.map((c) => RouterConnection.fromJson(c)).toList();
+    }
+
+    return [];
+  }
+
+  Future<void> addConnection({
+    required String name,
+    required String host,
+    required String port,
+    required String username,
+  }) async {
+    final cache = ref.read(cacheServiceProvider);
+
+    final connection = RouterConnection(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      host: host,
+      port: port,
+      username: username,
+    );
+
+    await cache.addSavedConnection(connection.toJson());
+
+    // Refresh state by rebuilding
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+
+  Future<void> updateConnection(RouterConnection connection) async {
+    final cache = ref.read(cacheServiceProvider);
+    await cache.updateSavedConnection(connection.id, connection.toJson());
+
+    // Refresh state by rebuilding
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+
+  Future<void> deleteConnection(String id) async {
+    final cache = ref.read(cacheServiceProvider);
+    await cache.deleteSavedConnection(id);
+
+    // Refresh state by rebuilding
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
   }
 }
