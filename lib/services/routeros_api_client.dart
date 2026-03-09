@@ -207,7 +207,11 @@ class RouterOSClient {
 
   void _processWord(String word) {
     if (word.startsWith('!re')) {
-      // New record starting
+      // New record starting - add previous item to response if exists
+      if (_currentItem != null) {
+        _currentResponse.add(_currentItem!);
+        _log('Added record to response (total: ${_currentResponse.length})');
+      }
       _currentItem = {};
       _log('Starting new record');
     } else if (word.startsWith('!done')) {
@@ -215,6 +219,7 @@ class RouterOSClient {
       _log('Received !done');
       if (_currentItem != null) {
         _currentResponse.add(_currentItem!);
+        _log('Added final record to response (total: ${_currentResponse.length})');
         _currentItem = null;
       }
       if (_awaitingDone && _responseCompleter != null && !_responseCompleter!.isCompleted) {
@@ -365,6 +370,19 @@ class RouterOSClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getInterfaceStats() async {
+    try {
+      _ensureConnected();
+      _writeWord('/interface/print');
+      _writeWord(''); // Empty word to terminate sentence
+      final response = await _readResponse();
+      _log('Got ${response.length} interface stats');
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch interface stats: $e');
+    }
+  }
+
   Future<void> addHotspotUser({
     required String username,
     required String password,
@@ -479,8 +497,9 @@ class RouterOSClient {
   Future<void> addUserProfile({
     required String name,
     String? rateLimit,
-    String? uptimeLimit,
-    String? dataLimit,
+    String? sessionTimeout,
+    String? onLogin,
+    String? onLogout,
   }) async {
     try {
       _ensureConnected();
@@ -489,11 +508,14 @@ class RouterOSClient {
       if (rateLimit != null) {
         _writeWord('=rate-limit=$rateLimit');
       }
-      if (uptimeLimit != null) {
-        _writeWord('=on-logout=$uptimeLimit');
+      if (sessionTimeout != null) {
+        _writeWord('=session-timeout=$sessionTimeout');
       }
-      if (dataLimit != null) {
-        _writeWord('=on-login=$dataLimit');
+      if (onLogin != null) {
+        _writeWord('=on-login=$onLogin');
+      }
+      if (onLogout != null) {
+        _writeWord('=on-logout=$onLogout');
       }
       _writeWord(''); // Empty word to terminate sentence
 
@@ -510,6 +532,7 @@ class RouterOSClient {
     required String id,
     String? name,
     String? rateLimit,
+    String? sessionTimeout,
   }) async {
     try {
       _ensureConnected();
@@ -520,6 +543,9 @@ class RouterOSClient {
       }
       if (rateLimit != null) {
         _writeWord('=rate-limit=$rateLimit');
+      }
+      if (sessionTimeout != null) {
+        _writeWord('=session-timeout=$sessionTimeout');
       }
       _writeWord(''); // Empty word to terminate sentence
 

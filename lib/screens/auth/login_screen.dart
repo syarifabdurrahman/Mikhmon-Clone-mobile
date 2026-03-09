@@ -147,7 +147,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onPressed: () => context.go('/'),
         ),
         title: Text(
-          'Mikhmon Clone',
+          'ΩMMON',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: AppTheme.onSurfaceColor,
                 fontWeight: FontWeight.bold,

@@ -1,4 +1,4 @@
-package com.mikhmonclone.mikhmon_clone
+package com.simpurrapps.ommon
 
 import io.flutter.embedding.android.FlutterActivity
 

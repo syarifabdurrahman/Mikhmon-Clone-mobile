@@ -21,22 +21,23 @@ void main() async {
   ]);
   runApp(
     const ProviderScope(
-      child: MikhmonCloneApp(),
+      child: OmmonApp(),
     ),
   );
 }
 
-class MikhmonCloneApp extends ConsumerWidget {
-  const MikhmonCloneApp({super.key});
+class OmmonApp extends ConsumerWidget {
+  const OmmonApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Mikhmon Clone',
-      theme: AppTheme.darkTheme,
+      title: 'ΩMMON - Open Mikrotik Monitor',
+      theme: AppTheme.getTheme(themeMode),
       routerConfig: router,
     );
   }

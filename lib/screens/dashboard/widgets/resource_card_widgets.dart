@@ -65,9 +65,8 @@ class ResourceCard extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: TextStyle(
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-              fontSize: 14,
             ),
           ),
         ),
@@ -78,10 +77,9 @@ class ResourceCard extends StatelessWidget {
   Widget _buildValue(BuildContext context) {
     return Text(
       value,
-      style: const TextStyle(
+      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
         color: AppTheme.onSurfaceColor,
         fontWeight: FontWeight.bold,
-        fontSize: 24,
       ),
     );
   }
@@ -89,9 +87,8 @@ class ResourceCard extends StatelessWidget {
   Widget _buildSubtitle(BuildContext context) {
     return Text(
       subtitle!,
-      style: TextStyle(
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
-        fontSize: 12,
       ),
     );
   }
@@ -553,27 +550,24 @@ class _IncomeCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               title,
-              style: TextStyle(
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
-                fontSize: 14,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               value,
-              style: const TextStyle(
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 color: AppTheme.onSurfaceColor,
                 fontWeight: FontWeight.bold,
-                fontSize: 24,
               ),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
               Text(
                 subtitle!,
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: color.withValues(alpha: 0.8),
-                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),

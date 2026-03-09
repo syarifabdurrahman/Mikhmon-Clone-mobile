@@ -149,7 +149,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     return Column(
       children: [
         Text(
-          'Mikhmon Clone',
+          'ΩMMON',
           style: Theme.of(context).textTheme.displayMedium?.copyWith(
                 color: AppTheme.onBackgroundColor,
                 fontWeight: FontWeight.bold,
@@ -169,7 +169,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
           ),
           child: Text(
-            'RouterOS Management',
+            'Open Mikrotik Monitor',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: AppTheme.primaryColor,
                   fontWeight: FontWeight.w500,

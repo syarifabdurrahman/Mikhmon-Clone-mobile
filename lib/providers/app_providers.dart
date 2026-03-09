@@ -7,6 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/routeros_service.dart';
 import '../services/models.dart';
 import '../services/cache_service.dart';
+import '../services/traffic_rate_service.dart';
+import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
@@ -33,6 +35,45 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
 final cacheServiceProvider = Provider<CacheService>((ref) {
   return CacheService();
 });
+
+// Theme Provider
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, AppThemeMode>((ref) {
+  return ThemeModeNotifier();
+});
+
+class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
+  static const String _storageKey = 'app_theme_mode';
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  ThemeModeNotifier() : super(AppThemeMode.purple) {
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    try {
+      final savedMode = await _storage.read(key: _storageKey);
+      if (savedMode != null) {
+        final mode = AppThemeMode.values.firstWhere(
+          (e) => e.toString() == savedMode,
+          orElse: () => AppThemeMode.purple,
+        );
+        state = mode;
+      }
+    } catch (e) {
+      debugPrint('[Theme] Error loading theme mode: $e');
+    }
+  }
+
+  Future<void> setThemeMode(AppThemeMode mode) async {
+    state = mode;
+    try {
+      await _storage.write(key: _storageKey, value: mode.toString());
+      debugPrint('[Theme] Theme mode saved: ${mode.toString()}');
+    } catch (e) {
+      debugPrint('[Theme] Error saving theme mode: $e');
+    }
+  }
+}
 
 // RouterOS Service Provider
 final routerOSServiceProvider = Provider<RouterOSService>((ref) {
@@ -824,6 +865,11 @@ final userProfileProvider = AsyncNotifierProvider<UserProfileNotifier, List<User
   return UserProfileNotifier();
 });
 
+// Interface Traffic Provider
+final interfaceTrafficProvider = AsyncNotifierProvider<InterfaceTrafficNotifier, List<InterfaceTraffic>>(() {
+  return InterfaceTrafficNotifier();
+});
+
 // In-memory storage for demo mode profiles
 List<UserProfile> _demoProfilesCache = [];
 bool _demoProfilesInitialized = false;
@@ -849,6 +895,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
     final profilesData = await client.getUserProfiles();
 
+    debugPrint('[UserProfiles] Received ${profilesData.length} profiles from RouterOS');
+    for (var i = 0; i < profilesData.length; i++) {
+      debugPrint('[UserProfiles] Profile $i: ${profilesData[i]}');
+    }
+
     // Convert API data to UserProfile objects
     return profilesData.map((data) {
       // Parse rate-limit (format: "upload/download" or "unlimited")
@@ -864,12 +915,20 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         }
       }
 
+      final profileId = data['.id'] as String?;
+      final profileName = data['name'] as String? ?? 'unknown';
+
+      // Use profile name as fallback ID if .id is missing
+      final id = profileId ?? '*$profileName';
+
+      debugPrint('[UserProfiles] Parsed profile: $id ($profileName)');
+
       return UserProfile(
-        id: data['.id'] as String? ?? '',
-        name: data['name'] as String? ?? 'unknown',
+        id: id,
+        name: profileName,
         rateLimitUpload: upload,
         rateLimitDownload: download,
-        validity: data['on-logout'] as String? ?? 'unlimited',
+        validity: data['session-timeout']?.toString() ?? data['on-logout'] as String? ?? 'unlimited',
         price: 0.0, // Price is stored separately, not in RouterOS
         sharedUsers: 1,
         autologout: true,
@@ -902,19 +961,48 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       throw Exception('Not connected to RouterOS');
     }
 
-    // Build rate-limit string
-    final rateLimit = profile.rateLimitUpload == 'unlimited' && profile.rateLimitDownload == 'unlimited'
+    // Build rate-limit string from upload/download
+    final rateLimit = (profile.rateLimitUpload == null || profile.rateLimitUpload == 'unlimited') &&
+        (profile.rateLimitDownload == null || profile.rateLimitDownload == 'unlimited')
         ? null
-        : '${profile.rateLimitUpload}/${profile.rateLimitDownload}';
+        : '${profile.rateLimitUpload ?? 'unlimited'}/${profile.rateLimitDownload ?? 'unlimited'}';
 
     await client.addUserProfile(
       name: profile.name,
       rateLimit: rateLimit,
-      uptimeLimit: profile.validity,
+      sessionTimeout: profile.validity, // Time limit for the session
     );
 
-    // Refresh the list
-    ref.invalidate(userProfileProvider);
+    // Refresh the list by rebuilding
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final profilesData = await client.getUserProfiles();
+      return profilesData.map((data) {
+        // Parse rate-limit (format: "upload/download" or "unlimited")
+        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
+        String upload = 'unlimited';
+        String download = 'unlimited';
+
+        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
+          final parts = rateLimit.split('/');
+          if (parts.length == 2) {
+            upload = parts[0];
+            download = parts[1];
+          }
+        }
+
+        return UserProfile(
+          id: data['.id'] ?? data['id'] ?? '',
+          name: data['name'] ?? 'default',
+          rateLimitUpload: upload,
+          rateLimitDownload: download,
+          validity: data['session-timeout']?.toString(),
+          price: data['price'] != null ? double.tryParse(data['price'].toString()) : null,
+          sharedUsers: data['shared-users'] != null ? int.tryParse(data['shared-users'].toString()) : null,
+          autologout: data['autologout'] == 'true' || data['autologout'] == true,
+        );
+      }).toList();
+    });
   }
 
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -934,19 +1022,49 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       throw Exception('Not connected to RouterOS');
     }
 
-    // Build rate-limit string
-    final rateLimit = updatedProfile.rateLimitUpload == 'unlimited' && updatedProfile.rateLimitDownload == 'unlimited'
+    // Build rate-limit string from upload/download
+    final rateLimit = (updatedProfile.rateLimitUpload == null || updatedProfile.rateLimitUpload == 'unlimited') &&
+        (updatedProfile.rateLimitDownload == null || updatedProfile.rateLimitDownload == 'unlimited')
         ? null
-        : '${updatedProfile.rateLimitUpload}/${updatedProfile.rateLimitDownload}';
+        : '${updatedProfile.rateLimitUpload ?? 'unlimited'}/${updatedProfile.rateLimitDownload ?? 'unlimited'}';
 
     await client.updateUserProfile(
       id: updatedProfile.id,
       name: updatedProfile.name,
       rateLimit: rateLimit,
+      sessionTimeout: updatedProfile.validity, // Time limit for the session
     );
 
-    // Refresh the list
-    ref.invalidate(userProfileProvider);
+    // Refresh the list by rebuilding
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final profilesData = await client.getUserProfiles();
+      return profilesData.map((data) {
+        // Parse rate-limit (format: "upload/download" or "unlimited")
+        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
+        String upload = 'unlimited';
+        String download = 'unlimited';
+
+        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
+          final parts = rateLimit.split('/');
+          if (parts.length == 2) {
+            upload = parts[0];
+            download = parts[1];
+          }
+        }
+
+        return UserProfile(
+          id: data['.id'] ?? data['id'] ?? '',
+          name: data['name'] ?? 'default',
+          rateLimitUpload: upload,
+          rateLimitDownload: download,
+          validity: data['session-timeout']?.toString(),
+          price: data['price'] != null ? double.tryParse(data['price'].toString()) : null,
+          sharedUsers: data['shared-users'] != null ? int.tryParse(data['shared-users'].toString()) : null,
+          autologout: data['autologout'] == 'true' || data['autologout'] == true,
+        );
+      }).toList();
+    });
   }
 
   Future<void> deleteProfile(String id) async {
@@ -965,8 +1083,36 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
     await client.removeUserProfile(id);
 
-    // Refresh the list
-    ref.invalidate(userProfileProvider);
+    // Refresh the list by rebuilding
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final profilesData = await client.getUserProfiles();
+      return profilesData.map((data) {
+        // Parse rate-limit (format: "upload/download" or "unlimited")
+        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
+        String upload = 'unlimited';
+        String download = 'unlimited';
+
+        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
+          final parts = rateLimit.split('/');
+          if (parts.length == 2) {
+            upload = parts[0];
+            download = parts[1];
+          }
+        }
+
+        return UserProfile(
+          id: data['.id'] ?? data['id'] ?? '',
+          name: data['name'] ?? 'default',
+          rateLimitUpload: upload,
+          rateLimitDownload: download,
+          validity: data['session-timeout']?.toString(),
+          price: data['price'] != null ? double.tryParse(data['price'].toString()) : null,
+          sharedUsers: data['shared-users'] != null ? int.tryParse(data['shared-users'].toString()) : null,
+          autologout: data['autologout'] == 'true' || data['autologout'] == true,
+        );
+      }).toList();
+    });
   }
 
   List<UserProfile> _getDemoProfiles() {
@@ -1307,5 +1453,189 @@ class SavedConnectionsNotifier extends AsyncNotifier<List<RouterConnection>> {
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => build());
+  }
+}
+
+// Interface Traffic Notifier
+// Traffic rate service for calculating real-time rates
+final _trafficRateService = TrafficRateService();
+
+// Demo mode traffic simulation state
+final _demoTrafficState = {
+  'ether1': _DemoTrafficState(
+    txBytes: 104857600 * 5, // 500 MB
+    rxBytes: 104857600 * 25, // 25 GB
+    txRate: 1024 * 1024 * 5, // 5 MB/s
+    rxRate: 1024 * 1024 * 50, // 50 MB/s
+  ),
+  'wlan1': _DemoTrafficState(
+    txBytes: 104857600 * 250, // 250 GB
+    rxBytes: 104857600 * 150, // 150 GB
+    txRate: 1024 * 512, // 512 KB/s
+    rxRate: 1024 * 1024 * 10, // 10 MB/s
+  ),
+};
+
+class _DemoTrafficState {
+  int txBytes;
+  int rxBytes;
+  final int txRate;
+  final int rxRate;
+
+  _DemoTrafficState({
+    required this.txBytes,
+    required this.rxBytes,
+    required this.txRate,
+    required this.rxRate,
+  });
+
+  // Update cumulative bytes based on rate (simulating 3 seconds passing)
+  void updateCumulative() {
+    txBytes += txRate * 3;
+    rxBytes += rxRate * 3;
+  }
+}
+
+class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
+  @override
+  Future<List<InterfaceTraffic>> build() async {
+    final service = ref.read(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      final demoInterfaces = _getDemoInterfaceStats();
+      // Calculate rates for demo mode too
+      return _trafficRateService.calculateRates(demoInterfaces);
+    }
+
+    // Fetch from real RouterOS API
+    final client = service.client;
+    if (client == null) {
+      return [];
+    }
+
+    final interfacesData = await client.getInterfaceStats();
+
+    // Convert API data to InterfaceTraffic objects (without rates initially)
+    final interfaces = interfacesData.map((data) {
+      return InterfaceTraffic.fromJson(data);
+    }).toList();
+
+    // Calculate rates using historical data
+    return _trafficRateService.calculateRates(interfaces);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final service = ref.read(routerOSServiceProvider);
+
+      if (service.isDemoMode) {
+        final demoInterfaces = _getDemoInterfaceStats();
+        // Calculate rates for demo mode too
+        return _trafficRateService.calculateRates(demoInterfaces);
+      }
+
+      final client = service.client;
+      if (client == null) {
+        return [];
+      }
+
+      final interfacesData = await client.getInterfaceStats();
+      final interfaces = interfacesData.map((data) {
+        return InterfaceTraffic.fromJson(data);
+      }).toList();
+
+      // Calculate rates using historical data
+      return _trafficRateService.calculateRates(interfaces);
+    });
+  }
+
+  /// Silent refresh - updates data without showing loading state
+  Future<void> silentRefresh() async {
+    debugPrint('[TrafficReal] silentRefresh() called');
+    final service = ref.read(routerOSServiceProvider);
+
+    try {
+      List<InterfaceTraffic> newData;
+
+      if (service.isDemoMode) {
+        final demoInterfaces = _getDemoInterfaceStats();
+        // Calculate rates for demo mode too
+        newData = _trafficRateService.calculateRates(demoInterfaces);
+      } else {
+        debugPrint('[TrafficReal] Starting real-time traffic fetch');
+        final client = service.client;
+        if (client == null) {
+          debugPrint('[TrafficReal] Client is null, aborting refresh');
+          return;
+        }
+
+        debugPrint('[TrafficReal] Fetching interface stats from RouterOS...');
+        final interfacesData = await client.getInterfaceStats();
+        debugPrint('[TrafficReal] Received ${interfacesData.length} interfaces from API');
+
+        final interfaces = interfacesData.map((data) {
+          return InterfaceTraffic.fromJson(data);
+        }).toList();
+
+        // Log raw data before rate calculation
+        for (final iface in interfaces) {
+          debugPrint('[TrafficReal] ${iface.name}: txBytes=${iface.txBytes}, rxBytes=${iface.rxBytes}, running=${iface.running}');
+        }
+
+        // Calculate rates using historical data
+        debugPrint('[TrafficReal] Calculating rates...');
+        newData = _trafficRateService.calculateRates(interfaces);
+
+        // Log results after rate calculation
+        for (final iface in newData) {
+          debugPrint('[TrafficReal] ${iface.name}: txRate=${iface.txBytesPerSecond} B/s, rxRate=${iface.rxBytesPerSecond} B/s');
+        }
+        debugPrint('[TrafficReal] Rate calculation completed, updating state');
+      }
+
+      // Update state directly without loading
+      debugPrint('[TrafficReal] Updating provider state with ${newData.length} interfaces');
+      state = AsyncValue.data(newData);
+      debugPrint('[TrafficReal] Provider state updated successfully');
+    } catch (e) {
+      // Silent fail - don't show error on auto-refresh
+      debugPrint('[Traffic] Silent refresh failed: $e');
+    }
+  }
+
+  List<InterfaceTraffic> _getDemoInterfaceStats() {
+    // Update demo cumulative bytes to simulate real traffic
+    for (var entry in _demoTrafficState.entries) {
+      final oldTx = entry.value.txBytes;
+      final oldRx = entry.value.rxBytes;
+      entry.value.updateCumulative();
+      debugPrint('[TrafficDemo] ${entry.key}: txBytes $oldTx → ${entry.value.txBytes}, rxBytes $oldRx → ${entry.value.rxBytes}');
+    }
+
+    return [
+      InterfaceTraffic(
+        name: 'ether1',
+        type: 'ether',
+        txBytes: _demoTrafficState['ether1']!.txBytes,
+        rxBytes: _demoTrafficState['ether1']!.rxBytes,
+        txBytesPerSecond: null, // Will be calculated by rate service
+        rxBytesPerSecond: null,
+        mtu: '1500',
+        running: true,
+        enabled: true,
+      ),
+      InterfaceTraffic(
+        name: 'wlan1',
+        type: 'wlan',
+        txBytes: _demoTrafficState['wlan1']!.txBytes,
+        rxBytes: _demoTrafficState['wlan1']!.rxBytes,
+        txBytesPerSecond: null, // Will be calculated by rate service
+        rxBytesPerSecond: null,
+        mtu: '1500',
+        running: true,
+        enabled: true,
+      ),
+    ];
   }
 }

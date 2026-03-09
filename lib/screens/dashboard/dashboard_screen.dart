@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/routeros_service.dart';
 import '../../services/models.dart';
+import '../../services/resource_history.dart';
 import '../../providers/app_providers.dart';
 import 'widgets/resource_card_widgets.dart';
+import 'widgets/combined_resource_chart.dart';
+import 'widgets/traffic_monitor_widgets.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -21,11 +24,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   SystemResources? _resources;
   Timer? _refreshTimer;
   late final ValueNotifier<SystemResources?> _resourcesNotifier;
+  late final ResourceHistoryNotifier _resourceHistory;
 
   @override
   void initState() {
     super.initState();
     _resourcesNotifier = ValueNotifier<SystemResources?>(null);
+    _resourceHistory = ResourceHistoryNotifier();
     _loadDashboardData();
     _startPeriodicRefresh();
   }
@@ -34,6 +39,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void dispose() {
     _refreshTimer?.cancel();
     _resourcesNotifier.dispose();
+    _resourceHistory.dispose();
     super.dispose();
   }
 
@@ -60,6 +66,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// Update the resources notifier when resources change
   void _updateResourcesNotifier() {
     _resourcesNotifier.value = _resources;
+    // Also add to history for charts
+    if (_resources != null) {
+      _resourceHistory.addFromResources(_resources!);
+    }
   }
 
   Future<void> _loadDashboardData({bool showLoading = true}) async {
@@ -249,14 +259,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () => context.push('/settings'),
           ),
           IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            onPressed: () {
-              context.push('/settings');
-            },
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
           ),
         ],
       ),
@@ -350,7 +358,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             if (ref.read(routerOSServiceProvider).isDemoMode) _buildDemoBanner(),
             _buildSystemInfoCard(),
             const SizedBox(height: 16),
-            _buildResourceCards(),
+            _buildResourceChart(),
+            const SizedBox(height: 16),
+            const TrafficMonitorCard(),
             const SizedBox(height: 16),
             _buildIncomeCards(),
             const SizedBox(height: 16),
@@ -435,85 +445,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildResourceCards() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Resources',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.onBackgroundColor,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: CpuLoadCard(
-                resourcesNotifier: _resourcesNotifier,
-                isDemoMode: ref.read(routerOSServiceProvider).isDemoMode,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: MemoryCard(
-                resourcesNotifier: _resourcesNotifier,
-                isDemoMode: ref.read(routerOSServiceProvider).isDemoMode,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: DiskCard(
-                resourcesNotifier: _resourcesNotifier,
-                isDemoMode: ref.read(routerOSServiceProvider).isDemoMode,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildQuickActionCard(
-                Icons.people_rounded,
-                'All Users',
-                subtitle: 'View All',
-                onTap: () {
-                  context.go('/users');
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildQuickActionCard(
-                Icons.wifi_rounded,
-                'Active Users',
-                subtitle: 'View Connected',
-                onTap: () {
-                  context.go('/users/active');
-                },
-                color: Colors.green,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildQuickActionCard(
-                Icons.person_add_rounded,
-                'Add User',
-                subtitle: 'Create New',
-                onTap: () {
-                  context.push('/users/add');
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
+  Widget _buildResourceChart() {
+    final isDemoMode = ref.read(routerOSServiceProvider).isDemoMode;
+
+    return ListenableBuilder(
+      listenable: _resourceHistory,
+      builder: (context, child) {
+        return CombinedResourceChart(
+          resourceHistory: _resourceHistory,
+          isDemoMode: isDemoMode,
+        );
+      },
     );
   }
 
@@ -540,88 +482,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildQuickActionCard(
-                Icons.card_membership_rounded,
-                'User Profiles',
-                subtitle: 'Manage Profiles',
-                onTap: () {
-                  context.go('/profiles');
-                },
-                color: Colors.orange,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildQuickActionCard(
-                Icons.settings_rounded,
-                'Settings',
-                subtitle: 'Configure',
-                onTap: () {
-                  context.push('/settings');
-                },
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
       ],
-    );
-  }
-
-  Widget _buildQuickActionCard(
-    IconData icon,
-    String title, {
-    String? subtitle,
-    VoidCallback? onTap,
-    Color? color,
-  }) {
-    final cardColor = color ?? AppTheme.primaryColor;
-
-    return Card(
-      color: AppTheme.surfaceColor,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                icon,
-                color: cardColor,
-                size: 20,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.onSurfaceColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cardColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 

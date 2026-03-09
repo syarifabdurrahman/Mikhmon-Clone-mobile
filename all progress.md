@@ -1,18 +1,24 @@
-# Mikhmon Clone - Flutter App Progress Tracker
+# ΩMMON - Open Mikrotik Monitor - Progress Tracker
 
-## Mikhmon Features vs Flutter Clone
+> **App Name**: ΩMMON (Open Mikrotik Monitor)
+> **Package**: `com.simpurrapps.ommon`
+> **Flutter**: SDK ^3.6.0
 
-### ✅ Already Implemented
+---
+
+## ✅ Already Implemented
 
 | Feature | Status | Notes |
 | --------------------------- | ------ | ----------------------------------------------------- |
 | **Login System** | ✅ | RouterOS API (port 8728), demo mode toggle |
-| **Dashboard** | ✅ | System resources (CPU, Memory, Disk) with **real-time updates (3s)** |
+| **Dashboard** | ✅ | **Real-time line chart** with CPU/Memory/Disk, auto-scrolls right-to-left |
+| **Resource History** | ✅ | **60 data points** (3 min history), animated updates |
+| **Interface Traffic** | ✅ | **Network monitoring** widget showing TX/RX bytes and rates |
 | **Local Caching** | ✅ | **Hive database** for offline support & instant load |
 | **Seamless Login** | ✅ | **Pre-fetch data** during login, instant dashboard |
 | **Hotspot Users** | ✅ | CRUD (Create, Read, Update, Delete) |
 | **User Filtering** | ✅ | Search and status filter |
-| **Hotspot Active Users** | ✅ | Real-time monitoring, auto-refresh, force logout |
+| **Hotspot Active Users** | ✅ | Real-time monitoring, auto-refresh (5s), force logout |
 | **User Profiles** | ✅ | Rate limit, validity, price, shared users, auto logout |
 | **Demo Mode** | ✅ | Simulated data with Riverpod state management |
 | **User Details Screen** | ✅ | View user statistics and info |
@@ -20,63 +26,174 @@
 | **Add User Screen** | ✅ | Create new hotspot users |
 | **Performance Optimizations** | ✅ | RepaintBoundary, itemExtent, widget extraction |
 | **Voucher Generation** | ✅ | Bulk user creation with custom username format |
+| **Responsive Design** | ✅ | LayoutBuilder for adaptive UI on all screens |
+| **Modern UI Theme** | ✅ | **Poppins font**, Material 3, vibrant colors |
 
 ---
 
-## 🆕 Recent Updates (February 2026)
+## 🆕 Recent Updates (March 9, 2026)
 
-### 1. RouterOS API Implementation ✅
-**Complete rewrite from HTTP to RouterOS API protocol**
+### 1. Real-Time Traffic Rate Updates ✅
+**Fixed traffic monitoring to show live per-second rates**
 
-- Changed default port from **80 to 8728** (RouterOS API)
-- Implemented proper RouterOS binary protocol:
-  - Variable-length encoding (1-5 bytes) for word lengths
-  - Post-v6.43 plain text login in one sentence
-  - Zero-length word termination
-  - Response parsing: `!re`, `!done`, `!trap`, `!fatal`
-- Files: `lib/services/routeros_api_client.dart`, `lib/services/routeros_service.dart`
+- **Issue**: Traffic rates showing "0 B/s" instead of real-time values
+- **Root Cause**: Demo mode wasn't calling `_trafficRateService.calculateRates()` in `build()`, `refresh()`, and `silentRefresh()`
+- **Fix**: Added rate calculation for demo mode in all three methods
+- **Impact**: TX and RX rates now update correctly every 3 seconds
+- **Files**: `lib/providers/app_providers.dart`
 
-### 2. Seamless Login Flow ✅
-**Pre-fetch system resources during login**
+### 2. Smooth Traffic Text Updates ✅
+**Refactored to use ValueNotifier for text-only updates**
 
-- Dashboard loads instantly with pre-fetched data
-- No loading spinner after login
-- `AuthState` now includes `systemResources` field
-- Files: `lib/providers/app_providers.dart`, `lib/screens/dashboard/dashboard_screen.dart`
+- **Issue**: Entire card was rebuilding causing visual flicker
+- **Solution**: Used `ValueNotifier` for each traffic value (TX total, RX total, TX rate, RX rate)
+- **Implementation**: `ValueListenableBuilder` wraps each text widget for independent updates
+- **Result**: Text values update smoothly without rebuilding card structure
+- **File**: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-### 3. Local Caching with Hive ✅
-**Offline support and instant data display**
+### 3. About Dialog with Developers ✅
+**Added developer information to Settings > About**
 
-**Dependencies Added:**
+- **Developers**: Favian Hugo and Syarif Abdurrahman
+- **UI**: Two developer cards with icons and names
+- **Style**: Matching app theme with purple primary color
+- **File**: `lib/screens/settings/settings_screen.dart`
+
+### 4. Responsive Developer Cards ✅
+**Fixed overflow issue on smaller screens**
+
+- **Issue**: "Syarif Abdurrahman" text overflowed on small screens
+- **Solution**:
+  - Used `Expanded` widgets for flexible width
+  - Reduced horizontal padding from 16 to 8
+  - Added `FittedBox` to prevent text overflow
+- **Result**: Cards adapt to all screen sizes without overflow
+- **File**: `lib/screens/settings/settings_screen.dart`
+
+---
+
+## 🆕 Previous Updates (March 8, 2026)
+
+### 5. App Rebranding ✅
+**Mikhmon Clone → ΩMMON (Open Mikrotik Monitor)**
+
+- **App Name**: `ΩMMON` with Omega (Ω) symbol
+- **Full Name**: Open Mikrotik Monitor
+- **Package**: `com.simpurrapps.ommon`
+- **Files Updated**:
+  - `pubspec.yaml` - Package name: `ommon`
+  - `lib/main.dart` - `OmmonApp` class
+  - `lib/screens/welcome/welcome_screen.dart` - "ΩMMON" title
+  - `lib/screens/auth/login_screen.dart` - "ΩMMON" in AppBar
+  - `lib/screens/settings/settings_screen.dart` - About dialog
+  - `test/widget_test.dart` - Updated test expectations
+  - `android/app/build.gradle.kts` - Application ID: `com.simpurrapps.ommon`
+  - `android/app/src/main/AndroidManifest.xml` - App label: "OMMON"
+  - `android/app/src/main/kotlin/com/simpurrapps/ommon/MainActivity.kt` - New package
+
+### 2. Real-Time System Monitor Chart ✅
+**Combined line chart with CPU, Memory, and Disk**
+
+- **Single chart** showing all three metrics (replaced individual cards)
+- **Right-to-left scrolling** - like Linux Mint system monitor
+- **Smooth animations** - 300ms transitions on data updates
+- **Auto-scrolling window** - Shows last 30-40 data points
+- **Interactive tooltips** - Tap to see exact values
+- **Live indicator** - Shows "LIVE" badge with sync icon
+- **Color-coded lines**:
+  - 🟣 CPU - Purple/Indigo gradient
+  - 🟢 RAM - Green/Teal gradient
+  - 🟠 Disk - Orange/Amber gradient
+- **File**: `lib/screens/dashboard/widgets/combined_resource_chart.dart`
+
+### 3. Resource History Tracking ✅
+**Data persistence for real-time charts**
+
+- **`ResourceDataPoint`** class - Stores CPU/Memory/Disk at timestamp
+- **`ResourceHistory`** class - Maintains 60 data points (3 min history)
+- **`ResourceHistoryNotifier`** - State management with ChangeNotifier
+- **Auto-updates** every 3 seconds when resources refresh
+- **File**: `lib/services/resource_history.dart`
+
+### 4. RouterOS API Bug Fixes ✅
+**Fixed critical issues with multi-record responses**
+
+- **Issue**: Only last profile/item was shown when multiple records existed
+- **Root Cause**: `_processWord()` didn't add previous item when `!re` received
+- **Fix**: Now adds current item to response before starting new record
+- **File**: `lib/services/routeros_api_client.dart`
+- **Impact**: All user profiles, hotspot users, and other multi-record data now display correctly
+
+### 5. User Profile Creation Fix ✅
+**Fixed circular dependency in Riverpod provider**
+
+- **Issue**: "provider cannot depend on itself" error when creating profiles
+- **Root Cause**: `addProfile()`, `updateProfile()`, `deleteProfile()` called `ref.invalidate(userProfileProvider)`
+- **Fix**: Changed to direct state updates with `AsyncValue.guard()`
+- **File**: `lib/providers/app_providers.dart`
+
+### 6. Modern UI Theme ✅
+**Material 3 with Poppins font and vibrant colors**
+
+- **Font**: Google Fonts - **Poppins** (modern, clean typography)
+- **Design System**: **Material 3** (Flutter's latest)
+- **Primary Color**: **Vibrant Purple** (#7C3AED)
+- **Secondary Color**: **Cyan** (#06B6D4)
+- **Surface Colors**: Slate tones (900, 800, 700)
+- **Features**:
+  - Proper shadow colors using `ColorScheme.shadow`
+  - Surface tint set to transparent for better control
+  - Rounded corners (16-24px)
+  - Optimized letter spacing for headlines
+  - Better text hierarchy with improved heights
+- **File**: `lib/theme/app_theme.dart`
+
+### 7. Dashboard Cleanup ✅
+**Removed duplicate UI elements**
+
+- **Removed**: Duplicate User Profiles and Settings cards from income section
+- **Removed**: Unused `_buildQuickActionCard` method
+- **Added**: Settings button back to AppBar (for easy access)
+- **Result**: Cleaner, more focused dashboard layout
+
+### 8. Responsive Design Improvements ✅
+**Adaptive UI for all screen sizes**
+
+- **LayoutBuilder** for dynamic sizing
+- **Chart height**: 180px (small) vs 240px (large)
+- **Adjusted padding** and font sizes based on screen width
+- **Wrap widgets** for legend items to prevent overflow
+- **Small screen detection**: `< 400px` threshold
+
+### 9. Chart Dependencies ✅
+**Added fl_chart and google_fonts libraries**
+
 ```yaml
-hive: ^2.2.3
-hive_flutter: ^1.1.0
+dependencies:
+  fl_chart: ^0.70.1
+  google_fonts: ^6.2.1
 ```
 
-**Features:**
-- `getSystemResources()` / `saveSystemResources()`
-- `getHotspotUsers()` / `saveHotspotUsers()`
-- `getActiveUsers()` / `saveActiveUsers()`
-- `getUserProfiles()` / `saveUserProfiles()`
-- `isCacheStale()` - 5-minute validity check
-- File: `lib/services/cache_service.dart`
+### 10. Interface Traffic Monitoring ✅
+**Network interface statistics widget with real-time rate calculation**
 
-### 4. Real-Time Dashboard Updates ✅
-**Auto-refresh every 3 seconds**
-
-- Timer fetches from RouterOS every 3 seconds (real mode)
-- `ValueNotifier<SystemResources?>` for reactive updates
-- Resource cards use `ValueListenableBuilder`
-- Demo mode: random values | Real mode: actual router data
-- Files: `lib/screens/dashboard/dashboard_screen.dart`, `lib/screens/dashboard/widgets/resource_card_widgets.dart`
-
-### 5. Enhanced Data Parsing ✅
-**RouterOS API format support**
-
-- `_parseSizeToInt()` - Parses "512MiB", "1GiB" into bytes
-- `_parseUptime()` - Parses "2d 3h 45m" into seconds
-- Supports binary (KiB, MiB, GiB) and decimal (KB, MB) units
-- File: `lib/services/models.dart`
+- **Real-time traffic data** - TX/RX bytes and per-second rates
+- **Rate calculation service** - `TrafficRateService` computes rates from cumulative bytes
+- **Smooth text updates** - `ValueNotifier` + `ValueListenableBuilder` for flicker-free updates
+- **Auto-refresh** - Updates every 3 seconds without full card rebuild
+- **Interface filtering** - Shows only running interfaces, sorted by type
+- **Type-based styling** - Color-coded icons for Ethernet (Cyan), Wireless (Violet), Bridge (Emerald)
+- **Status badges** - Active/Inactive/Disabled indicators
+- **Human-readable formatting** - Auto-converts bytes to B/KB/MB/GB/TB
+- **Refresh capability** - Manual refresh button with loading states
+- **Demo mode support** - Simulated interface data with rate calculation
+- **Files**:
+  - `lib/services/models.dart` - Added `InterfaceTraffic` class
+  - `lib/services/traffic_rate_service.dart` - Real-time rate calculation from cumulative bytes
+  - `lib/services/routeros_api_client.dart` - Added `getInterfaceStats()` method
+  - `lib/providers/app_providers.dart` - Added `interfaceTrafficProvider` with rate calculation
+  - `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart` - New widget with ValueNotifier architecture
+  - `lib/screens/dashboard/dashboard_screen.dart` - Added widget to dashboard
 
 ---
 
@@ -87,7 +204,39 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
                                                     ↓
                                           Timer (every 3s)
                                                     ↓
-                                          RouterOS → Cache → UI Update
+                                          RouterOS → ResourceHistory → Chart Update
+                                                    ↓
+                                          Animated Chart (scrolls right→left)
+```
+
+---
+
+## Dashboard Architecture
+
+```
+┌─────────────────────────────────────┐
+│ System Info Card                   │
+│ - Router name, version, platform   │
+│ - CPU frequency, uptime            │
+├─────────────────────────────────────┤
+│                                     │
+│   Combined Line Chart              │
+│   ┌─────────────────────────────┐  │
+│   │ 🟣 CPU  🟢 RAM  🟠 Disk    │  │
+│   │   LIVE  [scrolling →     ]  │  │
+│   └─────────────────────────────┘  │
+│                                     │
+├─────────────────────────────────────┤
+│ Income Cards                        │
+│ - Today's income                    │
+│ - This month                        │
+├─────────────────────────────────────┤
+│ Quick Actions                       │
+│ - Add Hotspot User                 │
+│ - Manage Hotspot                   │
+│ - User Profiles                     │
+│ - Connection Logs                  │
+└─────────────────────────────────────┘
 ```
 
 ---
@@ -96,13 +245,8 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 
 #### 1. Dashboard Enhancements
 
-- **Income tracking** (daily/monthly sales)
-- **Real-time clock display** (timezone, time, date)
-- **Router identity display** (show router name/model)
-- **Active users counter** widget (show online hotspot users count)
-- **Total users counter** widget (show registered users count)
-- **Live income widget** (today's and this month's income)
-- **Health monitoring** (voltage, temperature sensors)
+- ~~**Interface stats**~~ ✅ COMPLETED - Network traffic monitoring (tx/rx bytes)
+- **Health monitoring** - Voltage, temperature sensors
 
 #### 2. Hotspot Features
 
@@ -125,8 +269,8 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
   - CSV/XLS export
   - Quantity and total summary
 - **Income Summary** - Total revenue calculations
-  - Today's income
-  - This month's income
+  - Today's income ✅ (Already shown)
+  - This month's income ✅ (Already shown)
   - Filtered period totals
 
 #### 4. Log System
@@ -151,9 +295,8 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
   - Save router configurations
   - Quick session switching
 - **Idle Timeout** - Auto-logout timer (10 min)
-- **Mobile/Desktop Responsive** - Adaptive UI
 - **Session Management** - Save/load router sessions
-- **About Page** - App information and version
+- **About Page** - App information and version ✅ (Already in settings)
 
 ---
 
@@ -166,23 +309,27 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 3. ~~**Voucher Generation**~~ ✅ COMPLETED
 4. ~~**RouterOS API Integration**~~ ✅ COMPLETED
 5. ~~**Local Caching (Hive)**~~ ✅ COMPLETED
-6. ~~**Real-Time Dashboard**~~ ✅ COMPLETED
-7. **Dashboard Income Widget** - Show daily/monthly revenue
-   - Quick business overview
-   - Uses existing report data
+6. ~~**Real-Time Dashboard Chart**~~ ✅ COMPLETED
+7. ~~**Resource History Tracking**~~ ✅ COMPLETED
+8. ~~**Responsive Design**~~ ✅ COMPLETED
+9. ~~**Dashboard Income Widget**~~ ✅ Already implemented
+10. ~~**Modern UI Theme**~~ ✅ COMPLETED
+11. ~~**Interface Traffic Monitoring**~~ ✅ COMPLETED
 
 ### Medium Priority (User Experience)
 
-8. **Settings screen** - Theme switcher, router management
-9. **Reports page** - Sales history with filtering
-10. **Log viewer** - Activity tracking
-11. **Hotspot Hosts** - DHCP lease monitoring
+12. **Settings screen** - Theme switcher, router management (UI exists, needs implementation)
+13. **Reports page** - Sales history with filtering
+14. **Log viewer** - Activity tracking
+15. **Hotspot Hosts** - DHCP lease monitoring
+16. **Health Monitoring** - Temperature, voltage sensors
 
 ### Low Priority (Nice to Have)
 
-12. **Template editor** - Custom voucher printing
-13. **Multi-session support** - Multiple routers
-14. **Real-time clock** - Dashboard enhancement
+17. **Template editor** - Custom voucher printing
+18. **Multi-session support** - Multiple routers
+19. **Real-time clock widget** - Dashboard enhancement
+20. **Voucher printing** - PDF/Print templates
 
 ---
 
@@ -192,10 +339,26 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 
 - **State Management**: Riverpod 2.6.1
 - **Navigation**: go_router 14.6.2
-- **HTTP Client**: ~~Dio 5.7.0~~ → **RouterOS API (socket-based)**
+- **Charts**: fl_chart 0.70.1
+- **Fonts**: google_fonts 6.2.1 (Poppins)
 - **Secure Storage**: flutter_secure_storage
-- **Local Database**: **Hive 2.2.3** (NEW)
+- **Local Database**: Hive 2.2.3
 - **Demo Mode**: In-memory cache (module-level variables)
+
+### Theme Configuration
+
+```dart
+// Modern Color Palette
+Primary: #7C3AED (Vibrant Purple)
+Secondary: #06B6D4 (Cyan)
+Background: #0F172A (Slate 900)
+Surface: #1E293B (Slate 800)
+Card: #334155 (Slate 700)
+
+// Typography
+Font Family: Poppins (Google Fonts)
+Design System: Material 3
+```
 
 ### RouterOS API Protocol
 
@@ -211,6 +374,7 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 │   '' (empty word terminator)                               │
 │ • Termination: Zero-length word for each sentence        │
 │ • Responses: !re (data), !done (end), !trap (error)       │
+│ • Multi-record: Each !re starts new record              │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -229,26 +393,17 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 | Data Type | Refresh Rate |
 |-----------|--------------|
 | Dashboard resources | Every 3 seconds (real mode) |
+| Resource history | Every 3 seconds (adds to history) |
+| Active users | Every 5 seconds (real mode) |
 | Demo mode cards | 2-5 seconds (random values) |
 | Cache validity check | On load |
 
-### Demo Mode Data Structure
+### Resource History Settings
 
-```dart
-// Current demo users stored in memory
-List<Map<String, dynamic>> _demoUsersCache = [];
-bool _demoUsersInitialized = false;
-
-// Cache for demo active sessions
-final Map<String, Map<String, dynamic>> _demoActiveSessions = {};
-
-// Demo profiles include:
-- default (Free, unlimited)
-- 1hour ($1.00, 1h validity)
-- 1day ($2.50, 1d validity)
-- 1week ($10.00, 7d validity)
-- 1month ($25.00, 30d validity)
-```
+- **Max data points**: 60 (3 minutes at 3s intervals)
+- **Visible window**: 30-40 points (scrolling)
+- **Animation duration**: 300ms
+- **Chart update**: Triggered by ResourceHistoryNotifier
 
 ### Files Structure
 
@@ -256,32 +411,55 @@ final Map<String, Map<String, dynamic>> _demoActiveSessions = {};
 lib/
 ├── providers/
 │   └── app_providers.dart                # Riverpod state management
-│                                         # + CacheServiceProvider (NEW)
-│                                         # + AuthState with resources (NEW)
+│                                         # + CacheServiceProvider
+│                                         # + AuthState with resources
+│                                         # + ResourceHistoryNotifier
+│                                         # + UserProfileNotifier (fixed circular dependency)
 ├── screens/
 │   ├── auth/
-│   │   └── login_screen.dart             # Login with demo toggle (port 8728 labels)
+│   │   └── login_screen.dart             # Login with demo toggle (port 8728)
 │   ├── dashboard/
-│   │   ├── dashboard_screen.dart         # Dashboard with real-time updates (NEW)
+│   │   ├── dashboard_screen.dart         # Dashboard with real-time chart
 │   │   └── widgets/
-│   │       └── resource_card_widgets.dart # Reactive cards (NEW)
+│   │       ├── resource_card_widgets.dart # Income cards (theme updated)
+│   │       ├── combined_resource_chart.dart # Real-time line chart
+│   │       └── traffic_monitor_widgets.dart # Interface traffic monitoring
 │   ├── welcome/
-│   │   └── welcome_screen.dart           # Welcome screen
+│   │   └── welcome_screen.dart           # Welcome screen (ΩMMON branding)
+│   ├── settings/
+│   │   └── settings_screen.dart          # Settings with ΩMMON branding
 │   └── hotspot_users/
 │       ├── hotspot_users_screen.dart     # User list with filters
 │       ├── hotspot_active_users_screen.dart # Active users (real-time)
 │       ├── hotspot_user_details_screen.dart
 │       ├── add_hotspot_user_screen.dart
 │       ├── edit_hotspot_user_screen.dart
-│       ├── user_profiles_screen.dart     # Profile management
-│       └── add_edit_profile_screen.dart  # Add/edit profiles
+│       ├── user_profiles_screen.dart     # Profile management (fixed multi-record parsing)
+│       ├── add_edit_profile_screen.dart  # Add/edit profiles (fixed circular dependency)
+│       └── voucher_generation_screen.dart
 ├── services/
 │   ├── models.dart                       # Data models (enhanced parsing)
-│   ├── routeros_api_client.dart          # RouterOS API protocol (REWRITE)
+│   ├── routeros_api_client.dart          # RouterOS API protocol (fixed multi-record)
 │   ├── routeros_service.dart             # Uses RouterOSClient
-│   └── cache_service.dart                # Hive caching service (NEW)
+│   ├── cache_service.dart                # Hive caching service
+│   ├── resource_history.dart             # Resource history tracking
+│   └── traffic_rate_service.dart         # Real-time traffic rate calculation
+├── theme/
+│   └── app_theme.dart                    # Modern Material 3 theme with Poppins
 └── utils/
     └── validators.dart                   # Form validators
+```
+
+### Android Structure
+
+```
+android/
+├── app/
+│   ├── build.gradle.kts                  # applicationId: com.simpurrapps.ommon
+│   └── src/main/
+│       ├── AndroidManifest.xml           # android:label="OMMON"
+│       └── kotlin/com/simpurrapps/ommon/
+│           └── MainActivity.kt           # Package: com.simpurrapps.ommon
 ```
 
 ---
@@ -290,15 +468,52 @@ lib/
 
 Choose a feature to implement:
 
-1. ~~**Hotspot Active**~~ ✅ DONE
-2. ~~**User Profiles Management**~~ ✅ DONE
-3. ~~**Voucher Generator**~~ ✅ DONE
-4. ~~**RouterOS API Integration**~~ ✅ DONE
-5. ~~**Local Caching**~~ ✅ DONE
-6. ~~**Real-Time Dashboard**~~ ✅ DONE
-7. **Dashboard Income** - Revenue tracking widgets
-8. **Settings Screen** - Theme and configuration
+1. ~~**Rebranding to ΩMMON**~~ ✅ DONE
+2. ~~**Real-Time Chart**~~ ✅ DONE
+3. ~~**Resource History**~~ ✅ DONE
+4. ~~**Responsive Design**~~ ✅ DONE
+5. ~~**Modern UI Theme**~~ ✅ DONE
+6. ~~**User Profile Creation Fix**~~ ✅ DONE
+7. ~~**RouterOS API Multi-Record Fix**~~ ✅ DONE
+8. ~~**Interface Traffic Monitoring**~~ ✅ DONE
+9. **Settings Implementation** - Make settings screen functional
+10. **Reports Page** - Sales history with filtering
+11. **Hotspot Hosts** - DHCP lease monitoring
+12. **Log Viewer** - Activity tracking
+13. **Health Monitoring** - Temperature, voltage sensors
 
 ---
 
-_Last Updated: February 20, 2026_
+## Bug Fixes Summary
+
+### Fixed Issues (March 9, 2026)
+
+1. **Traffic Rates Showing "0 B/s"** - Fixed demo mode rate calculation
+   - Added `_trafficRateService.calculateRates()` calls in `build()`, `refresh()`, and `silentRefresh()`
+   - File: `lib/providers/app_providers.dart`
+
+2. **Traffic Values Not Updating** - Fixed widget state synchronization
+   - Added `_updateTrafficValues()` call in widget's `build()` method
+   - File: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
+
+3. **Developer Card Overflow** - Fixed responsive layout on small screens
+   - Used `Expanded` widgets and `FittedBox` for text
+   - File: `lib/screens/settings/settings_screen.dart`
+
+### Fixed Issues (March 8, 2026)
+
+1. **User Profile Creation** - Fixed "provider cannot depend on itself" error
+   - Changed from `ref.invalidate()` to direct state updates
+   - File: `lib/providers/app_providers.dart`
+
+2. **Multiple User Profiles Not Showing** - Fixed RouterOS API response parsing
+   - Added item to response when new `!re` is received
+   - File: `lib/services/routeros_api_client.dart`
+
+3. **Font Not Found** - Changed from Plus Jakarta Sans to Poppins
+   - Updated theme to use available Google Font
+   - File: `lib/theme/app_theme.dart`
+
+---
+
+_Last Updated: March 9, 2026_

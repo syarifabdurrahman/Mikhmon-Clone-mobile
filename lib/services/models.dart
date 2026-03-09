@@ -1,3 +1,77 @@
+class InterfaceTraffic {
+  final String name;
+  final String type; // ether, bridge, wireless, etc.
+  final int? txBytes; // Total transmitted bytes
+  final int? rxBytes; // Total received bytes
+  final int? txBytesPerSecond; // Current tx rate
+  final int? rxBytesPerSecond; // Current rx rate
+  final String? mtu;
+  final bool running;
+  final bool? enabled;
+
+  InterfaceTraffic({
+    required this.name,
+    required this.type,
+    this.txBytes,
+    this.rxBytes,
+    this.txBytesPerSecond,
+    this.rxBytesPerSecond,
+    this.mtu,
+    required this.running,
+    this.enabled,
+  });
+
+  factory InterfaceTraffic.fromJson(Map<String, dynamic> json) {
+    return InterfaceTraffic(
+      name: json['name'] ?? 'unknown',
+      type: json['type'] ?? 'unknown',
+      txBytes: json['tx-byte'] != null ? int.tryParse(json['tx-byte'].toString()) : null,
+      rxBytes: json['rx-byte'] != null ? int.tryParse(json['rx-byte'].toString()) : null,
+      txBytesPerSecond: json['tx-byte-per-second'] != null ? int.tryParse(json['tx-byte-per-second'].toString()) : null,
+      rxBytesPerSecond: json['rx-byte-per-second'] != null ? int.tryParse(json['rx-byte-per-second'].toString()) : null,
+      mtu: json['mtu']?.toString(),
+      running: json['running'] == 'true' || json['running'] == true,
+      enabled: json['disabled'] == 'false' || json['disabled'] == false,
+    );
+  }
+
+  // Formatted getters
+  String get txDisplay => _formatBytes(txBytes ?? 0);
+  String get rxDisplay => _formatBytes(rxBytes ?? 0);
+  String get txRateDisplay => _formatBytesPerSecond(txBytesPerSecond ?? 0);
+  String get rxRateDisplay => _formatBytesPerSecond(rxBytesPerSecond ?? 0);
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+    return '${(bytes / (1024 * 1024 * 1024 * 1024)).toStringAsFixed(2)} TB';
+  }
+
+  String _formatBytesPerSecond(int bytesPerSecond) {
+    if (bytesPerSecond < 1024) return '$bytesPerSecond B/s';
+    if (bytesPerSecond < 1024 * 1024) return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    if (bytesPerSecond < 1024 * 1024 * 1024) return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+    if (bytesPerSecond < 1024 * 1024 * 1024 * 1024) return '${(bytesPerSecond / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB/s';
+    return '${(bytesPerSecond / (1024 * 1024 * 1024 * 1024)).toStringAsFixed(2)} TB/s';
+  }
+
+  double get txPercent {
+    if (txBytes == null || rxBytes == null) return 0;
+    final total = txBytes! + rxBytes!;
+    if (total == 0) return 0;
+    return txBytes! / total;
+  }
+
+  double get rxPercent {
+    if (txBytes == null || rxBytes == null) return 0;
+    final total = txBytes! + rxBytes!;
+    if (total == 0) return 0;
+    return rxBytes! / total;
+  }
+}
+
 class UserProfile {
   final String id;
   final String name;
