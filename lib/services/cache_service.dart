@@ -21,6 +21,7 @@ class CacheService {
   static const String _incomeSummaryKey = 'income_summary';
   static const String _savedConnectionsKey = 'saved_connections';
   static const String _lastUpdateKey = 'last_update';
+  static const String _interfaceTrafficKey = 'interface_traffic';
 
   /// Initialize Hive cache
   Future<void> init() async {
@@ -331,6 +332,32 @@ class CacheService {
       debugPrint('[CacheService] Cache closed');
     } catch (e) {
       debugPrint('[CacheService] Error closing cache: $e');
+    }
+  }
+
+  /// Get interface traffic from cache
+  List<Map<String, dynamic>>? getInterfaceTraffic() {
+    try {
+      final data = _cacheBox.get(_interfaceTrafficKey);
+      if (data != null && data is List) {
+        debugPrint('[CacheService] Interface traffic cache hit');
+        return List<Map<String, dynamic>>.from(data);
+      }
+      debugPrint('[CacheService] Interface traffic cache miss');
+      return null;
+    } catch (e) {
+      debugPrint('[CacheService] Error reading interface traffic: $e');
+      return null;
+    }
+  }
+
+  /// Save interface traffic to cache
+  Future<void> saveInterfaceTraffic(List<Map<String, dynamic>> data) async {
+    try {
+      await _cacheBox.put(_interfaceTrafficKey, data);
+      debugPrint('[CacheService] Interface traffic cached (${data.length} interfaces)');
+    } catch (e) {
+      debugPrint('[CacheService] Error saving interface traffic: $e');
     }
   }
 }

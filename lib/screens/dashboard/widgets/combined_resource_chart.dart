@@ -47,6 +47,11 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
       curve: Curves.easeInOut,
     );
 
+    // Skip initial animation if we already have data (prevents hiccup on navigation)
+    if (widget.resourceHistory.cpuData.isNotEmpty) {
+      _animationController.value = 1.0;
+    }
+
     if (widget.isDemoMode) {
       _startDemoMode();
     }
@@ -112,34 +117,36 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
     _memorySpots = [];
     _diskSpots = [];
 
+    // Get the timestamp of the first visible point as reference
+    DateTime? referenceTime;
+    if (dataPoints.isNotEmpty && startIndex < dataPoints.length) {
+      referenceTime = dataPoints[startIndex].timestamp;
+    }
+
     for (int i = startIndex; i < dataPoints.length; i++) {
       final point = dataPoints[i];
-      final x = (i - startIndex).toDouble();
+      // Use actual elapsed time in seconds from the reference point
+      final x = referenceTime != null
+          ? point.timestamp.difference(referenceTime).inSeconds.toDouble()
+          : 0.0;
       _cpuSpots.add(FlSpot(x, point.cpuLoad));
       _memorySpots.add(FlSpot(x, point.memoryUsage));
       _diskSpots.add(FlSpot(x, point.diskUsage));
     }
   }
 
-  String _formatTime(int index) {
-    final dataPoints = widget.resourceHistory.cpuData;
-    if (dataPoints.isEmpty) return '';
-
-    final actualIndex = dataPoints.length - 1 - index;
-    if (actualIndex < 0 || actualIndex >= dataPoints.length) {
-      return '';
-    }
-
-    final timestamp = dataPoints[actualIndex].timestamp;
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inSeconds < 60) {
-      return '${difference.inSeconds}s';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m';
+  /// Format time based on x-coordinate (elapsed seconds)
+  String _formatElapsedTime(double elapsedSeconds) {
+    if (elapsedSeconds < 60) {
+      return '${elapsedSeconds.toInt()}s';
+    } else if (elapsedSeconds < 3600) {
+      final minutes = (elapsedSeconds / 60).floor();
+      final seconds = (elapsedSeconds % 60).toInt();
+      return seconds > 0 ? '${minutes}m${seconds}s' : '${minutes}m';
     } else {
-      return '${difference.inHours}h';
+      final hours = (elapsedSeconds / 3600).floor();
+      final minutes = ((elapsedSeconds % 3600) / 60).floor();
+      return minutes > 0 ? '${hours}h${minutes}m' : '${hours}h';
     }
   }
 
@@ -154,7 +161,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
     // As new data arrives, old data scrolls off to the left
     final visiblePoints = (_cpuSpots.length.clamp(10, 50)).toDouble();
     final startX = (_cpuSpots.length - visiblePoints).clamp(0.0, double.infinity);
-    final maxX = (_cpuSpots.length - 1).toDouble().clamp(1.0, 60.0);
+    final maxX = (_cpuSpots.length - 1).toDouble().clamp(1.0, double.infinity); // Remove the 60.0 clamp to allow continuous scrolling
 
     return AnimatedBuilder(
       animation: _animation,
@@ -188,17 +195,11 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                     reservedSize: 18,
                     interval: (maxX - startX) / 6,
                     getTitlesWidget: (value, meta) {
-                      final index = value.toInt();
-                      if (index < 0 || index >= _cpuSpots.length) {
-                        return const SizedBox.shrink();
-                      }
-                      // Show fewer labels for cleaner look
-                      final labelInterval = ((maxX - startX) / 6).ceil();
-                      if (index % labelInterval != 0) {
-                        return const SizedBox.shrink();
-                      }
+                      // value is the x-coordinate in seconds
+                      if (value < 0) return const SizedBox.shrink();
+
                       return Text(
-                        widget.isDemoMode ? '${index * 2}s' : _formatTime(index),
+                        _formatElapsedTime(value),
                         style: TextStyle(
                           color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
                           fontSize: 8,
@@ -365,17 +366,30 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.show_chart_rounded,
-            size: 48,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                AppTheme.primaryColor.withValues(alpha: 0.5),
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Text(
             'Collecting data...',
             style: TextStyle(
               color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
               fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Waiting for first data point',
+            style: TextStyle(
+              color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+              fontSize: 10,
             ),
           ),
         ],

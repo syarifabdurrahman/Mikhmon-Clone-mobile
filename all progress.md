@@ -28,12 +28,50 @@
 | **Voucher Generation** | ✅ | Bulk user creation with custom username format |
 | **Responsive Design** | ✅ | LayoutBuilder for adaptive UI on all screens |
 | **Modern UI Theme** | ✅ | **Poppins font**, Material 3, vibrant colors |
+| **Hotspot Hosts** | ✅ | DHCP lease/binding monitoring with search & filters |
 
 ---
 
 ## 🆕 Recent Updates (March 9, 2026)
 
-### 1. Real-Time Traffic Rate Updates ✅
+### 1. Auto-Refresh Timer Fix ✅
+**Fixed traffic monitoring auto-refresh to work in real-time mode**
+
+- **Issue**: Traffic rates not updating automatically every 3 seconds in real-time mode (not demo mode)
+- **Root Cause**: `_loadInitialData()` called from `initState()` ran before provider data was loaded, so timer never started
+- **Fix**:
+  - Added `_timerStarted` flag to prevent duplicate timers
+  - Moved `_startAutoRefresh()` call to `build()` method which uses `ref.watch()` and triggers when data arrives
+  - Timer now starts correctly regardless of data loading timing
+- **Impact**: Traffic rates now auto-update every 3 seconds in both demo and real-time modes
+- **Files**: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
+
+### 2. Network Permissions Added ✅
+**Fixed "Permission denied" error when connecting to RouterOS**
+
+- **Issue**: App couldn't connect to RouterOS in real-time mode, showing "SocketException: Connection failed (OS Error: Permission denied)"
+- **Root Cause**: AndroidManifest.xml was missing INTERNET permission required for network sockets
+- **Fix**: Added network permissions before `<application>` tag:
+  ```xml
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  ```
+- **Impact**: App can now successfully connect to RouterOS devices on port 8728
+- **File**: `android/app/src/main/AndroidManifest.xml`
+
+### 3. Removed Refresh Button ✅
+**Cleaned up UI to match system resources card**
+
+- **Issue**: Traffic monitor had manual refresh button with "Updating..." state, inconsistent with system resources
+- **Solution**:
+  - Removed `_buildRefreshIndicator()` method entirely
+  - Removed `_isRefreshing` state variable
+  - Simplified `_silentRefresh()` by removing try/finally blocks
+  - Changed header to use `Expanded` widget for text (no spacer/refresh button)
+- **Result**: Clean, silent auto-refresh like system resources card - no visible refresh indicators
+- **File**: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
+
+### 4. Real-Time Traffic Rate Updates ✅
 **Fixed traffic monitoring to show live per-second rates**
 
 - **Issue**: Traffic rates showing "0 B/s" instead of real-time values
@@ -42,7 +80,7 @@
 - **Impact**: TX and RX rates now update correctly every 3 seconds
 - **Files**: `lib/providers/app_providers.dart`
 
-### 2. Smooth Traffic Text Updates ✅
+### 5. Smooth Traffic Text Updates ✅
 **Refactored to use ValueNotifier for text-only updates**
 
 - **Issue**: Entire card was rebuilding causing visual flicker
@@ -51,7 +89,7 @@
 - **Result**: Text values update smoothly without rebuilding card structure
 - **File**: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-### 3. About Dialog with Developers ✅
+### 6. About Dialog with Developers ✅
 **Added developer information to Settings > About**
 
 - **Developers**: Favian Hugo and Syarif Abdurrahman
@@ -59,7 +97,7 @@
 - **Style**: Matching app theme with purple primary color
 - **File**: `lib/screens/settings/settings_screen.dart`
 
-### 4. Responsive Developer Cards ✅
+### 7. Responsive Developer Cards ✅
 **Fixed overflow issue on smaller screens**
 
 - **Issue**: "Syarif Abdurrahman" text overflowed on small screens
@@ -69,6 +107,28 @@
   - Added `FittedBox` to prevent text overflow
 - **Result**: Cards adapt to all screen sizes without overflow
 - **File**: `lib/screens/settings/settings_screen.dart`
+
+### 8. Hotspot Hosts Monitoring ✅
+**DHCP lease/binding monitoring with real-time updates**
+
+- **Feature**: Complete hotspot hosts monitoring showing all connected devices
+- **Data Model**: `HotspotHost` class with MAC address, IP address, authorization status, bypassed status, user association, uptime, and idle time
+- **API Integration**: RouterOS `/ip/hotspot/host/print` command to fetch DHCP hosts
+- **State Management**: `HotspotHostsNotifier` with AsyncNotifier, auto-refreshes every 5 seconds
+- **UI Features**:
+  - Search by IP, MAC address, or username
+  - Filter chips (All, Authorized, Unauthorized, Bypassed)
+  - Color-coded status badges (Emerald for authorized, Amber for bypassed, Slate for unauthorized)
+  - Card-based layout with connection details
+  - Demo mode support with 4 sample hosts
+- **Navigation**: Added route and dashboard button for easy access
+- **Files**:
+  - `lib/services/models.dart` - Added `HotspotHost` class
+  - `lib/services/routeros_api_client.dart` - Added `getHotspotHosts()` method
+  - `lib/providers/app_providers.dart` - Added `HotspotHostsNotifier` and `hotspotHostsProvider`
+  - `lib/screens/hotspot_users/hotspot_hosts_screen.dart` - Complete UI implementation
+  - `lib/navigation/app_router.dart` - Added route configuration
+  - `lib/screens/dashboard/dashboard_screen.dart` - Added navigation button
 
 ---
 
@@ -180,12 +240,13 @@ dependencies:
 - **Real-time traffic data** - TX/RX bytes and per-second rates
 - **Rate calculation service** - `TrafficRateService` computes rates from cumulative bytes
 - **Smooth text updates** - `ValueNotifier` + `ValueListenableBuilder` for flicker-free updates
-- **Auto-refresh** - Updates every 3 seconds without full card rebuild
+- **Silent auto-refresh** - Updates every 3 seconds without any UI indicator (like system resources)
+- **Smart timer startup** - Timer starts when data becomes available via `ref.watch()` in `build()` method
 - **Interface filtering** - Shows only running interfaces, sorted by type
 - **Type-based styling** - Color-coded icons for Ethernet (Cyan), Wireless (Violet), Bridge (Emerald)
 - **Status badges** - Active/Inactive/Disabled indicators
 - **Human-readable formatting** - Auto-converts bytes to B/KB/MB/GB/TB
-- **Refresh capability** - Manual refresh button with loading states
+- **Network permissions** - INTERNET and ACCESS_NETWORK_STATE for RouterOS connections
 - **Demo mode support** - Simulated interface data with rate calculation
 - **Files**:
   - `lib/services/models.dart` - Added `InterfaceTraffic` class
@@ -194,6 +255,7 @@ dependencies:
   - `lib/providers/app_providers.dart` - Added `interfaceTrafficProvider` with rate calculation
   - `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart` - New widget with ValueNotifier architecture
   - `lib/screens/dashboard/dashboard_screen.dart` - Added widget to dashboard
+  - `android/app/src/main/AndroidManifest.xml` - Added network permissions
 
 ---
 
@@ -250,10 +312,7 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 
 #### 2. Hotspot Features
 
-- **Hotspot Hosts** - DHCP lease/binding monitoring
-  - View authorized/bypassed hosts
-  - Show MAC address, IP address, client ID
-  - Filter by authorization status
+- ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease/binding monitoring
 - **Voucher Printing** - Print with customizable templates
   - Default template (full size)
   - Small template (compact)
@@ -321,7 +380,7 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 12. **Settings screen** - Theme switcher, router management (UI exists, needs implementation)
 13. **Reports page** - Sales history with filtering
 14. **Log viewer** - Activity tracking
-15. **Hotspot Hosts** - DHCP lease monitoring
+15. ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease monitoring
 16. **Health Monitoring** - Temperature, voltage sensors
 
 ### Low Priority (Nice to Have)
@@ -395,6 +454,7 @@ Design System: Material 3
 | Dashboard resources | Every 3 seconds (real mode) |
 | Resource history | Every 3 seconds (adds to history) |
 | Active users | Every 5 seconds (real mode) |
+| Hotspot hosts | Every 5 seconds (real mode) |
 | Demo mode cards | 2-5 seconds (random values) |
 | Cache validity check | On load |
 
@@ -415,11 +475,12 @@ lib/
 │                                         # + AuthState with resources
 │                                         # + ResourceHistoryNotifier
 │                                         # + UserProfileNotifier (fixed circular dependency)
+│                                         # + HotspotHostsNotifier with auto-refresh
 ├── screens/
 │   ├── auth/
 │   │   └── login_screen.dart             # Login with demo toggle (port 8728)
 │   ├── dashboard/
-│   │   ├── dashboard_screen.dart         # Dashboard with real-time chart
+│   │   ├── dashboard_screen.dart         # Dashboard with real-time chart + Hotspot Hosts button
 │   │   └── widgets/
 │   │       ├── resource_card_widgets.dart # Income cards (theme updated)
 │   │       ├── combined_resource_chart.dart # Real-time line chart
@@ -431,6 +492,7 @@ lib/
 │   └── hotspot_users/
 │       ├── hotspot_users_screen.dart     # User list with filters
 │       ├── hotspot_active_users_screen.dart # Active users (real-time)
+│       ├── hotspot_hosts_screen.dart     # DHCP hosts monitoring (NEW)
 │       ├── hotspot_user_details_screen.dart
 │       ├── add_hotspot_user_screen.dart
 │       ├── edit_hotspot_user_screen.dart
@@ -438,14 +500,16 @@ lib/
 │       ├── add_edit_profile_screen.dart  # Add/edit profiles (fixed circular dependency)
 │       └── voucher_generation_screen.dart
 ├── services/
-│   ├── models.dart                       # Data models (enhanced parsing)
-│   ├── routeros_api_client.dart          # RouterOS API protocol (fixed multi-record)
+│   ├── models.dart                       # Data models (enhanced parsing) + HotspotHost
+│   ├── routeros_api_client.dart          # RouterOS API protocol (fixed multi-record) + getHotspotHosts()
 │   ├── routeros_service.dart             # Uses RouterOSClient
 │   ├── cache_service.dart                # Hive caching service
 │   ├── resource_history.dart             # Resource history tracking
 │   └── traffic_rate_service.dart         # Real-time traffic rate calculation
 ├── theme/
 │   └── app_theme.dart                    # Modern Material 3 theme with Poppins
+├── navigation/
+│   └── app_router.dart                   # go_router configuration + hosts route
 └── utils/
     └── validators.dart                   # Form validators
 ```
@@ -478,7 +542,7 @@ Choose a feature to implement:
 8. ~~**Interface Traffic Monitoring**~~ ✅ DONE
 9. **Settings Implementation** - Make settings screen functional
 10. **Reports Page** - Sales history with filtering
-11. **Hotspot Hosts** - DHCP lease monitoring
+11. ~~**Hotspot Hosts**~~ ✅ DONE - DHCP lease monitoring
 12. **Log Viewer** - Activity tracking
 13. **Health Monitoring** - Temperature, voltage sensors
 
@@ -488,17 +552,34 @@ Choose a feature to implement:
 
 ### Fixed Issues (March 9, 2026)
 
-1. **Traffic Rates Showing "0 B/s"** - Fixed demo mode rate calculation
+1. **Auto-Refresh Timer Not Firing** - Fixed timer startup timing issue
+   - Added `_timerStarted` flag and moved timer start to `build()` method
+   - Timer now starts correctly when data becomes available via `ref.watch()`
+   - File: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
+
+2. **Network Permission Denied** - Added missing INTERNET permission
+   - Added `INTERNET` and `ACCESS_NETWORK_STATE` permissions to AndroidManifest.xml
+   - App can now connect to RouterOS devices on port 8728
+   - File: `android/app/src/main/AndroidManifest.xml`
+
+3. **Traffic Rates Showing "0 B/s"** - Fixed demo mode rate calculation
    - Added `_trafficRateService.calculateRates()` calls in `build()`, `refresh()`, and `silentRefresh()`
    - File: `lib/providers/app_providers.dart`
 
-2. **Traffic Values Not Updating** - Fixed widget state synchronization
+4. **Traffic Values Not Updating** - Fixed widget state synchronization
    - Added `_updateTrafficValues()` call in widget's `build()` method
    - File: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-3. **Developer Card Overflow** - Fixed responsive layout on small screens
+5. **Developer Card Overflow** - Fixed responsive layout on small screens
    - Used `Expanded` widgets and `FittedBox` for text
    - File: `lib/screens/settings/settings_screen.dart`
+
+6. **Hotspot Hosts Implementation Bugs** - Fixed compilation errors
+   - Added missing `import 'dart:async';` for Timer support
+   - Removed `mounted` property check (AsyncNotifier doesn't have mounted)
+   - Removed `super.dispose()` call (AsyncNotifier doesn't have dispose method)
+   - Fixed `const _buildLoadingState()` → `_buildLoadingState()`
+   - Files: `lib/providers/app_providers.dart`, `lib/screens/hotspot_users/hotspot_hosts_screen.dart`
 
 ### Fixed Issues (March 8, 2026)
 

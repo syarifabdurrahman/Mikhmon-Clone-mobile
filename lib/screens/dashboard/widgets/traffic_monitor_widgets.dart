@@ -15,7 +15,6 @@ class TrafficMonitorCard extends ConsumerStatefulWidget {
 
 class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
   Timer? _refreshTimer;
-  bool _isRefreshing = false;
   bool _timerStarted = false; // Track if timer has been started
   List<InterfaceTraffic>? _currentData;
   // Individual notifiers for each interface's values - allows text-only updates
@@ -74,68 +73,62 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
     _timerStarted = true;
     debugPrint('[Traffic] Auto-refresh timer started');
     // Auto-refresh every 3 seconds for both demo and real mode
-    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted && !_isRefreshing) {
-        debugPrint('[Traffic] Timer fired, calling _silentRefresh()');
+    // Use Future.delayed to skip first tick, then start periodic timer
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        debugPrint('[Traffic] First refresh after delay');
         _silentRefresh();
-      } else if (!mounted) {
-        debugPrint('[Traffic] Timer fired but widget not mounted, cancelling');
-        timer.cancel();
+        // Then start periodic timer
+        _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+          if (mounted) {
+            debugPrint('[Traffic] Timer fired, calling _silentRefresh()');
+            _silentRefresh();
+          } else {
+            debugPrint('[Traffic] Timer fired but widget not mounted, cancelling');
+            timer.cancel();
+          }
+        });
       } else {
-        debugPrint('[Traffic] Timer fired but already refreshing, skipping');
+        debugPrint('[Traffic] Widget not mounted after delay, not starting timer');
       }
     });
   }
 
   Future<void> _silentRefresh() async {
-    if (_isRefreshing) {
-      debugPrint('[Traffic] _silentRefresh() called but already refreshing, returning');
-      return;
-    }
-
     debugPrint('[Traffic] _silentRefresh() starting');
-    _isRefreshing = true;
-    setState(() {});
 
-    try {
-      // Trigger a silent refresh without showing loading
-      final notifier = ref.read(interfaceTrafficProvider.notifier);
-      debugPrint('[Traffic] Calling notifier.silentRefresh()');
-      await notifier.silentRefresh();
-      debugPrint('[Traffic] notifier.silentRefresh() completed');
+    // Trigger a silent refresh without showing loading
+    final notifier = ref.read(interfaceTrafficProvider.notifier);
+    debugPrint('[Traffic] Calling notifier.silentRefresh()');
+    await notifier.silentRefresh();
+    debugPrint('[Traffic] notifier.silentRefresh() completed');
 
-      // Get the updated data
-      final trafficAsync = ref.read(interfaceTrafficProvider);
-      debugPrint('[Traffic] Reading provider state after refresh');
-      trafficAsync.when(
-        data: (interfaces) {
-          if (mounted) {
-            debugPrint('[Traffic] Provider has data: ${interfaces.length} interfaces');
-            for (final interface in interfaces) {
-              debugPrint('[Traffic] ${interface.name}: txBytesPerSecond=${interface.txBytesPerSecond}, rxBytesPerSecond=${interface.rxBytesPerSecond}');
-              debugPrint('[Traffic] ${interface.name}: Display values - TX=${interface.txRateDisplay}, RX=${interface.rxRateDisplay}');
-            }
-            // Only update the values, not the whole structure
-            debugPrint('[Traffic] Calling _updateTrafficValues with ${interfaces.length} interfaces');
-            _updateTrafficValues(interfaces);
-            debugPrint('[Traffic] _updateTrafficValues completed');
-            // Update current data reference if needed
-            _currentData = interfaces;
+    // Get the updated data
+    final trafficAsync = ref.read(interfaceTrafficProvider);
+    debugPrint('[Traffic] Reading provider state after refresh');
+    trafficAsync.when(
+      data: (interfaces) {
+        if (mounted) {
+          debugPrint('[Traffic] Provider has data: ${interfaces.length} interfaces');
+          for (final interface in interfaces) {
+            debugPrint('[Traffic] ${interface.name}: txBytesPerSecond=${interface.txBytesPerSecond}, rxBytesPerSecond=${interface.rxBytesPerSecond}');
+            debugPrint('[Traffic] ${interface.name}: Display values - TX=${interface.txRateDisplay}, RX=${interface.rxRateDisplay}');
           }
-        },
-        loading: () {
-          debugPrint('[Traffic] Still loading...');
-        },
-        error: (error, _) {
-          debugPrint('[Traffic] Error: $error');
-        },
-      );
-    } finally {
-      if (mounted) {
-        _isRefreshing = false;
-        setState(() {});
-      }
-    }
+          // Only update the values, not the whole structure
+          debugPrint('[Traffic] Calling _updateTrafficValues with ${interfaces.length} interfaces');
+          _updateTrafficValues(interfaces);
+          debugPrint('[Traffic] _updateTrafficValues completed');
+          // Update current data reference if needed
+          _currentData = interfaces;
+        }
+      },
+      loading: () {
+        debugPrint('[Traffic] Still loading...');
+      },
+      error: (error, _) {
+        debugPrint('[Traffic] Error: $error');
+      },
+    );
   }
 
   void _updateTrafficValues(List<InterfaceTraffic> interfaces) {
@@ -219,15 +212,15 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Interface Traffic',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.onSurfaceColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                Expanded(
+                  child: Text(
+                    'Interface Traffic',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppTheme.onSurfaceColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
                 ),
-                const Spacer(),
-                _buildRefreshIndicator(),
               ],
             ),
             const SizedBox(height: 16),
@@ -237,52 +230,6 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
               _buildEmptyState(context)
             else
               _buildInterfaceList(context, _currentData!),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRefreshIndicator() {
-    return GestureDetector(
-      onTap: () async {
-        if (_isRefreshing) return;
-        await _silentRefresh();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: _isRefreshing
-              ? AppTheme.secondaryColor.withValues(alpha: 0.05)
-              : AppTheme.secondaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: _isRefreshing
-                  ? CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
-                    )
-                  : const Icon(
-                      Icons.sync_rounded,
-                      color: AppTheme.secondaryColor,
-                      size: 16,
-                    ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              _isRefreshing ? 'Updating...' : 'Refresh',
-              style: TextStyle(
-                color: AppTheme.secondaryColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ],
         ),
       ),

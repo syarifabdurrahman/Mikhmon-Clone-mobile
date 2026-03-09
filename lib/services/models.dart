@@ -70,6 +70,20 @@ class InterfaceTraffic {
     if (total == 0) return 0;
     return rxBytes! / total;
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'type': type,
+      'tx-byte': txBytes?.toString(),
+      'rx-byte': rxBytes?.toString(),
+      'tx-byte-per-second': txBytesPerSecond?.toString(),
+      'rx-byte-per-second': rxBytesPerSecond?.toString(),
+      'mtu': mtu,
+      'running': running,
+      'disabled': enabled == false,
+    };
+  }
 }
 
 class UserProfile {
@@ -212,9 +226,9 @@ class SystemResources {
 
   factory SystemResources.fromJson(Map<String, dynamic> json) {
     return SystemResources(
-      platform: json['platform'] ?? json['platform-text'] ?? 'Unknown',
-      boardName: json['board-name'] ?? json['board-name-text'] ?? 'Unknown',
-      version: json['version'] ?? json['version-text'] ?? 'Unknown',
+      platform: _safeString(json['platform'] ?? json['platform-text']),
+      boardName: _safeString(json['board-name'] ?? json['board-name-text']),
+      version: _safeString(json['version'] ?? json['version-text']),
       cpuFrequency: _parseSizeToInt(json['cpu-frequency'] ?? json['cpu-frequency-text'] ?? '0'),
       cpuLoad: int.tryParse(json['cpu-load']?.toString().replaceAll('%', '') ?? '0') ?? 0,
       freeMemory: _parseSizeToInt(json['free-memory'] ?? json['free-memory-text'] ?? '0'),
@@ -223,6 +237,13 @@ class SystemResources {
       totalHddSpace: _parseSizeToInt(json['total-hdd-space'] ?? json['total-hdd-space-text'] ?? '0'),
       uptimeSeconds: _parseUptime(json['uptime'] ?? json['uptime-text'] ?? '0'),
     );
+  }
+
+  /// Safely extract a string value, defaulting to 'Unknown' if null or empty
+  static String _safeString(dynamic value) {
+    if (value == null) return 'Unknown';
+    final str = value.toString().trim();
+    return str.isEmpty ? 'Unknown' : str;
   }
 
   static int _parseSizeToInt(String value) {
@@ -635,4 +656,170 @@ class RouterConnection {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+}
+
+/// Hotspot Host Model - Represents a DHCP host/lease in RouterOS hotspot
+class HotspotHost {
+  final String id;
+  final String? macAddress;
+  final String? address; // IP address
+  final String? toAddress; // Target IP (for static entries)
+  final String? server; // Hotspot server name
+  final String? user; // Associated username (if logged in)
+  final String? hostname; // Device hostname from DHCP
+  final String? uptime; // Connection duration
+  final String? idleTime; // Time since last activity
+  final bool authorized; // Authorization status
+  final bool bypassed; // Bypassed status (can access without login)
+  final String? comment; // Comment/description
+  final int? bytesIn; // Bytes received by host
+  final int? bytesOut; // Bytes sent by host
+  final int? packetsIn; // Packets received
+  final int? packetsOut; // Packets sent
+
+  HotspotHost({
+    required this.id,
+    this.macAddress,
+    this.address,
+    this.toAddress,
+    this.server,
+    this.user,
+    this.hostname,
+    this.uptime,
+    this.idleTime,
+    required this.authorized,
+    required this.bypassed,
+    this.comment,
+    this.bytesIn,
+    this.bytesOut,
+    this.packetsIn,
+    this.packetsOut,
+  });
+
+  factory HotspotHost.fromJson(Map<String, dynamic> json) {
+    return HotspotHost(
+      id: json['.id'] as String? ?? json['id'] as String? ?? '',
+      macAddress: json['mac-address'] as String?,
+      address: json['address'] as String?,
+      toAddress: json['to-address'] as String?,
+      server: json['server'] as String?,
+      user: json['user'] as String?,
+      hostname: json['host-name'] as String? ?? json['hostname'] as String?,
+      uptime: json['uptime'] as String?,
+      idleTime: json['idle-time'] as String?,
+      authorized: json['authorized'] == 'true' || json['authorized'] == true,
+      bypassed: json['bypassed'] == 'true' || json['bypassed'] == true,
+      comment: json['comment'] as String?,
+      bytesIn: _parseInt(json['bytes-in']),
+      bytesOut: _parseInt(json['bytes-out']),
+      packetsIn: _parseInt(json['packets-in']),
+      packetsOut: _parseInt(json['packets-out']),
+    );
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '.id': id,
+      'mac-address': macAddress,
+      'address': address,
+      'to-address': toAddress,
+      'server': server,
+      'user': user,
+      'host-name': hostname,
+      'uptime': uptime,
+      'idle-time': idleTime,
+      'authorized': authorized.toString(),
+      'bypassed': bypassed.toString(),
+      'comment': comment,
+      'bytes-in': bytesIn,
+      'bytes-out': bytesOut,
+      'packets-in': packetsIn,
+      'packets-out': packetsOut,
+    };
+  }
+
+  /// Display name for the host (username or hostname)
+  String get displayName {
+    if (user != null && user!.isNotEmpty) return user!;
+    if (hostname != null && hostname!.isNotEmpty) return hostname!;
+    if (macAddress != null && macAddress!.isNotEmpty) return macAddress!;
+    if (address != null && address!.isNotEmpty) return address!;
+    return 'Unknown';
+  }
+
+  /// Device name for display (hostname or MAC)
+  String get deviceName {
+    if (hostname != null && hostname!.isNotEmpty) return hostname!;
+    if (user != null && user!.isNotEmpty) return user!;
+    return 'Unknown Device';
+  }
+
+  /// Status badge text
+  String get statusText {
+    if (bypassed) return 'Bypassed';
+    if (authorized) return 'Authorized';
+    return 'Unauthorized';
+  }
+
+  /// Check if host is active (has IP and is authorized or bypassed)
+  bool get isActive => address != null && address!.isNotEmpty && (authorized || bypassed);
+
+  HotspotHost copyWith({
+    String? id,
+    String? macAddress,
+    String? address,
+    String? toAddress,
+    String? server,
+    String? user,
+    String? hostname,
+    String? uptime,
+    String? idleTime,
+    bool? authorized,
+    bool? bypassed,
+    String? comment,
+    int? bytesIn,
+    int? bytesOut,
+    int? packetsIn,
+    int? packetsOut,
+  }) {
+    return HotspotHost(
+      id: id ?? this.id,
+      macAddress: macAddress ?? this.macAddress,
+      address: address ?? this.address,
+      toAddress: toAddress ?? this.toAddress,
+      server: server ?? this.server,
+      user: user ?? this.user,
+      hostname: hostname ?? this.hostname,
+      uptime: uptime ?? this.uptime,
+      idleTime: idleTime ?? this.idleTime,
+      authorized: authorized ?? this.authorized,
+      bypassed: bypassed ?? this.bypassed,
+      comment: comment ?? this.comment,
+      bytesIn: bytesIn ?? this.bytesIn,
+      bytesOut: bytesOut ?? this.bytesOut,
+      packetsIn: packetsIn ?? this.packetsIn,
+      packetsOut: packetsOut ?? this.packetsOut,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'HotspotHost(id: $id, macAddress: $macAddress, address: $address, user: $user, authorized: $authorized, bypassed: $bypassed)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is HotspotHost && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

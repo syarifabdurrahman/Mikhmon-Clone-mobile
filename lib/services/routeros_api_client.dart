@@ -583,6 +583,20 @@ class RouterOSClient {
     return false;
   }
 
+  /// Get all hotspot hosts (DHCP leases/binding)
+  Future<List<Map<String, dynamic>>> getHotspotHosts() async {
+    try {
+      _ensureConnected();
+      _writeWord('/ip/hotspot/host/print');
+      _writeWord(''); // Empty word to terminate sentence
+      final response = await _readResponse();
+      _log('Got ${response.length} hotspot hosts');
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch hotspot hosts: $e');
+    }
+  }
+
   Future<void> disconnect() async {
     _awaitingDone = false;
     if (_responseCompleter != null && !_responseCompleter!.isCompleted) {

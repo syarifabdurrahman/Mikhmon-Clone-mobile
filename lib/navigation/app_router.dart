@@ -5,6 +5,7 @@ import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
+import '../screens/hotspot_users/hotspot_hosts_screen.dart';
 
 class AppRouter {
   static const String initialRoute = '/';
@@ -12,6 +13,7 @@ class AppRouter {
   static const String dashboardRoute = '/dashboard';
   static const String usersRoute = '/users';
   static const String profilesRoute = '/profiles';
+  static const String hostsRoute = '/hosts';
   static const String settingsRoute = '/settings';
 
   static final router = GoRouter(
@@ -36,6 +38,10 @@ class AppRouter {
       GoRoute(
         path: profilesRoute,
         pageBuilder: (context, state) => const MaterialPage(child: UserProfilesScreen()),
+      ),
+      GoRoute(
+        path: hostsRoute,
+        pageBuilder: (context, state) => const MaterialPage(child: HotspotHostsScreen()),
       ),
     ],
   );

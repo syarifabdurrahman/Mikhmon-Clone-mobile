@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,12 +8,15 @@ import '../services/routeros_service.dart';
 import '../services/models.dart';
 import '../services/cache_service.dart';
 import '../services/traffic_rate_service.dart';
+import '../services/resource_history.dart';
 import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/hotspot_active_users_screen.dart';
+import '../screens/hotspot_users/hotspot_hosts_screen.dart';
+import '../screens/hotspot_users/hotspot_host_details_screen.dart';
 import '../screens/hotspot_users/add_hotspot_user_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/voucher_generation_screen.dart';
@@ -256,6 +259,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/profiles',
         name: 'profiles',
         builder: (context, state) => const UserProfilesScreen(),
+      ),
+      GoRoute(
+        path: '/hosts',
+        name: 'hosts',
+        builder: (context, state) => const HotspotHostsScreen(),
+      ),
+      GoRoute(
+        path: '/hosts/:id',
+        name: 'host_details',
+        builder: (context, state) {
+          final host = state.extra as HotspotHost?;
+          if (host == null) {
+            return const Scaffold(
+              body: Center(child: Text('Host not found')),
+            );
+          }
+          return HotspotHostDetailsScreen(host: host);
+        },
       ),
       GoRoute(
         path: '/settings',
@@ -640,21 +661,45 @@ final systemResourcesProvider = AsyncNotifierProvider<SystemResourcesNotifier, M
 class SystemResourcesNotifier extends AsyncNotifier<Map<String, dynamic>> {
   @override
   Future<Map<String, dynamic>> build() async {
+    // Keep the provider alive even when no listeners are attached
+    ref.keepAlive();
+
     final service = ref.read(routerOSServiceProvider);
 
     if (service.isDemoMode) {
       return _getDemoResources();
     }
 
+    // First, try to load from cache immediately (for seamless UX)
+    final cache = ref.read(cacheServiceProvider);
+    final cachedResources = cache.getSystemResources();
+    final lastUpdate = cache.getLastUpdate();
+
+    // If we have cached data that's less than 10 seconds old, use it immediately
+    // Otherwise, still use cached data but refresh in background
+    if (cachedResources != null) {
+      debugPrint('[SystemResources] Using cached resources, last update: $lastUpdate');
+      return cachedResources;
+    }
+
+    // No cache available, fetch from API
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
     }
 
-    return await client.getSystemResources();
+    final resources = await client.getSystemResources();
+
+    // Save to cache for next time
+    await cache.saveSystemResources(resources);
+
+    return resources;
   }
 
   Future<void> refresh() async {
+    // Force refresh (clear cache and fetch fresh)
+    final cache = ref.read(cacheServiceProvider);
+    await cache.clearEntry('system_resources');
     ref.invalidate(systemResourcesProvider);
   }
 
@@ -672,6 +717,11 @@ class SystemResourcesNotifier extends AsyncNotifier<Map<String, dynamic>> {
     };
   }
 }
+
+// Resource History Provider - persists across navigation for seamless charts
+final resourceHistoryProvider = ChangeNotifierProvider<ResourceHistoryNotifier>((ref) {
+  return ResourceHistoryNotifier();
+});
 
 // Hotspot Active Users Provider
 final hotspotActiveUsersProvider = AsyncNotifierProvider<HotspotActiveUsersNotifier, PaginatedUsers>(() {
@@ -1499,55 +1549,49 @@ class _DemoTrafficState {
 class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
   @override
   Future<List<InterfaceTraffic>> build() async {
+    // Keep the provider alive even when no listeners are attached
+    ref.keepAlive();
+
     final service = ref.read(routerOSServiceProvider);
 
     if (service.isDemoMode) {
       final demoInterfaces = _getDemoInterfaceStats();
-      // Calculate rates for demo mode too
       return _trafficRateService.calculateRates(demoInterfaces);
     }
 
-    // Fetch from real RouterOS API
+    // Check cache first for instant display (seamless UX)
+    final cache = ref.read(cacheServiceProvider);
+    final cachedTraffic = cache.getInterfaceTraffic();
+
+    if (cachedTraffic != null && cachedTraffic.isNotEmpty) {
+      debugPrint('[InterfaceTraffic] Using cached data');
+      // Convert cached maps back to InterfaceTraffic objects
+      return cachedTraffic.map((data) => InterfaceTraffic.fromJson(data)).toList();
+    }
+
+    // No cache, fetch from API
     final client = service.client;
     if (client == null) {
       return [];
     }
 
     final interfacesData = await client.getInterfaceStats();
-
-    // Convert API data to InterfaceTraffic objects (without rates initially)
     final interfaces = interfacesData.map((data) {
       return InterfaceTraffic.fromJson(data);
     }).toList();
 
     // Calculate rates using historical data
-    return _trafficRateService.calculateRates(interfaces);
+    final result = _trafficRateService.calculateRates(interfaces);
+
+    // Save to cache
+    await cache.saveInterfaceTraffic(result.map((e) => e.toJson()).toList());
+
+    return result;
   }
 
   Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final service = ref.read(routerOSServiceProvider);
-
-      if (service.isDemoMode) {
-        final demoInterfaces = _getDemoInterfaceStats();
-        // Calculate rates for demo mode too
-        return _trafficRateService.calculateRates(demoInterfaces);
-      }
-
-      final client = service.client;
-      if (client == null) {
-        return [];
-      }
-
-      final interfacesData = await client.getInterfaceStats();
-      final interfaces = interfacesData.map((data) {
-        return InterfaceTraffic.fromJson(data);
-      }).toList();
-
-      // Calculate rates using historical data
-      return _trafficRateService.calculateRates(interfaces);
-    });
+    // Don't show loading - just refresh in background
+    await silentRefresh();
   }
 
   /// Silent refresh - updates data without showing loading state
@@ -1560,7 +1604,6 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
 
       if (service.isDemoMode) {
         final demoInterfaces = _getDemoInterfaceStats();
-        // Calculate rates for demo mode too
         newData = _trafficRateService.calculateRates(demoInterfaces);
       } else {
         debugPrint('[TrafficReal] Starting real-time traffic fetch');
@@ -1570,10 +1613,7 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
           return;
         }
 
-        debugPrint('[TrafficReal] Fetching interface stats from RouterOS...');
         final interfacesData = await client.getInterfaceStats();
-        debugPrint('[TrafficReal] Received ${interfacesData.length} interfaces from API');
-
         final interfaces = interfacesData.map((data) {
           return InterfaceTraffic.fromJson(data);
         }).toList();
@@ -1591,7 +1631,10 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
         for (final iface in newData) {
           debugPrint('[TrafficReal] ${iface.name}: txRate=${iface.txBytesPerSecond} B/s, rxRate=${iface.rxBytesPerSecond} B/s');
         }
-        debugPrint('[TrafficReal] Rate calculation completed, updating state');
+
+        // Save to cache
+        final cache = ref.read(cacheServiceProvider);
+        await cache.saveInterfaceTraffic(newData.map((e) => e.toJson()).toList());
       }
 
       // Update state directly without loading
@@ -1638,4 +1681,134 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
       ),
     ];
   }
+}
+
+// Hotspot Hosts Provider
+final hotspotHostsProvider = AsyncNotifierProvider<HotspotHostsNotifier, List<HotspotHost>>(() {
+  return HotspotHostsNotifier();
+});
+
+class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
+  Timer? _refreshTimer;
+  bool _timerStarted = false;
+
+  @override
+  Future<List<HotspotHost>> build() async {
+    debugPrint('[Hosts] Loading hotspot hosts...');
+    final hosts = await _fetchHosts();
+    // Start auto-refresh when data becomes available
+    _startAutoRefresh();
+    return hosts;
+  }
+
+  Future<List<HotspotHost>> _fetchHosts() async {
+    final service = ref.read(routerOSServiceProvider);
+
+    if (service.isDemoMode) {
+      return _getDemoHosts();
+    }
+
+    final client = service.client;
+    if (client == null) {
+      return [];
+    }
+
+    try {
+      final hostsData = await client.getHotspotHosts();
+      return hostsData.map((data) => HotspotHost.fromJson(data)).toList();
+    } catch (e) {
+      debugPrint('[Hosts] Error fetching hosts: $e');
+      return [];
+    }
+  }
+
+  void _startAutoRefresh() {
+    if (_timerStarted) return;
+    _timerStarted = true;
+    debugPrint('[Hosts] Starting auto-refresh timer (every 5 seconds)');
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      debugPrint('[Hosts] Timer fired, calling silentRefresh()');
+      silentRefresh();
+    });
+  }
+
+  Future<void> silentRefresh() async {
+    debugPrint('[Hosts] silentRefresh() called');
+    try {
+      final hosts = await _fetchHosts();
+      state = AsyncValue.data(hosts);
+      debugPrint('[Hosts] Silent refresh completed, ${hosts.length} hosts');
+    } catch (e) {
+      debugPrint('[Hosts] Silent refresh failed: $e');
+    }
+  }
+
+  List<HotspotHost> _getDemoHosts() {
+    final now = DateTime.now();
+    return [
+      HotspotHost(
+        id: '*1',
+        macAddress: 'AA:BB:CC:DD:EE:01',
+        address: '192.168.88.100',
+        server: 'hotspot1',
+        user: 'demo1',
+        hostname: 'iPhone-14-Pro',
+        uptime: '${now.minute}m ${now.second}s',
+        idleTime: '10s',
+        authorized: true,
+        bypassed: false,
+        bytesIn: 15728640, // ~15 MB
+        bytesOut: 5242880, // ~5 MB
+        packetsIn: 15234,
+        packetsOut: 8456,
+      ),
+      HotspotHost(
+        id: '*2',
+        macAddress: 'AA:BB:CC:DD:EE:02',
+        address: '192.168.88.101',
+        server: 'hotspot1',
+        user: 'demo2',
+        hostname: 'Samsung-Galaxy-S23',
+        uptime: '${now.minute - 2}m ${now.second}s',
+        idleTime: '30s',
+        authorized: true,
+        bypassed: false,
+        bytesIn: 52428800, // ~50 MB
+        bytesOut: 20971520, // ~20 MB
+        packetsIn: 45123,
+        packetsOut: 25678,
+      ),
+      HotspotHost(
+        id: '*3',
+        macAddress: 'AA:BB:CC:DD:EE:03',
+        address: '192.168.88.102',
+        server: 'hotspot1',
+        user: null,
+        hostname: 'MacBook-Pro',
+        uptime: '5m 0s',
+        idleTime: '2m 30s',
+        authorized: false,
+        bypassed: true,
+        comment: 'Bypassed device',
+        bytesIn: 10485760, // ~10 MB
+        bytesOut: 5242880, // ~5 MB
+        packetsIn: 8912,
+        packetsOut: 4521,
+      ),
+      HotspotHost(
+        id: '*4',
+        macAddress: 'AA:BB:CC:DD:EE:04',
+        address: '192.168.88.103',
+        server: 'hotspot1',
+        user: null,
+        hostname: 'Windows-PC',
+        uptime: null,
+        idleTime: null,
+        authorized: false,
+        bypassed: false,
+      ),
+    ];
+  }
+
+  // Note: AsyncNotifier doesn't have dispose, timer will be cancelled when provider is disposed
 }

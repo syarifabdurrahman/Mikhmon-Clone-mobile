@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/routeros_service.dart';
 import '../../services/models.dart';
-import '../../services/resource_history.dart';
 import '../../providers/app_providers.dart';
 import 'widgets/resource_card_widgets.dart';
 import 'widgets/combined_resource_chart.dart';
@@ -24,14 +23,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   SystemResources? _resources;
   Timer? _refreshTimer;
   late final ValueNotifier<SystemResources?> _resourcesNotifier;
-  late final ResourceHistoryNotifier _resourceHistory;
+  bool _isFetching = false; // Guard against concurrent fetches
 
   @override
   void initState() {
     super.initState();
     _resourcesNotifier = ValueNotifier<SystemResources?>(null);
-    _resourceHistory = ResourceHistoryNotifier();
-    _loadDashboardData();
+
+    // Check if we have cached data before showing loading state
+    final service = ref.read(routerOSServiceProvider);
+    final cache = ref.read(cacheServiceProvider);
+    final hasCachedData = cache.getSystemResources() != null ||
+                          ref.read(authStateProvider).value?.systemResources != null;
+
+    // Don't show loading if we have cached data (seamless navigation)
+    _loadDashboardData(showLoading: !hasCachedData && !service.isDemoMode);
     _startPeriodicRefresh();
   }
 
@@ -39,11 +45,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void dispose() {
     _refreshTimer?.cancel();
     _resourcesNotifier.dispose();
-    _resourceHistory.dispose();
     super.dispose();
   }
 
   /// Start periodic refresh every 3 seconds
+  /// Uses Future.delayed to skip first tick for seamless navigation
   void _startPeriodicRefresh() {
     final service = ref.read(routerOSServiceProvider);
 
@@ -53,14 +59,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return;
     }
 
-    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    debugPrint('[Dashboard] Starting periodic refresh timer (first tick in 3s)');
+
+    // Use Future.delayed to skip first tick, then start periodic timer
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        debugPrint('[Dashboard] Periodic refresh triggered');
+        debugPrint('[Dashboard] First periodic refresh after delay');
         _fetchAndCacheResources();
+        // Then start periodic timer
+        _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+          if (mounted) {
+            debugPrint('[Dashboard] Periodic refresh triggered (tick ${timer.tick})');
+            _fetchAndCacheResources();
+          } else {
+            debugPrint('[Dashboard] Timer fired but widget not mounted, cancelling');
+            timer.cancel();
+          }
+        });
+        debugPrint('[Dashboard] Started periodic refresh (every 3 seconds)');
+      } else {
+        debugPrint('[Dashboard] Widget not mounted, cancelling timer start');
       }
     });
-
-    debugPrint('[Dashboard] Started periodic refresh (every 3 seconds)');
   }
 
   /// Update the resources notifier when resources change
@@ -68,7 +88,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _resourcesNotifier.value = _resources;
     // Also add to history for charts
     if (_resources != null) {
-      _resourceHistory.addFromResources(_resources!);
+      ref.read(resourceHistoryProvider).addFromResources(_resources!);
     }
   }
 
@@ -126,9 +146,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
       // Check cache for instant data display (second fastest path)
       final cachedResources = cache.getSystemResources();
-      final isStale = cache.isCacheStale();
       if (cachedResources != null) {
-        debugPrint('Using cached resources (stale: $isStale)');
+        debugPrint('Using cached resources');
         if (mounted) {
           setState(() {
             _resources = SystemResources.fromJson(cachedResources);
@@ -136,10 +155,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           });
           _updateResourcesNotifier();
         }
-        // If cache is stale or this is a manual refresh, fetch fresh data
-        if (showLoading || isStale) {
-          _fetchAndCacheResources();
-        }
+        // Don't fetch fresh data on navigation - use cached data instantly
+        // The periodic timer will keep data updated
         return;
       }
 
@@ -174,7 +191,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   /// Fetch resources from RouterOS and cache them
+  /// Guarded against concurrent fetches with _isFetching flag
   Future<void> _fetchAndCacheResources() async {
+    // Prevent concurrent fetches
+    if (_isFetching) {
+      debugPrint('[Refresh] Already fetching, skipping duplicate request');
+      return;
+    }
+
+    _isFetching = true;
+
     try {
       final service = ref.read(routerOSServiceProvider);
       final cache = ref.read(cacheServiceProvider);
@@ -192,23 +218,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
       debugPrint('[Refresh] Fetching fresh system resources...');
       final resourcesData = await client.getSystemResources();
-      debugPrint('[Refresh] Resources data: $resourcesData');
+      debugPrint('[Refresh] Resources data received: ${resourcesData.length} fields');
+
+      // Validate that we got meaningful data before saving
+      // Check if we have at least some expected fields
+      if (resourcesData.isEmpty ||
+          (!resourcesData.containsKey('platform') &&
+           !resourcesData.containsKey('cpu-load') &&
+           !resourcesData.containsKey('free-memory'))) {
+        debugPrint('[Refresh] Warning: Received invalid/empty resources data');
+        debugPrint('[Refresh] Data keys: ${resourcesData.keys.toList()}');
+        return;
+      }
 
       // Save to cache
       await cache.saveSystemResources(resourcesData);
-      debugPrint('[Refresh] Resources cached');
+      debugPrint('[Refresh] Resources cached successfully');
 
       // Update UI if mounted
       if (mounted) {
+        final newResources = SystemResources.fromJson(resourcesData);
         setState(() {
-          _resources = SystemResources.fromJson(resourcesData);
+          _resources = newResources;
           _errorMessage = null;
         });
         _updateResourcesNotifier();
-        debugPrint('[Refresh] Dashboard updated successfully!');
+        debugPrint('[Refresh] Dashboard updated successfully! CPU: ${newResources.cpuLoad}%, RAM: ${(newResources.freeMemory / newResources.totalMemory * 100).toStringAsFixed(1)}%');
       }
     } catch (e) {
       debugPrint('[Refresh] Error fetching resources: $e');
+      debugPrint('[Refresh] Error type: ${e.runtimeType}');
       // Don't show error on background refresh failures
       // Only show error if there's no cached data
       if (_resources == null && mounted) {
@@ -216,6 +255,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _errorMessage = e.toString();
         });
       }
+    } finally {
+      _isFetching = false;
     }
   }
 
@@ -449,10 +490,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final isDemoMode = ref.read(routerOSServiceProvider).isDemoMode;
 
     return ListenableBuilder(
-      listenable: _resourceHistory,
+      listenable: ref.read(resourceHistoryProvider),
       builder: (context, child) {
         return CombinedResourceChart(
-          resourceHistory: _resourceHistory,
+          resourceHistory: ref.read(resourceHistoryProvider),
           isDemoMode: isDemoMode,
         );
       },
@@ -536,6 +577,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Icons.arrow_forward_ios_rounded,
                 () {
                   context.go('/profiles');
+                },
+              ),
+              Divider(
+                height: 1,
+                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+              ),
+              _buildActionButton(
+                Icons.lan_rounded,
+                'Hotspot Hosts',
+                Icons.arrow_forward_ios_rounded,
+                () {
+                  context.go('/hosts');
                 },
               ),
               Divider(
