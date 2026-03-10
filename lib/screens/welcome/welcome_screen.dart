@@ -64,9 +64,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.backgroundColor,
-              AppTheme.surfaceColor,
-              AppTheme.backgroundColor,
+              context.appBackground,
+              context.appSurface,
+              context.appBackground,
             ],
             stops: const [0.0, 0.5, 1.0],
           ),
@@ -120,18 +120,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       width: isSmallScreen ? 100 : 120,
       height: isSmallScreen ? 100 : 120,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryColor,
-            Color(0xFF1976D2),
+            context.appPrimary,
+            const Color(0xFF1976D2),
           ],
         ),
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+            color: context.appPrimary.withValues(alpha: 0.3),
             blurRadius: 24,
             spreadRadius: 8,
           ),
@@ -140,7 +140,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       child: Icon(
         Icons.router_rounded,
         size: isSmallScreen ? 50 : 60,
-        color: AppTheme.onPrimaryColor,
+        color: Colors.white,
       ),
     );
   }
@@ -151,7 +151,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         Text(
           'ΩMMON',
           style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                color: AppTheme.onBackgroundColor,
+                color: context.appOnBackground,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.5,
               ),
@@ -161,17 +161,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.15),
+            color: context.appPrimary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppTheme.primaryColor.withValues(alpha: 0.3),
+              color: context.appPrimary.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
           child: Text(
             'Open Mikrotik Monitor',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.primaryColor,
+                  color: context.appPrimary,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.5,
                 ),
@@ -185,7 +185,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     return Text(
       'Professional Mikrotik RouterOS management solution. Monitor, control, and manage your hotspot with ease.',
       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+            color: context.appOnSurface.withValues(alpha: 0.7),
             height: 1.5,
           ),
       textAlign: TextAlign.center,
@@ -213,7 +213,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             ),
             style: ElevatedButton.styleFrom(
               elevation: 4,
-              shadowColor: AppTheme.primaryColor.withValues(alpha: 0.4),
+              shadowColor: context.appPrimary.withValues(alpha: 0.4),
             ),
           ),
         ),
@@ -225,13 +225,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.cardColor.withValues(alpha: 0.5),
+        color: context.appCard.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         'Version 1.0.0',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+              color: context.appOnSurface.withValues(alpha: 0.5),
               letterSpacing: 1,
             ),
       ),
@@ -259,13 +259,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 Icon(
                   Icons.history_rounded,
                   size: 18,
-                  color: AppTheme.onBackgroundColor.withValues(alpha: 0.6),
+                  color: context.appOnBackground.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Quick Login',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                        color: context.appOnBackground.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w500,
                       ),
                 ),
@@ -284,7 +284,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   Widget _buildConnectionCard(RouterConnection connection) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: AppTheme.surfaceColor.withValues(alpha: 0.8),
+      color: context.appSurface.withValues(alpha: 0.8),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -299,13 +299,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  color: context.appPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.router_rounded,
                   size: 18,
-                  color: AppTheme.primaryColor,
+                  color: context.appPrimary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -316,7 +316,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     Text(
                       connection.name,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.onBackgroundColor,
+                            color: context.appOnBackground,
                             fontWeight: FontWeight.w500,
                           ),
                     ),
@@ -324,7 +324,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     Text(
                       connection.address,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onBackgroundColor.withValues(alpha: 0.6),
+                            color: context.appOnBackground.withValues(alpha: 0.6),
                           ),
                     ),
                   ],
@@ -333,7 +333,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               Text(
                 connection.username,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onBackgroundColor.withValues(alpha: 0.5),
+                      color: context.appOnBackground.withValues(alpha: 0.5),
                     ),
               ),
             ],
@@ -349,11 +349,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
+        backgroundColor: context.appSurface,
         title: Text(
           'Connect to ${connection.name}',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onBackgroundColor,
+                color: context.appOnBackground,
               ),
         ),
         content: Column(
@@ -363,13 +363,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             Text(
               'Host: ${connection.host}:${connection.port}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                    color: context.appOnBackground.withValues(alpha: 0.7),
                   ),
             ),
             Text(
               'Username: ${connection.username}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                    color: context.appOnBackground.withValues(alpha: 0.7),
                   ),
             ),
             const SizedBox(height: 16),
@@ -394,7 +394,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
-              style: TextStyle(color: AppTheme.onBackgroundColor.withValues(alpha: 0.6)),
+              style: TextStyle(color: context.appOnBackground.withValues(alpha: 0.6)),
             ),
           ),
           ElevatedButton(
@@ -403,8 +403,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               _quickLogin(connection, passwordController.text);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: AppTheme.onPrimaryColor,
+              backgroundColor: context.appPrimary,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Connect'),
           ),

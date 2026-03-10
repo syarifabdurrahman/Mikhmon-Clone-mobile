@@ -176,7 +176,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                 horizontalInterval: 25,
                 getDrawingHorizontalLine: (value) {
                   return FlLine(
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.08),
+                    color: context.appOnSurface.withValues(alpha: 0.08),
                     strokeWidth: 1,
                   );
                 },
@@ -201,7 +201,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                       return Text(
                         _formatElapsedTime(value),
                         style: TextStyle(
-                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                          color: context.appOnSurface.withValues(alpha: 0.5),
                           fontSize: 8,
                         ),
                       );
@@ -218,7 +218,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                       return Text(
                         '${value.toInt()}',
                         style: TextStyle(
-                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                          color: context.appOnSurface.withValues(alpha: 0.5),
                           fontSize: 8,
                         ),
                       );
@@ -316,7 +316,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
               lineTouchData: LineTouchData(
                 enabled: true,
                 touchTooltipData: LineTouchTooltipData(
-                  getTooltipColor: (touchedSpot) => AppTheme.surfaceColor.withValues(alpha: 0.95),
+                  getTooltipColor: (touchedSpot) => context.appSurface.withValues(alpha: 0.95),
                   tooltipRoundedRadius: 8,
                   tooltipPadding: const EdgeInsets.all(6),
                   tooltipMargin: 6,
@@ -372,7 +372,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
             child: CircularProgressIndicator(
               strokeWidth: 3,
               valueColor: AlwaysStoppedAnimation<Color>(
-                AppTheme.primaryColor.withValues(alpha: 0.5),
+                context.appPrimary.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -380,7 +380,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
           Text(
             'Collecting data...',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+              color: context.appOnSurface.withValues(alpha: 0.5),
               fontSize: 12,
             ),
           ),
@@ -388,7 +388,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
           Text(
             'Waiting for first data point',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+              color: context.appOnSurface.withValues(alpha: 0.3),
               fontSize: 10,
             ),
           ),
@@ -408,7 +408,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
         final chartHeight = isSmallScreen ? 180.0 : 240.0;
 
         return Card(
-          color: AppTheme.surfaceColor,
+          color: context.appSurface,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -431,15 +431,15 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppTheme.primaryColor.withValues(alpha: 0.15),
-                            AppTheme.primaryColor.withValues(alpha: 0.08),
+                            context.appPrimary.withValues(alpha: 0.15),
+                            context.appPrimary.withValues(alpha: 0.08),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.analytics_rounded,
-                        color: AppTheme.primaryColor,
+                        color: context.appPrimary,
                         size: isSmallScreen ? 20 : 24,
                       ),
                     ),
@@ -451,7 +451,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                           Text(
                             'System Resources',
                             style: TextStyle(
-                              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                              color: context.appOnSurface.withValues(alpha: 0.7),
                               fontSize: isSmallScreen ? 12 : 14,
                             ),
                           ),
@@ -473,7 +473,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                                 Text(
                                   'Loading...',
                                   style: TextStyle(
-                                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                                    color: context.appOnSurface.withValues(alpha: 0.5),
                                     fontSize: isSmallScreen ? 10 : 12,
                                   ),
                                 ),
@@ -490,7 +490,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          color: context.appPrimary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -499,13 +499,13 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                             Icon(
                               Icons.sync_rounded,
                               size: isSmallScreen ? 10 : 12,
-                              color: AppTheme.primaryColor,
+                              color: context.appPrimary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'LIVE',
                               style: TextStyle(
-                                color: AppTheme.primaryColor,
+                                color: context.appPrimary,
                                 fontSize: isSmallScreen ? 9 : 10,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -544,7 +544,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
         Text(
           '$label ${value.toStringAsFixed(0)}%',
           style: TextStyle(
-            color: AppTheme.onSurfaceColor,
+            color: context.appOnSurface,
             fontWeight: FontWeight.w600,
             fontSize: isSmallScreen ? 11 : 13,
           ),

@@ -187,7 +187,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
     );
 
     return Card(
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -202,28 +202,28 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.secondaryColor.withValues(alpha: 0.1),
+                    color: context.appSecondary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.network_check_rounded,
-                    color: AppTheme.secondaryColor,
+                    color: context.appSecondary,
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Interface Traffic',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppTheme.onSurfaceColor,
+                          color: context.appOnSurface,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             if (_currentData == null)
               _buildLoadingState(context)
             else if (_currentData!.isEmpty)
@@ -237,11 +237,11 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
   }
 
   Widget _buildLoadingState(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       height: 120,
       child: Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondaryColor),
+          valueColor: AlwaysStoppedAnimation<Color>(context.appSecondary),
           strokeWidth: 3,
         ),
       ),
@@ -257,14 +257,14 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
           children: [
             Icon(
               Icons.lan_rounded,
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+              color: context.appOnSurface.withValues(alpha: 0.3),
               size: 48,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'No interfaces found',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                    color: context.appOnSurface.withValues(alpha: 0.5),
                   ),
             ),
           ],
@@ -317,10 +317,10 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.cardColor,
+        color: context.appCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.onSurfaceColor.withValues(alpha: 0.05),
+          color: context.appOnSurface.withValues(alpha: 0.05),
           width: 1,
         ),
       ),
@@ -341,7 +341,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,14 +349,14 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                     Text(
                       interface.name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: AppTheme.onSurfaceColor,
+                            color: context.appOnSurface,
                             fontWeight: FontWeight.bold,
                           ),
                     ),
                     Text(
                       _getInterfaceTypeLabel(interface.type),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                            color: context.appOnSurface.withValues(alpha: 0.6),
                             fontSize: 11,
                           ),
                     ),
@@ -366,7 +366,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
               _buildStatusBadge(context, interface),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -376,10 +376,10 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                   label: 'TX',
                   txNotifier: notifiers.txDisplay,
                   rateNotifier: notifiers.txRateDisplay,
-                  color: AppTheme.secondaryColor,
+                  color: context.appSecondary,
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               Expanded(
                 child: _buildTrafficStat(
                   context,
@@ -405,13 +405,13 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+          color: context.appOnSurface.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
           'Disabled',
           style: TextStyle(
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+            color: context.appOnSurface.withValues(alpha: 0.5),
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
@@ -432,12 +432,12 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
             Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppTheme.successColor,
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             Text(
               'Active',
               style: TextStyle(
@@ -492,7 +492,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                 color: color,
                 size: 16,
               ),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
@@ -503,7 +503,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           // ValueListenableBuilder rebuilds ONLY this text when value changes
           ValueListenableBuilder<String>(
             valueListenable: txNotifier,
@@ -511,14 +511,14 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
               return Text(
                 value,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.onSurfaceColor,
+                      color: context.appOnSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
               );
             },
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           // ValueListenableBuilder rebuilds ONLY this text when rate changes
           ValueListenableBuilder<String>(
             valueListenable: rateNotifier,
@@ -526,7 +526,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
               return Text(
                 rate,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                      color: context.appOnSurface.withValues(alpha: 0.6),
                       fontSize: 11,
                     ),
               );

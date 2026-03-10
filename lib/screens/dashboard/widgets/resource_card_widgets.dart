@@ -27,7 +27,7 @@ class ResourceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Card(
-        color: AppTheme.surfaceColor,
+        color: context.appSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -45,7 +45,7 @@ class ResourceCard extends StatelessWidget {
                 _buildSubtitle(context),
               ],
               const SizedBox(height: 12),
-              _buildProgressBar(),
+              _buildProgressBar(context),
             ],
           ),
         ),
@@ -58,7 +58,7 @@ class ResourceCard extends StatelessWidget {
       children: [
         Icon(
           icon,
-          color: AppTheme.primaryColor,
+          color: context.appPrimary,
           size: 20,
         ),
         const SizedBox(width: 8),
@@ -66,7 +66,7 @@ class ResourceCard extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+              color: context.appOnSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -78,7 +78,7 @@ class ResourceCard extends StatelessWidget {
     return Text(
       value,
       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-        color: AppTheme.onSurfaceColor,
+        color: context.appOnSurface,
         fontWeight: FontWeight.bold,
       ),
     );
@@ -88,20 +88,20 @@ class ResourceCard extends StatelessWidget {
     return Text(
       subtitle!,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+        color: context.appOnSurface.withValues(alpha: 0.5),
       ),
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(BuildContext context) {
     final isError = usagePercent > 0.8;
     return ClipRRect(
       borderRadius: BorderRadius.circular(4),
       child: LinearProgressIndicator(
         value: usagePercent.clamp(0.0, 1.0),
-        backgroundColor: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+        backgroundColor: context.appOnSurface.withValues(alpha: 0.1),
         valueColor: AlwaysStoppedAnimation<Color>(
-          isError ? AppTheme.errorColor : AppTheme.primaryColor,
+          isError ? context.appError : context.appPrimary,
         ),
         minHeight: 6,
       ),
@@ -532,7 +532,7 @@ class _IncomeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -551,14 +551,14 @@ class _IncomeCard extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                color: context.appOnSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               value,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),

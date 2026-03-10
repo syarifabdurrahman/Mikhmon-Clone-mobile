@@ -65,16 +65,16 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
     final hostsAsync = ref.watch(hotspotHostsProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/dashboard'),
         ),
-        title: const Text('Hotspot Hosts'),
+        title: Text('Hotspot Hosts'),
       ),
       body: Column(
         children: [
@@ -100,7 +100,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
   Widget _buildSearchAndFilter() {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       child: Column(
         children: [
           // Search bar
@@ -108,10 +108,10 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Search by IP, MAC, or user...',
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: Icon(Icons.search),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: Icon(Icons.clear),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {});
@@ -119,7 +119,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                     )
                   : null,
               filled: true,
-              fillColor: AppTheme.backgroundColor,
+              fillColor: context.appBackground,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -127,7 +127,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
             ),
             onChanged: (value) => setState(() {}),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           // Filter chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -144,10 +144,10 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                         _selectedFilter = selected ? filter : HostFilter.all;
                       });
                     },
-                    selectedColor: AppTheme.primaryColor.withOpacity(0.2),
-                    checkmarkColor: AppTheme.primaryColor,
+                    selectedColor: context.appPrimary.withOpacity(0.2),
+                    checkmarkColor: context.appPrimary,
                     labelStyle: TextStyle(
-                      color: isSelected ? AppTheme.primaryColor : AppTheme.onSurfaceColor,
+                      color: isSelected ? context.appPrimary : context.appOnSurface,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
@@ -189,12 +189,12 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
       borderRadius: BorderRadius.circular(12),
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
-        color: AppTheme.cardColor,
+        color: context.appCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: AppTheme.onSurfaceColor.withOpacity(0.05),
+            color: context.appOnSurface.withOpacity(0.05),
             width: 1,
           ),
         ),
@@ -217,7 +217,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +225,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                         Text(
                           host.deviceName,
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: AppTheme.onSurfaceColor,
+                                color: context.appOnSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
@@ -233,7 +233,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                           Text(
                             host.macAddress!,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                  color: context.appOnSurface.withOpacity(0.7),
                                   fontFamily: 'monospace',
                                 ),
                           ),
@@ -241,16 +241,16 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                     ),
                   ),
                   _buildStatusBadge(host),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 14,
-                    color: AppTheme.onSurfaceColor.withOpacity(0.3),
+                    color: context.appOnSurface.withOpacity(0.3),
                   ),
                 ],
               ),
               if (host.uptime != null || host.idleTime != null) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Wrap(
                   spacing: 16,
                   runSpacing: 8,
@@ -277,11 +277,11 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                 ),
               ],
               if (host.comment != null) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   host.comment!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                        color: context.appOnSurface.withOpacity(0.5),
                         fontStyle: FontStyle.italic,
                       ),
                 ),
@@ -318,19 +318,19 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: AppTheme.onSurfaceColor.withOpacity(0.5)),
-        const SizedBox(width: 4),
+        Icon(icon, size: 14, color: context.appOnSurface.withOpacity(0.5)),
+        SizedBox(width: 4),
         Text(
           '$label: ',
           style: TextStyle(
-            color: AppTheme.onSurfaceColor.withOpacity(0.5),
+            color: context.appOnSurface.withOpacity(0.5),
             fontSize: 11,
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            color: AppTheme.onSurfaceColor,
+            color: context.appOnSurface,
             fontSize: 11,
             fontWeight: FontWeight.w500,
           ),
@@ -352,9 +352,9 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+        valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
       ),
     );
   }
@@ -366,21 +366,21 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
         children: [
           Icon(
             Icons.error_outline,
-            color: AppTheme.errorColor,
+            color: context.appError,
             size: 48,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'Error loading hosts',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.onSurfaceColor,
+                  color: context.appOnSurface,
                 ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             error.toString(),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.onSurfaceColor.withOpacity(0.6),
+                  color: context.appOnSurface.withOpacity(0.6),
                 ),
             textAlign: TextAlign.center,
           ),
@@ -396,21 +396,21 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
         children: [
           Icon(
             Icons.lan_outlined,
-            color: AppTheme.onSurfaceColor.withOpacity(0.3),
+            color: context.appOnSurface.withOpacity(0.3),
             size: 64,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'No hosts found',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.onSurfaceColor,
+                  color: context.appOnSurface,
                 ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             'Try changing filters or search terms',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                  color: context.appOnSurface.withOpacity(0.5),
                 ),
           ),
         ],

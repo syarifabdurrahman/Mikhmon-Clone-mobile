@@ -24,7 +24,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
     final profilesAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: _buildAppBar(),
       body: profilesAsync.when(
         data: (profiles) {
@@ -57,41 +57,41 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
             ),
           );
         },
-        loading: () => const Center(
+        loading: () => Center(
           child: CircularProgressIndicator(),
         ),
         error: (error, stack) => _buildErrorState(error.toString()),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateToAddProfile,
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: AppTheme.onPrimaryColor,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Profile'),
+        backgroundColor: context.appPrimary,
+        foregroundColor: Colors.white,
+        icon: Icon(Icons.add_rounded),
+        label: Text('Add Profile'),
       ),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: AppTheme.surfaceColor,
-      foregroundColor: AppTheme.onSurfaceColor,
+      backgroundColor: context.appSurface,
+      foregroundColor: context.appOnSurface,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
+        icon: Icon(Icons.arrow_back_rounded),
         onPressed: () => context.go('/dashboard'),
         tooltip: 'Back to Dashboard',
       ),
-      title: const Text(
+      title: Text(
         'User Profiles',
         style: TextStyle(
-          color: AppTheme.onSurfaceColor,
+          color: context.appOnSurface,
           fontWeight: FontWeight.bold,
         ),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.refresh_rounded),
+          icon: Icon(Icons.refresh_rounded),
           onPressed: () {
             ref.read(userProfileProvider.notifier).refresh();
           },
@@ -109,21 +109,21 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
           Icon(
             Icons.card_membership_rounded,
             size: 80,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+            color: context.appOnSurface.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 24),
-          const Text(
+          SizedBox(height: 24),
+          Text(
             'No Profiles Found',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor,
+              color: context.appOnSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             'Create your first user profile to get started',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+              color: context.appOnSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -136,24 +136,24 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
             size: 64,
-            color: AppTheme.errorColor,
+            color: context.appError,
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             'Failed to load profiles',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor,
+              color: context.appOnSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             error,
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+              color: context.appOnSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -165,7 +165,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
   void _showProfileDetails(UserProfile profile) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surfaceColor,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -181,7 +181,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
   void _showProfileOptions(UserProfile profile) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surfaceColor,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -190,16 +190,16 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.visibility_rounded),
-              title: const Text('View Details'),
+              leading: Icon(Icons.visibility_rounded),
+              title: Text('View Details'),
               onTap: () {
                 Navigator.pop(context);
                 _showProfileDetails(profile);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.edit_rounded),
-              title: const Text('Edit Profile'),
+              leading: Icon(Icons.edit_rounded),
+              title: Text('Edit Profile'),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToEditProfile(profile);
@@ -207,10 +207,10 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
             ),
             ListTile(
               leading:
-                  const Icon(Icons.delete_rounded, color: AppTheme.errorColor),
-              title: const Text(
+                  Icon(Icons.delete_rounded, color: context.appError),
+              title: Text(
                 'Delete Profile',
-                style: TextStyle(color: AppTheme.errorColor),
+                style: TextStyle(color: context.appError),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -245,20 +245,20 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        title: const Text(
+        backgroundColor: context.appSurface,
+        title: Text(
           'Delete Profile',
-          style: TextStyle(color: AppTheme.onSurfaceColor),
+          style: TextStyle(color: context.appOnSurface),
         ),
         content: Text(
           'Are you sure you want to delete "${profile.name}" profile? This action cannot be undone.',
           style:
-              TextStyle(color: AppTheme.onSurfaceColor.withValues(alpha: 0.8)),
+              TextStyle(color: context.appOnSurface.withValues(alpha: 0.8)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -270,15 +270,15 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Profile "${profile.name}" deleted'),
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: context.appPrimary,
                   ),
                 );
               }
             },
             style: TextButton.styleFrom(
-              foregroundColor: AppTheme.errorColor,
+              foregroundColor: context.appError,
             ),
-            child: const Text('Delete'),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -302,12 +302,12 @@ class _ProfileCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+          color: context.appOnSurface.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -321,19 +321,19 @@ class _ProfileCard extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  _buildIconContainer(),
-                  const SizedBox(width: 16),
+                  _buildIconContainer(context),
+                  SizedBox(width: 16),
                   Expanded(
-                    child: _buildProfileInfo(),
+                    child: _buildProfileInfo(context),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.more_vert_rounded),
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                    icon: Icon(Icons.more_vert_rounded),
+                    color: context.appOnSurface.withValues(alpha: 0.6),
                     onPressed: onMoreTap,
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _ProfileInfoGrid(profile: profile),
             ],
           ),
@@ -342,7 +342,7 @@ class _ProfileCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildIconContainer() {
+  Widget _buildIconContainer(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -350,36 +350,36 @@ class _ProfileCard extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryColor,
-            AppTheme.primaryColor.withValues(alpha: 0.7),
+            context.appPrimary,
+            context.appPrimary.withValues(alpha: 0.7),
           ],
         ),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.card_membership_rounded,
-        color: AppTheme.onPrimaryColor,
+        color: Colors.white,
         size: 24,
       ),
     );
   }
 
-  Widget _buildProfileInfo() {
+  Widget _buildProfileInfo(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           profile.name.toUpperCase(),
-          style: const TextStyle(
-            color: AppTheme.onSurfaceColor,
+          style: TextStyle(
+            color: context.appOnSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           profile.priceDisplay,
-          style: const TextStyle(
-            color: AppTheme.primaryColor,
+          style: TextStyle(
+            color: context.appPrimary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -403,13 +403,13 @@ class _ProfileInfoGrid extends StatelessWidget {
           label: 'Rate Limit',
           value: profile.rateLimitDisplay,
         ),
-        const SizedBox(height: 5),
+        SizedBox(height: 5),
         _InfoRow(
           icon: Icons.access_time_rounded,
           label: 'Validity',
           value: profile.validityDisplay,
         ),
-        const SizedBox(height: 5),
+        SizedBox(height: 5),
         _InfoRow(
           icon: Icons.people_rounded,
           label: 'Shared Users',
@@ -439,22 +439,22 @@ class _InfoRow extends StatelessWidget {
         Icon(
           icon,
           size: 18,
-          color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+          color: context.appOnSurface.withValues(alpha: 0.5),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Text(
           '$label:',
           style: TextStyle(
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+            color: context.appOnSurface.withValues(alpha: 0.6),
           ),
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              color: AppTheme.onSurfaceColor,
+            style: TextStyle(
+              color: context.appOnSurface,
               fontWeight: FontWeight.w500,
             ),
             overflow: TextOverflow.ellipsis,
@@ -495,33 +495,33 @@ class _ProfileDetailsSheet extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDragHandle(),
-            _buildHeader(),
-            const SizedBox(height: 24),
+            _buildDragHandle(context),
+            _buildHeader(context),
+            SizedBox(height: 24),
             _ProfileDetailItem(
               icon: Icons.speed_rounded,
               label: 'Rate Limit',
               value: profile.rateLimitDisplay,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _ProfileDetailItem(
               icon: Icons.access_time_rounded,
               label: 'Validity',
               value: profile.validityDisplay,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _ProfileDetailItem(
               icon: Icons.people_rounded,
               label: 'Shared Users',
               value: profile.sharedUsersDisplay,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _ProfileDetailItem(
               icon: Icons.logout_rounded,
               label: 'Auto Logout',
               value: profile.autologout == true ? 'Enabled' : 'Disabled',
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             _buildActionButtons(context),
           ],
         ),
@@ -529,21 +529,21 @@ class _ProfileDetailsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildDragHandle() {
+  Widget _buildDragHandle(BuildContext context) {
     return Center(
       child: Container(
         width: 40,
         height: 4,
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+          color: context.appOnSurface.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(2),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
         Container(
@@ -553,35 +553,35 @@ class _ProfileDetailsSheet extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.primaryColor,
-                AppTheme.primaryColor.withValues(alpha: 0.7),
+                context.appPrimary,
+                context.appPrimary.withValues(alpha: 0.7),
               ],
             ),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.card_membership_rounded,
-            color: AppTheme.onPrimaryColor,
+            color: Colors.white,
             size: 28,
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 profile.name.toUpperCase(),
-                style: const TextStyle(
-                  color: AppTheme.onSurfaceColor,
+                style: TextStyle(
+                  color: context.appOnSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                 profile.priceDisplay,
-                style: const TextStyle(
-                  color: AppTheme.primaryColor,
+                style: TextStyle(
+                  color: context.appPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -601,26 +601,26 @@ class _ProfileDetailsSheet extends StatelessWidget {
               Navigator.pop(context);
               onEdit();
             },
-            icon: const Icon(Icons.edit_rounded),
-            label: const Text('Edit'),
+            icon: Icon(Icons.edit_rounded),
+            label: Text('Edit'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.primaryColor,
-              side: const BorderSide(color: AppTheme.primaryColor),
+              foregroundColor: context.appPrimary,
+              side: BorderSide(color: context.appPrimary),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
               onDelete();
             },
-            icon: const Icon(Icons.delete_rounded),
-            label: const Text('Delete'),
+            icon: Icon(Icons.delete_rounded),
+            label: Text('Delete'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
+              backgroundColor: context.appError,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
@@ -648,7 +648,7 @@ class _ProfileDetailItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.backgroundColor,
+        color: context.appBackground,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -656,22 +656,22 @@ class _ProfileDetailItem extends StatelessWidget {
           Icon(
             icon,
             size: 20,
-            color: AppTheme.primaryColor,
+            color: context.appPrimary,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Text(
             '$label:',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+              color: context.appOnSurface.withValues(alpha: 0.6),
             ),
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: AppTheme.onSurfaceColor,
+              style: TextStyle(
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.right,

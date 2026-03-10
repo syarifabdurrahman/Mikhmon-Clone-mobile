@@ -12,10 +12,12 @@
 | --------------------------- | ------ | ----------------------------------------------------- |
 | **Login System** | ✅ | RouterOS API (port 8728), demo mode toggle |
 | **Dashboard** | ✅ | **Real-time line chart** with CPU/Memory/Disk, auto-scrolls right-to-left |
-| **Resource History** | ✅ | **60 data points** (3 min history), animated updates |
+| **Resource History** | ✅ | **60+ data points** (unlimited history), animated updates, accurate elapsed time labels |
 | **Interface Traffic** | ✅ | **Network monitoring** widget showing TX/RX bytes and rates |
 | **Local Caching** | ✅ | **Hive database** for offline support & instant load |
+| **Seamless Navigation** | ✅ | **Provider keepAlive** for smooth transitions, no hiccups |
 | **Seamless Login** | ✅ | **Pre-fetch data** during login, instant dashboard |
+| **Initial Load Indicator** | ✅ | **Lazy loading** with "Loading dashboard..." for first-time fetch |
 | **Hotspot Users** | ✅ | CRUD (Create, Read, Update, Delete) |
 | **User Filtering** | ✅ | Search and status filter |
 | **Hotspot Active Users** | ✅ | Real-time monitoring, auto-refresh (5s), force logout |
@@ -29,12 +31,82 @@
 | **Responsive Design** | ✅ | LayoutBuilder for adaptive UI on all screens |
 | **Modern UI Theme** | ✅ | **Poppins font**, Material 3, vibrant colors |
 | **Hotspot Hosts** | ✅ | DHCP lease/binding monitoring with search & filters |
+| **Concurrent Fetch Protection** | ✅ | **_isFetching flag** prevents race conditions |
+| **Data Validation** | ✅ | **_safeString()** helper handles null/empty strings |
+| **Graph Time Formatting** | ✅ | **Accurate elapsed time** (30s, 2m, 3m30s, 1h15m, etc.) |
+| **Continuous Scrolling** | ✅ | **Unlimited graph scrolling** (removed 60.0 clamp) |
 
 ---
 
-## 🆕 Recent Updates (March 9, 2026)
+## 🆕 Recent Updates (March 10, 2026)
 
-### 1. Auto-Refresh Timer Fix ✅
+### 1. Navigation Hiccups Fix ✅
+**Fixed interface traffic "connect/disconnect" flashes and graph hiccups when navigating**
+
+- **Issue**: When navigating between Dashboard → Hotspot Host → Dashboard, the interface showed "connect/disconnect" flashes and the graph hiccuped
+- **Root Causes**:
+  1. No `ref.keepAlive()` on providers caused disposal/recreation on navigation
+  2. Dashboard periodic timer fired immediately on widget creation
+  3. Traffic monitor timer also fired immediately
+  4. Stale cache check triggered immediate fetch on navigation
+- **Fixes**:
+  1. Added `ref.keepAlive()` to `InterfaceTrafficNotifier` and `SystemResourcesNotifier` to prevent disposal
+  2. Removed `_refreshInBackground()` method (no longer needed)
+  3. Removed stale cache check from dashboard - use cached data instantly
+  4. Delayed both dashboard and traffic monitor timers by 3 seconds using `Future.delayed`
+- **Impact**: Seamless navigation without hiccups or connect/disconnect flashes
+- **Files**:
+  - `lib/providers/app_providers.dart`
+  - `lib/screens/dashboard/dashboard_screen.dart`
+  - `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
+
+### 2. Platform "Unknown" Issue Fix ✅
+**Fixed platform intermittently becoming "unknown" on dashboard**
+
+- **Issue**: Sometimes the platform value became "unknown" on dashboard, which triggered hiccups again
+- **Root Causes**:
+  1. No protection against concurrent fetches causing race conditions
+  2. Empty/incomplete API responses not validated
+  3. No string validation in SystemResources.fromJson
+- **Fixes**:
+  1. Added `_isFetching` flag to prevent concurrent fetches
+  2. Added better data validation (check for specific fields like 'platform', 'cpu-load', 'free-memory')
+  3. Added `_safeString()` helper to handle null/empty strings
+  4. Added comprehensive debug logging
+- **Impact**: Platform no longer becomes "unknown", race conditions eliminated
+- **Files**:
+  - `lib/screens/dashboard/dashboard_screen.dart`
+  - `lib/services/models.dart`
+
+### 3. Graph Time Labels Fix ✅
+**Fixed time labels resetting to "0s" on reload and added proper elapsed time display**
+
+- **Issue**: Time labels showed "0s" again when data reloaded, not accurate elapsed time
+- **Root Cause**: X-coordinates were relative (0, 1, 2, ...) calculated from current window, not actual timestamps
+- **Fixes**:
+  1. Changed x-coordinates to use actual elapsed time in seconds from reference timestamp
+  2. Added `_formatElapsedTime()` for proper time formatting (30s, 2m, 3m30s, 1h15m, etc.)
+  3. Removed 60.0 clamp on `maxX` to allow continuous scrolling beyond 3 minutes
+  4. Updated chart labels to use x-coordinate (elapsed seconds) directly
+- **Impact**: Time labels now show accurate elapsed time that doesn't reset on reload
+- **Files**:
+  - `lib/screens/dashboard/widgets/combined_resource_chart.dart`
+
+### 4. Initial Load Indicator ✅
+**Added lazy loading indicator for first-time dashboard data fetch**
+
+- **Issue**: No visual feedback when fetching data for the first time
+- **Fixes**:
+  1. Added `_isInitialLoad` flag to track first data load
+  2. Set `_isInitialLoad = false` after successful data load from all sources
+  3. Updated `_buildBody()` to show "Loading dashboard..." with CircularProgressIndicator when `_isInitialLoad && _isLoading`
+  4. Improved chart empty state with loading indicator and "Waiting for first data point" message
+- **Impact**: Users see clear loading indicator on first load, seamless updates afterwards
+- **Files**:
+  - `lib/screens/dashboard/dashboard_screen.dart`
+  - `lib/screens/dashboard/widgets/combined_resource_chart.dart`
+
+### 5. Auto-Refresh Timer Fix ✅
 **Fixed traffic monitoring auto-refresh to work in real-time mode**
 
 - **Issue**: Traffic rates not updating automatically every 3 seconds in real-time mode (not demo mode)
@@ -46,7 +118,7 @@
 - **Impact**: Traffic rates now auto-update every 3 seconds in both demo and real-time modes
 - **Files**: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-### 2. Network Permissions Added ✅
+### 6. Network Permissions Added ✅
 **Fixed "Permission denied" error when connecting to RouterOS**
 
 - **Issue**: App couldn't connect to RouterOS in real-time mode, showing "SocketException: Connection failed (OS Error: Permission denied)"
@@ -59,7 +131,7 @@
 - **Impact**: App can now successfully connect to RouterOS devices on port 8728
 - **File**: `android/app/src/main/AndroidManifest.xml`
 
-### 3. Removed Refresh Button ✅
+### 7. Removed Refresh Button ✅
 **Cleaned up UI to match system resources card**
 
 - **Issue**: Traffic monitor had manual refresh button with "Updating..." state, inconsistent with system resources
@@ -71,7 +143,7 @@
 - **Result**: Clean, silent auto-refresh like system resources card - no visible refresh indicators
 - **File**: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-### 4. Real-Time Traffic Rate Updates ✅
+### 8. Real-Time Traffic Rate Updates ✅
 **Fixed traffic monitoring to show live per-second rates**
 
 - **Issue**: Traffic rates showing "0 B/s" instead of real-time values
@@ -80,7 +152,7 @@
 - **Impact**: TX and RX rates now update correctly every 3 seconds
 - **Files**: `lib/providers/app_providers.dart`
 
-### 5. Smooth Traffic Text Updates ✅
+### 9. Smooth Traffic Text Updates ✅
 **Refactored to use ValueNotifier for text-only updates**
 
 - **Issue**: Entire card was rebuilding causing visual flicker
@@ -89,7 +161,7 @@
 - **Result**: Text values update smoothly without rebuilding card structure
 - **File**: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-### 6. About Dialog with Developers ✅
+### 10. About Dialog with Developers ✅
 **Added developer information to Settings > About**
 
 - **Developers**: Favian Hugo and Syarif Abdurrahman
@@ -97,7 +169,7 @@
 - **Style**: Matching app theme with purple primary color
 - **File**: `lib/screens/settings/settings_screen.dart`
 
-### 7. Responsive Developer Cards ✅
+### 11. Responsive Developer Cards ✅
 **Fixed overflow issue on smaller screens**
 
 - **Issue**: "Syarif Abdurrahman" text overflowed on small screens
@@ -108,7 +180,7 @@
 - **Result**: Cards adapt to all screen sizes without overflow
 - **File**: `lib/screens/settings/settings_screen.dart`
 
-### 8. Hotspot Hosts Monitoring ✅
+### 12. Hotspot Hosts Monitoring ✅
 **DHCP lease/binding monitoring with real-time updates**
 
 - **Feature**: Complete hotspot hosts monitoring showing all connected devices
@@ -374,6 +446,9 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 9. ~~**Dashboard Income Widget**~~ ✅ Already implemented
 10. ~~**Modern UI Theme**~~ ✅ COMPLETED
 11. ~~**Interface Traffic Monitoring**~~ ✅ COMPLETED
+12. ~~**Seamless Navigation**~~ ✅ COMPLETED - Provider keepAlive for smooth transitions
+13. ~~**Data Validation & Protection**~~ ✅ COMPLETED - Concurrent fetch protection and string validation
+14. ~~**Accurate Time Labels**~~ ✅ COMPLETED - Elapsed time formatting and continuous scrolling
 
 ### Medium Priority (User Experience)
 
@@ -451,19 +526,22 @@ Design System: Material 3
 
 | Data Type | Refresh Rate |
 |-----------|--------------|
-| Dashboard resources | Every 3 seconds (real mode) |
+| Dashboard resources | Every 3 seconds (real mode), delayed first tick |
 | Resource history | Every 3 seconds (adds to history) |
 | Active users | Every 5 seconds (real mode) |
 | Hotspot hosts | Every 5 seconds (real mode) |
+| Interface traffic | Every 3 seconds (real mode), delayed first tick |
 | Demo mode cards | 2-5 seconds (random values) |
 | Cache validity check | On load |
 
 ### Resource History Settings
 
-- **Max data points**: 60 (3 minutes at 3s intervals)
+- **Max data points**: Unlimited (was 60, now removed for continuous scrolling)
 - **Visible window**: 30-40 points (scrolling)
 - **Animation duration**: 300ms
 - **Chart update**: Triggered by ResourceHistoryNotifier
+- **Time labels**: Accurate elapsed time (30s, 2m, 3m30s, 1h15m, etc.)
+- **X-coordinates**: Based on actual timestamps (not relative positions)
 
 ### Files Structure
 
@@ -481,10 +559,16 @@ lib/
 │   │   └── login_screen.dart             # Login with demo toggle (port 8728)
 │   ├── dashboard/
 │   │   ├── dashboard_screen.dart         # Dashboard with real-time chart + Hotspot Hosts button
+│   │   │                                  # + Initial load indicator (_isInitialLoad flag)
+│   │   │                                  # + Concurrent fetch protection (_isFetching flag)
 │   │   └── widgets/
 │   │       ├── resource_card_widgets.dart # Income cards (theme updated)
 │   │       ├── combined_resource_chart.dart # Real-time line chart
+│   │       │                               # + Accurate elapsed time labels
+│   │       │                               # + Continuous scrolling (unlimited data points)
+│   │       │                               # + Initial load indicator
 │   │       └── traffic_monitor_widgets.dart # Interface traffic monitoring
+│   │                                       # + Delayed timer start (3s)
 │   ├── welcome/
 │   │   └── welcome_screen.dart           # Welcome screen (ΩMMON branding)
 │   ├── settings/
@@ -540,46 +624,74 @@ Choose a feature to implement:
 6. ~~**User Profile Creation Fix**~~ ✅ DONE
 7. ~~**RouterOS API Multi-Record Fix**~~ ✅ DONE
 8. ~~**Interface Traffic Monitoring**~~ ✅ DONE
-9. **Settings Implementation** - Make settings screen functional
-10. **Reports Page** - Sales history with filtering
-11. ~~**Hotspot Hosts**~~ ✅ DONE - DHCP lease monitoring
-12. **Log Viewer** - Activity tracking
-13. **Health Monitoring** - Temperature, voltage sensors
+9. ~~**Navigation Hiccups Fix**~~ ✅ DONE - Seamless navigation without hiccups
+10. ~~**Platform "Unknown" Issue Fix**~~ ✅ DONE - Race conditions eliminated
+11. ~~**Graph Time Labels Fix**~~ ✅ DONE - Accurate elapsed time display
+12. ~~**Initial Load Indicator**~~ ✅ DONE - Loading indicator for first-time fetch
+13. **Settings Implementation** - Make settings screen functional
+14. **Reports Page** - Sales history with filtering
+15. ~~**Hotspot Hosts**~~ ✅ DONE - DHCP lease monitoring
+16. **Log Viewer** - Activity tracking
+17. **Health Monitoring** - Temperature, voltage sensors
 
 ---
 
 ## Bug Fixes Summary
 
-### Fixed Issues (March 9, 2026)
+### Fixed Issues (March 10, 2026)
 
-1. **Auto-Refresh Timer Not Firing** - Fixed timer startup timing issue
+1. **Navigation Hiccups** - Fixed connect/disconnect flashes and graph hiccups
+   - Added `ref.keepAlive()` to prevent provider disposal on navigation
+   - Delayed dashboard and traffic monitor timers to prevent immediate refresh
+   - Removed stale cache check that triggered fetch on navigation
+   - Files: `lib/providers/app_providers.dart`, `lib/screens/dashboard/dashboard_screen.dart`, `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
+
+2. **Platform Becoming "Unknown"** - Fixed race conditions and data validation
+   - Added `_isFetching` flag to prevent concurrent fetches
+   - Added better data validation for API responses
+   - Added `_safeString()` helper to handle null/empty strings
+   - Files: `lib/screens/dashboard/dashboard_screen.dart`, `lib/services/models.dart`
+
+3. **Graph Time Labels Resetting** - Fixed elapsed time calculation
+   - Changed x-coordinates to use actual timestamps instead of relative positions
+   - Added `_formatElapsedTime()` for proper time formatting
+   - Removed 60.0 clamp on `maxX` for continuous scrolling
+   - File: `lib/screens/dashboard/widgets/combined_resource_chart.dart`
+
+4. **No Initial Load Indicator** - Added lazy loading for first-time fetch
+   - Added `_isInitialLoad` flag to track first data load
+   - Show "Loading dashboard..." indicator on initial load
+   - Improved chart empty state with loading indicator
+   - Files: `lib/screens/dashboard/dashboard_screen.dart`, `lib/screens/dashboard/widgets/combined_resource_chart.dart`
+
+5. **Auto-Refresh Timer Not Firing** - Fixed timer startup timing issue
    - Added `_timerStarted` flag and moved timer start to `build()` method
    - Timer now starts correctly when data becomes available via `ref.watch()`
    - File: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-2. **Network Permission Denied** - Added missing INTERNET permission
+6. **Network Permission Denied** - Added missing INTERNET permission
    - Added `INTERNET` and `ACCESS_NETWORK_STATE` permissions to AndroidManifest.xml
    - App can now connect to RouterOS devices on port 8728
    - File: `android/app/src/main/AndroidManifest.xml`
 
-3. **Traffic Rates Showing "0 B/s"** - Fixed demo mode rate calculation
+7. **Traffic Rates Showing "0 B/s"** - Fixed demo mode rate calculation
    - Added `_trafficRateService.calculateRates()` calls in `build()`, `refresh()`, and `silentRefresh()`
    - File: `lib/providers/app_providers.dart`
 
-4. **Traffic Values Not Updating** - Fixed widget state synchronization
+8. **Traffic Values Not Updating** - Fixed widget state synchronization
    - Added `_updateTrafficValues()` call in widget's `build()` method
    - File: `lib/screens/dashboard/widgets/traffic_monitor_widgets.dart`
 
-5. **Developer Card Overflow** - Fixed responsive layout on small screens
+9. **Developer Card Overflow** - Fixed responsive layout on small screens
    - Used `Expanded` widgets and `FittedBox` for text
    - File: `lib/screens/settings/settings_screen.dart`
 
-6. **Hotspot Hosts Implementation Bugs** - Fixed compilation errors
-   - Added missing `import 'dart:async';` for Timer support
-   - Removed `mounted` property check (AsyncNotifier doesn't have mounted)
-   - Removed `super.dispose()` call (AsyncNotifier doesn't have dispose method)
-   - Fixed `const _buildLoadingState()` → `_buildLoadingState()`
-   - Files: `lib/providers/app_providers.dart`, `lib/screens/hotspot_users/hotspot_hosts_screen.dart`
+10. **Hotspot Hosts Implementation Bugs** - Fixed compilation errors
+    - Added missing `import 'dart:async';` for Timer support
+    - Removed `mounted` property check (AsyncNotifier doesn't have mounted)
+    - Removed `super.dispose()` call (AsyncNotifier doesn't have dispose method)
+    - Fixed `const _buildLoadingState()` → `_buildLoadingState()`
+    - Files: `lib/providers/app_providers.dart`, `lib/screens/hotspot_users/hotspot_hosts_screen.dart`
 
 ### Fixed Issues (March 8, 2026)
 
@@ -597,4 +709,4 @@ Choose a feature to implement:
 
 ---
 
-_Last Updated: March 9, 2026_
+_Last Updated: March 10, 2026_

@@ -141,19 +141,21 @@ class AppTheme {
 
       // AppBar Theme
       appBarTheme: AppBarTheme(
-        backgroundColor: surfaceColor,
-        foregroundColor: onSurfaceColor,
+        backgroundColor: surface,
+        foregroundColor: onSurface,
         elevation: 0,
         centerTitle: true,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         titleTextStyle: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          color: onSurfaceColor,
+          color: onSurface,
           letterSpacing: -0.5,
         ),
-        iconTheme: const IconThemeData(
-          color: onSurfaceColor,
+        iconTheme: IconThemeData(
+          color: onSurface,
           size: 24,
         ),
       ),
@@ -162,7 +164,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
-          foregroundColor: onPrimaryColor,
+          foregroundColor: brightness == Brightness.dark ? Colors.white : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -181,7 +183,7 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: colorScheme.primary,
-          foregroundColor: onPrimaryColor,
+          foregroundColor: brightness == Brightness.dark ? Colors.white : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -253,11 +255,11 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: errorColor, width: 2),
+          borderSide: const BorderSide(color: Color(0xFFF43F5E), width: 2),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: errorColor, width: 2),
+          borderSide: const BorderSide(color: Color(0xFFF43F5E), width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         hintStyle: GoogleFonts.poppins(
@@ -275,7 +277,7 @@ class AppTheme {
       // Floating Action Button Theme
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.primary,
-        foregroundColor: onPrimaryColor,
+        foregroundColor: brightness == Brightness.dark ? Colors.white : Colors.white,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -384,7 +386,7 @@ class AppTheme {
           }
           return card;
         }),
-        checkColor: WidgetStateProperty.all(onPrimaryColor),
+        checkColor: WidgetStateProperty.all(brightness == Brightness.dark ? Colors.white : Colors.white),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
         ),
@@ -567,14 +569,14 @@ class AppTheme {
   // Helper for glassmorphism effect
   static BoxDecoration glassmorphismDecoration({
     double borderRadius = 20,
-    Color? surfaceColor,
+    required Color surfaceColor,
+    required Color onSurfaceColor,
   }) {
-    final color = surfaceColor ?? AppTheme.surfaceColor;
     return BoxDecoration(
-      color: color.withValues(alpha: 0.8),
+      color: surfaceColor.withValues(alpha: 0.8),
       borderRadius: BorderRadius.circular(borderRadius),
       border: Border.all(
-        color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+        color: onSurfaceColor.withValues(alpha: 0.1),
         width: 1,
       ),
       boxShadow: [
@@ -588,10 +590,10 @@ class AppTheme {
   }
 
   // Helper for modern card shadow
-  static List<BoxShadow> modernCardShadow() {
+  static List<BoxShadow> modernCardShadow({required Color primaryColor}) {
     return [
       BoxShadow(
-        color: primarySeed.withValues(alpha: 0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         blurRadius: 20,
         offset: const Offset(0, 4),
       ),
@@ -625,4 +627,32 @@ class ThemeColors {
     required this.onSurface,
     required this.brightness,
   });
+}
+
+// Extension on ThemeData to provide easy access to custom theme colors
+extension AppThemeData on ThemeData {
+  Color get appBackground => scaffoldBackgroundColor;
+  Color get appSurface => colorScheme.surface;
+  Color get appCard => cardColor;
+  Color get appOnBackground => colorScheme.onSurface.withValues(alpha: 0.8);
+  Color get appOnSurface => colorScheme.onSurface;
+  Color get appPrimary => colorScheme.primary;
+  Color get appSecondary => colorScheme.secondary;
+  Color get appError => const Color(0xFFF43F5E);
+  Color get appSuccess => const Color(0xFF10B981);
+  Color get appWarning => const Color(0xFFF59E0B);
+}
+
+// Extension on BuildContext for easier access to theme colors
+extension AppThemeContext on BuildContext {
+  Color get appBackground => Theme.of(this).scaffoldBackgroundColor;
+  Color get appSurface => Theme.of(this).colorScheme.surface;
+  Color get appCard => Theme.of(this).cardColor;
+  Color get appOnBackground => Theme.of(this).colorScheme.onSurface.withValues(alpha: 0.8);
+  Color get appOnSurface => Theme.of(this).colorScheme.onSurface;
+  Color get appPrimary => Theme.of(this).colorScheme.primary;
+  Color get appSecondary => Theme.of(this).colorScheme.secondary;
+  Color get appError => const Color(0xFFF43F5E);
+  Color get appSuccess => const Color(0xFF10B981);
+  Color get appWarning => const Color(0xFFF59E0B);
 }

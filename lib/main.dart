@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'providers/app_providers.dart';
 import 'services/cache_service.dart';
-import 'theme/app_theme.dart';
+import 'services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +37,7 @@ class OmmonApp extends ConsumerWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'ΩMMON - Open Mikrotik Monitor',
-      theme: AppTheme.getTheme(themeMode),
+      theme: ThemeService.getThemeData(themeMode),
       routerConfig: router,
     );
   }

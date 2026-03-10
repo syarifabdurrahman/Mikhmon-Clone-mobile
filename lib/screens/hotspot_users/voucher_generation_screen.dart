@@ -147,7 +147,7 @@ class _VoucherGenerationScreenState
     if (_selectedProfile == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a profile')),
+        SnackBar(content: Text('Please select a profile')),
       );
       return;
     }
@@ -200,7 +200,7 @@ class _VoucherGenerationScreenState
       if (client == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Not connected to RouterOS. Please login first.'),
               backgroundColor: Colors.red,
             ),
@@ -334,14 +334,14 @@ class _VoucherGenerationScreenState
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: const Color(0xFF2A2A3C),
-        title: const Text(
+        title: Text(
           'Generate Vouchers',
           style: TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: _resetForm,
             tooltip: 'Reset Form',
           ),
@@ -373,9 +373,9 @@ class _VoucherGenerationScreenState
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline,
+                      Icon(Icons.info_outline,
                           color: Colors.orange, size: 20),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Demo Mode: Vouchers will be generated locally',
@@ -403,7 +403,7 @@ class _VoucherGenerationScreenState
                       helperText: 'Number of vouchers to generate (1-500)',
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // Server Selection
                     _buildDropdown<String>(
@@ -417,7 +417,7 @@ class _VoucherGenerationScreenState
                           setState(() => _selectedServer = value ?? 'all'),
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // User Mode
                     _buildDropdown<UserMode>(
@@ -443,7 +443,7 @@ class _VoucherGenerationScreenState
                       },
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // Name Length
                     _buildDropdown<int>(
@@ -460,7 +460,7 @@ class _VoucherGenerationScreenState
                           setState(() => _nameLength = value ?? 4),
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // Prefix
                     _buildTextField(
@@ -470,7 +470,7 @@ class _VoucherGenerationScreenState
                       helperText: 'Optional prefix for usernames',
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // Character Type
                     _buildDropdown<CharType>(
@@ -487,7 +487,7 @@ class _VoucherGenerationScreenState
                           setState(() => _charType = value ?? CharType.lower),
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // Profile
                     profilesAsync.when(
@@ -502,14 +502,14 @@ class _VoucherGenerationScreenState
                             );
                           }).toList(),
                           icon: Icons.pie_chart,
-                          hint: const Text('Select Profile'),
+                          hint: Text('Select Profile'),
                           onChanged: (value) =>
                               setState(() => _selectedProfile = value),
                           validator: (value) =>
                               value == null ? 'Please select a profile' : null,
                         );
                       },
-                      loading: () => const Center(
+                      loading: () => Center(
                         child: CircularProgressIndicator(),
                       ),
                       error: (_, __) => _buildDropdown<String>(
@@ -528,7 +528,7 @@ class _VoucherGenerationScreenState
                 ),
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // Limits Card
               _buildSectionCard(
@@ -545,7 +545,7 @@ class _VoucherGenerationScreenState
                       textCapitalization: TextCapitalization.none,
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // Data Limit
                     _buildTextField(
@@ -556,7 +556,7 @@ class _VoucherGenerationScreenState
                       textCapitalization: TextCapitalization.characters,
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
 
                     // Comment
                     _buildTextField(
@@ -569,7 +569,7 @@ class _VoucherGenerationScreenState
                 ),
               ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               // Status Message
               if (_generationStatus != null)
@@ -596,9 +596,9 @@ class _VoucherGenerationScreenState
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.check_circle,
+                                Icon(Icons.check_circle,
                                     color: Colors.green, size: 20),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     _generationStatus!,
@@ -609,7 +609,7 @@ class _VoucherGenerationScreenState
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
@@ -624,7 +624,7 @@ class _VoucherGenerationScreenState
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                 ),
-                                child: const Text('Show Users'),
+                                child: Text('Show Users'),
                               ),
                             ),
                           ],
@@ -632,15 +632,15 @@ class _VoucherGenerationScreenState
                       : Row(
                           children: [
                             if (_isGenerating)
-                              const SizedBox(
+                              SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
                             else
-                              const Icon(Icons.check_circle,
+                              Icon(Icons.check_circle,
                                   color: Colors.green, size: 20),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 _generationStatus!,
@@ -655,7 +655,7 @@ class _VoucherGenerationScreenState
                         ),
                 ),
 
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               // Generate Button
               SizedBox(
@@ -672,7 +672,7 @@ class _VoucherGenerationScreenState
                     ),
                   ),
                   child: _isGenerating
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 24,
                           height: 24,
                           child: CircularProgressIndicator(
@@ -699,7 +699,7 @@ class _VoucherGenerationScreenState
                 ),
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // Reset Button
               SizedBox(
@@ -766,10 +766,10 @@ class _VoucherGenerationScreenState
             child: Row(
               children: [
                 Icon(icon, color: const Color(0xFF6C63FF), size: 20),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -799,7 +799,7 @@ class _VoucherGenerationScreenState
     return TextFormField(
       controller: controller,
       textCapitalization: textCapitalization,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey.shade400),
@@ -836,7 +836,7 @@ class _VoucherGenerationScreenState
     return TextFormField(
       controller: controller,
       keyboardType: TextInputType.number,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey.shade400),
@@ -894,7 +894,7 @@ class _VoucherGenerationScreenState
       validator: validator,
       iconEnabledColor: const Color(0xFF6C63FF),
       dropdownColor: const Color(0xFF2A2A3C),
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey.shade400),

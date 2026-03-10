@@ -19,6 +19,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isLoading = false;
+  bool _isInitialLoad = true; // Track if this is the first data load
   String? _errorMessage;
   SystemResources? _resources;
   Timer? _refreshTimer;
@@ -106,18 +107,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       final cache = ref.read(cacheServiceProvider);
       debugPrint('Demo Mode: ${service.isDemoMode}');
       debugPrint('Is Connected: ${service.isConnected}');
+      debugPrint('Initial Load: $_isInitialLoad');
 
       // Check if demo mode is enabled
       if (service.isDemoMode) {
         debugPrint('Using demo mode data');
         // Simulate loading delay for initial load
-        if (showLoading) {
+        if (_isInitialLoad) {
           await Future.delayed(const Duration(milliseconds: 800));
         }
 
         if (mounted) {
           setState(() {
             _resources = _getDemoResources();
+            _isInitialLoad = false;
           });
           _updateResourcesNotifier();
         }
@@ -132,6 +135,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           setState(() {
             _resources = SystemResources.fromJson(authState.value!.systemResources!);
             _isLoading = false;
+            _isInitialLoad = false;
           });
           _updateResourcesNotifier();
         }
@@ -152,6 +156,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           setState(() {
             _resources = SystemResources.fromJson(cachedResources);
             _isLoading = false;
+            _isInitialLoad = false;
           });
           _updateResourcesNotifier();
         }
@@ -241,6 +246,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         setState(() {
           _resources = newResources;
           _errorMessage = null;
+          _isInitialLoad = false; // First successful data load
         });
         _updateResourcesNotifier();
         debugPrint('[Refresh] Dashboard updated successfully! CPU: ${newResources.cpuLoad}%, RAM: ${(newResources.freeMemory / newResources.totalMemory * 100).toStringAsFixed(1)}%');
@@ -279,10 +285,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
@@ -294,7 +300,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         title: Text(
           'Dashboard',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -314,10 +320,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+    // Show loading indicator for initial load
+    if (_isInitialLoad && _isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(
+                strokeWidth: 4,
+                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading dashboard...',
+              style: TextStyle(
+                color: context.appOnBackground.withValues(alpha: 0.7),
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -337,16 +362,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.error_outline_rounded,
                       size: 64,
-                      color: AppTheme.errorColor,
+                      color: context.appError,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Connection Error',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppTheme.onBackgroundColor,
+                            color: context.appOnBackground,
                             fontWeight: FontWeight.bold,
                           ),
                       textAlign: TextAlign.center,
@@ -356,15 +381,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       _errorMessage!,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                            color: context.appOnBackground.withValues(alpha: 0.7),
                           ),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _loadDashboardData,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: AppTheme.onPrimaryColor,
+                        backgroundColor: context.appPrimary,
+                        foregroundColor: Colors.white,
                       ),
                       child: const Text('Retry'),
                     ),
@@ -382,7 +407,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: Text(
           'No data available',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.onBackgroundColor,
+                color: context.appOnBackground,
               ),
         ),
       );
@@ -390,7 +415,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return RefreshIndicator(
       onRefresh: () => _loadDashboardData(showLoading: false),
-      color: AppTheme.primaryColor,
+      color: context.appPrimary,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -414,7 +439,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildSystemInfoCard() {
     return Card(
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -429,12 +454,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    color: context.appPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.router_rounded,
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     size: 28,
                   ),
                 ),
@@ -446,7 +471,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Text(
                         _resources!.boardName,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: AppTheme.onSurfaceColor,
+                              color: context.appOnSurface,
                               fontWeight: FontWeight.bold,
                             ),
                       ),
@@ -454,7 +479,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Text(
                         'RouterOS ${_resources!.version}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                              color: context.appOnSurface.withValues(alpha: 0.7),
                             ),
                       ),
                     ],
@@ -507,7 +532,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Text(
           'Income',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.onBackgroundColor,
+                color: context.appOnBackground,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -534,13 +559,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         Text(
           'Quick Actions',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.onBackgroundColor,
+                color: context.appOnBackground,
                 fontWeight: FontWeight.bold,
               ),
         ),
         const SizedBox(height: 12),
         Card(
-          color: AppTheme.surfaceColor,
+          color: context.appSurface,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -557,7 +582,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               Divider(
                 height: 1,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                color: context.appOnSurface.withValues(alpha: 0.1),
               ),
               _buildActionButton(
                 Icons.wifi_rounded,
@@ -569,7 +594,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               Divider(
                 height: 1,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                color: context.appOnSurface.withValues(alpha: 0.1),
               ),
               _buildActionButton(
                 Icons.card_membership_rounded,
@@ -581,7 +606,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               Divider(
                 height: 1,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                color: context.appOnSurface.withValues(alpha: 0.1),
               ),
               _buildActionButton(
                 Icons.lan_rounded,
@@ -593,7 +618,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               Divider(
                 height: 1,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                color: context.appOnSurface.withValues(alpha: 0.1),
               ),
               _buildActionButton(
                 Icons.history_rounded,
@@ -627,7 +652,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: [
             Icon(
               leadingIcon,
-              color: AppTheme.primaryColor,
+              color: context.appPrimary,
               size: 24,
             ),
             const SizedBox(width: 16),
@@ -635,14 +660,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: Text(
                 title,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.onSurfaceColor,
+                      color: context.appOnSurface,
                       fontWeight: FontWeight.w500,
                     ),
               ),
             ),
             Icon(
               trailingIcon,
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+              color: context.appOnSurface.withValues(alpha: 0.5),
               size: 16,
             ),
           ],
@@ -656,21 +681,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       children: [
         Icon(
           icon,
-          color: AppTheme.primaryColor,
+          color: context.appPrimary,
           size: 20,
         ),
         const SizedBox(width: 12),
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                color: context.appOnSurface.withValues(alpha: 0.7),
               ),
         ),
         const Spacer(),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
@@ -698,13 +723,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryColor.withValues(alpha: 0.2),
-            AppTheme.primaryColor.withValues(alpha: 0.1),
+            context.appPrimary.withValues(alpha: 0.2),
+            context.appPrimary.withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          color: context.appPrimary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -712,7 +737,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         children: [
           Icon(
             Icons.science_rounded,
-            color: AppTheme.primaryColor,
+            color: context.appPrimary,
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -720,7 +745,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Text(
               'Demo Mode - Showing simulated data',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     fontWeight: FontWeight.w600,
                   ),
             ),

@@ -75,7 +75,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
             SnackBar(
               content:
                   Text('User "${widget.user['name']}" updated successfully'),
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: context.appPrimary,
             ),
           );
           Navigator.pop(context, true); // Return true to indicate success
@@ -87,9 +87,9 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
+            content: Text(
                 'Update user not implemented for real RouterOS connection yet'),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: context.appError,
           ),
         );
         setState(() {
@@ -105,7 +105,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to update user: $e'),
-              backgroundColor: AppTheme.errorColor,
+              backgroundColor: context.appError,
             ),
           );
         }
@@ -116,19 +116,19 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Edit User',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -142,15 +142,15 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 _buildUsernameDisplay(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildPasswordField(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildProfileSelector(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildCommentField(),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 _buildSubmitButton(),
               ],
             ),
@@ -162,12 +162,12 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
 
   Widget _buildHeader() {
     return Card(
-      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+      color: context.appPrimary.withValues(alpha: 0.1),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          color: context.appPrimary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -177,14 +177,14 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
           children: [
             Icon(
               Icons.edit_rounded,
-              color: AppTheme.primaryColor,
+              color: context.appPrimary,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Edit user "${widget.user['name']}"',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.primaryColor,
+                      color: context.appPrimary,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -202,13 +202,13 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         Text(
           'Username',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Card(
-          color: AppTheme.surfaceColor,
+          color: context.appSurface,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -219,14 +219,14 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
               children: [
                 Icon(
                   Icons.person_rounded,
-                  color: AppTheme.primaryColor,
+                  color: context.appPrimary,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     widget.user['name'] ?? '',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppTheme.onSurfaceColor,
+                          color: context.appOnSurface,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
@@ -246,11 +246,11 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         Text(
           'New Password (Optional)',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: _passwordController,
           obscureText: _obscurePassword,
@@ -258,7 +258,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
           autocorrect: false,
           decoration: InputDecoration(
             hintText: 'Enter new password (leave empty to keep current)',
-            prefixIcon: const Icon(Icons.lock_rounded, size: 20),
+            prefixIcon: Icon(Icons.lock_rounded, size: 20),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword
@@ -287,34 +287,34 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         Text(
           'User Profile',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         profilesAsync.when(
           data: (profiles) {
             if (profiles.isEmpty) {
               return Card(
-                color: AppTheme.surfaceColor,
+                color: context.appSurface,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline_rounded,
-                          color: AppTheme.primaryColor),
-                      const SizedBox(width: 12),
+                      Icon(Icons.info_outline_rounded,
+                          color: context.appPrimary),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'No profiles available. Please create a profile first.',
                           style: TextStyle(
-                              color: AppTheme.onSurfaceColor
+                              color: context.appOnSurface
                                   .withValues(alpha: 0.7)),
                         ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Create Profile'),
+                        child: Text('Create Profile'),
                       ),
                     ],
                   ),
@@ -341,14 +341,14 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                   initialValue: _selectedProfileId ?? currentProfileId ?? profiles.first.id,
                   decoration: InputDecoration(
                     hintText: 'Select profile',
-                    prefixIcon: const Icon(Icons.card_membership_rounded, size: 20),
+                    prefixIcon: Icon(Icons.card_membership_rounded, size: 20),
                   ),
                   items: profiles.map((profile) {
                     return DropdownMenuItem<String>(
                       value: profile.id,
                       child: Text(
                         profile.name.toUpperCase(),
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),
                     );
@@ -367,14 +367,14 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    color: context.appPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                      color: context.appPrimary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -382,15 +382,15 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                       Icon(
                         Icons.info_outline_rounded,
                         size: 16,
-                        color: AppTheme.primaryColor,
+                        color: context.appPrimary,
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           '${selectedProfile.priceDisplay} • ${selectedProfile.validityDisplay} • ${selectedProfile.rateLimitDisplay}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.8),
+                            color: context.appOnSurface.withValues(alpha: 0.8),
                           ),
                         ),
                       ),
@@ -400,24 +400,24 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
               ],
             );
           },
-          loading: () => const Center(
+          loading: () => Center(
             child: Padding(
               padding: EdgeInsets.all(16),
               child: CircularProgressIndicator(),
             ),
           ),
           error: (_, __) => Card(
-            color: AppTheme.surfaceColor,
+            color: context.appSurface,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline_rounded, color: AppTheme.errorColor),
-                  const SizedBox(width: 15),
+                  Icon(Icons.error_outline_rounded, color: context.appError),
+                  SizedBox(width: 15),
                   Expanded(
                     child: Text(
                       'Failed to load profiles',
-                      style: TextStyle(color: AppTheme.errorColor),
+                      style: TextStyle(color: context.appError),
                     ),
                   ),
                 ],
@@ -436,11 +436,11 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         Text(
           'Comment (Optional)',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: _commentController,
           textInputAction: TextInputAction.done,
@@ -465,13 +465,13 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _updateUser,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: AppTheme.onPrimaryColor,
+          backgroundColor: context.appPrimary,
+          foregroundColor: Colors.white,
           disabledBackgroundColor:
-              AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+              context.appOnSurface.withValues(alpha: 0.1),
         ),
         child: _isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(

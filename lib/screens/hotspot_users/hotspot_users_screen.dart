@@ -73,7 +73,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final service = ref.watch(routerOSServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: _buildAppBar(service),
       body: Column(
         children: [
@@ -109,7 +109,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
 
                 return RefreshIndicator(
                   onRefresh: () => ref.read(hotspotUsersProvider.notifier).refresh(),
-                  color: AppTheme.primaryColor,
+                  color: context.appPrimary,
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
@@ -136,9 +136,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                   ),
                 );
               },
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
                 ),
               ),
               error: (error, stack) => _buildErrorState(error.toString()),
@@ -155,20 +155,20 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
           FloatingActionButton.extended(
             heroTag: 'generate_vouchers',
             onPressed: () => _navigateToGenerateVouchers(),
-            backgroundColor: AppTheme.secondaryColor,
-            foregroundColor: AppTheme.onSecondaryColor,
-            icon: const Icon(Icons.confirmation_number_rounded),
-            label: const Text('Generate Vouchers'),
+            backgroundColor: context.appSecondary,
+            foregroundColor: Colors.black,
+            icon: Icon(Icons.confirmation_number_rounded),
+            label: Text('Generate Vouchers'),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           // Add User Button
           FloatingActionButton.extended(
             heroTag: 'add_user',
             onPressed: () => _navigateToAddUser(),
-            backgroundColor: AppTheme.primaryColor,
-            foregroundColor: AppTheme.onPrimaryColor,
-            icon: const Icon(Icons.person_add_rounded),
-            label: const Text('Add User'),
+            backgroundColor: context.appPrimary,
+            foregroundColor: Colors.white,
+            icon: Icon(Icons.person_add_rounded),
+            label: Text('Add User'),
           ),
         ],
       ),
@@ -177,24 +177,24 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
 
   PreferredSizeWidget _buildAppBar(RouterOSService service) {
     return AppBar(
-      backgroundColor: AppTheme.surfaceColor,
-      foregroundColor: AppTheme.onSurfaceColor,
+      backgroundColor: context.appSurface,
+      foregroundColor: context.appOnSurface,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
+        icon: Icon(Icons.arrow_back_rounded),
         onPressed: () => context.go('/dashboard'),
       ),
-      title: const Text(
+      title: Text(
         'Hotspot Users',
         style: TextStyle(
-          color: AppTheme.onSurfaceColor,
+          color: context.appOnSurface,
           fontWeight: FontWeight.bold,
         ),
       ),
       actions: [
         if (service.isDemoMode) _buildDemoBadge(),
         IconButton(
-          icon: const Icon(Icons.refresh_rounded),
+          icon: Icon(Icons.refresh_rounded),
           onPressed: () {
             ref.read(hotspotUsersProvider.notifier).refresh();
           },
@@ -210,28 +210,28 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryColor.withValues(alpha: 0.2),
-            AppTheme.primaryColor.withValues(alpha: 0.1),
+            context.appPrimary.withValues(alpha: 0.2),
+            context.appPrimary.withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          color: context.appPrimary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
-      child: const Row(
+      child: Row(
         children: [
           Icon(
             Icons.science_rounded,
-            color: AppTheme.primaryColor,
+            color: context.appPrimary,
             size: 16,
           ),
           SizedBox(width: 6),
           Text(
             'DEMO',
             style: TextStyle(
-              color: AppTheme.primaryColor,
+              color: context.appPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -278,21 +278,21 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
           Icon(
             Icons.person_off_rounded,
             size: 64,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+            color: context.appOnSurface.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             'No hotspot users found',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor,
+              color: context.appOnSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             hasFilters ? 'Try adjusting your search or filter' : 'Add your first user to get started',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+              color: context.appOnSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -305,24 +305,24 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
             size: 64,
-            color: AppTheme.errorColor,
+            color: context.appError,
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             'Error loading users',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor,
+              color: context.appOnSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             error,
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+              color: context.appOnSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -361,7 +361,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   void _showUserContextMenu(HotspotUser user) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surfaceColor,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -399,7 +399,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: context.appPrimary,
               ),
             );
           }
@@ -416,13 +416,13 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        title: const Text('Delete User'),
+        backgroundColor: context.appSurface,
+        title: Text('Delete User'),
         content: Text('Are you sure you want to delete user "${user.name}"? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -434,15 +434,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text('User "${user.name}" deleted successfully'),
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: context.appPrimary,
                   ),
                 );
               }
             },
             style: TextButton.styleFrom(
-              foregroundColor: AppTheme.errorColor,
+              foregroundColor: context.appError,
             ),
-            child: const Text('Delete'),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -471,7 +471,7 @@ class _SearchAndFilterBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: context.appSurface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -485,15 +485,15 @@ class _SearchAndFilterBar extends StatelessWidget {
           TextField(
             decoration: InputDecoration(
               hintText: 'Search by username or profile...',
-              prefixIcon: const Icon(Icons.search_rounded),
+              prefixIcon: Icon(Icons.search_rounded),
               suffixIcon: searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
+                      icon: Icon(Icons.clear_rounded),
                       onPressed: onClearSearch,
                     )
                   : null,
               filled: true,
-              fillColor: AppTheme.backgroundColor,
+              fillColor: context.appBackground,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -501,7 +501,7 @@ class _SearchAndFilterBar extends StatelessWidget {
             ),
             onChanged: onSearchChanged,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           SegmentedButton<UserStatusFilter>(
             segments: const [
               ButtonSegment(
@@ -525,15 +525,15 @@ class _SearchAndFilterBar extends StatelessWidget {
             style: ButtonStyle(
               backgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
-                  return AppTheme.primaryColor;
+                  return context.appPrimary;
                 }
-                return AppTheme.backgroundColor;
+                return context.appBackground;
               }),
               foregroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
-                  return AppTheme.onPrimaryColor;
+                  return Colors.white;
                 }
-                return AppTheme.onSurfaceColor;
+                return context.appOnSurface;
               }),
             ),
           ),
@@ -559,14 +559,14 @@ class _UserCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: user.active
-              ? AppTheme.primaryColor.withValues(alpha: 0.3)
-              : AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+              ? context.appPrimary.withValues(alpha: 0.3)
+              : context.appOnSurface.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -579,14 +579,14 @@ class _UserCard extends StatelessWidget {
           child: Row(
             children: [
               _UserAvatar(active: user.active),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               Expanded(
                 child: _UserInfo(user: user),
               ),
               Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+                color: context.appOnSurface.withValues(alpha: 0.3),
               ),
             ],
           ),
@@ -617,7 +617,7 @@ class _UserAvatar extends StatelessWidget {
       ),
       child: Icon(
         Icons.person_rounded,
-        color: active ? Colors.white : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+        color: active ? Colors.white : context.appOnSurface.withValues(alpha: 0.5),
       ),
     );
   }
@@ -636,12 +636,12 @@ class _UserInfo extends StatelessWidget {
       children: [
         Text(
           user.name,
-          style: const TextStyle(
-            color: AppTheme.onSurfaceColor,
+          style: TextStyle(
+            color: context.appOnSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         _UserStatusBadge(user: user),
       ],
     );
@@ -662,13 +662,13 @@ class _UserStatusBadge extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
             color: user.active
-                ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                : AppTheme.onSurfaceColor.withValues(alpha: 0.05),
+                ? context.appPrimary.withValues(alpha: 0.1)
+                : context.appOnSurface.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: user.active
-                  ? AppTheme.primaryColor.withValues(alpha: 0.3)
-                  : AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+                  ? context.appPrimary.withValues(alpha: 0.3)
+                  : context.appOnSurface.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -676,24 +676,24 @@ class _UserStatusBadge extends StatelessWidget {
             user.profile.toUpperCase(),
             style: TextStyle(
               color: user.active
-                  ? AppTheme.primaryColor
-                  : AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                  ? context.appPrimary
+                  : context.appOnSurface.withValues(alpha: 0.6),
               fontWeight: FontWeight.w600,
               fontSize: 10,
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Icon(
           user.active ? Icons.wifi_rounded : Icons.wifi_off_rounded,
           size: 16,
-          color: user.active ? Colors.green : AppTheme.onSurfaceColor.withValues(alpha: 0.4),
+          color: user.active ? Colors.green : context.appOnSurface.withValues(alpha: 0.4),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(
           user.active ? 'Connected' : 'Disconnected',
           style: TextStyle(
-            color: user.active ? Colors.green : AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+            color: user.active ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
             fontSize: 12,
           ),
         ),
@@ -708,11 +708,11 @@ class _LoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
         padding: EdgeInsets.all(16),
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+          valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
         ),
       ),
     );
@@ -741,44 +741,44 @@ class _UserContextMenu extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildDragHandle(),
+          _buildDragHandle(context),
           ListTile(
-            leading: const Icon(Icons.visibility_rounded),
-            title: const Text('View Details'),
+            leading: Icon(Icons.visibility_rounded),
+            title: Text('View Details'),
             onTap: onViewDetails,
           ),
           ListTile(
-            leading: const Icon(Icons.edit_rounded),
-            title: const Text('Edit User'),
+            leading: Icon(Icons.edit_rounded),
+            title: Text('Edit User'),
             onTap: onEdit,
           ),
           ListTile(
             leading: Icon(
               user.active ? Icons.wifi_off_rounded : Icons.wifi_rounded,
-              color: user.active ? AppTheme.errorColor : AppTheme.primaryColor,
+              color: user.active ? context.appError : context.appPrimary,
             ),
             title: Text(user.active ? 'Disable User' : 'Enable User'),
             onTap: onToggleStatus,
           ),
           ListTile(
-            leading: const Icon(Icons.delete_rounded, color: AppTheme.errorColor),
-            title: const Text('Delete User'),
+            leading: Icon(Icons.delete_rounded, color: context.appError),
+            title: Text('Delete User'),
             onTap: onDelete,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _buildDragHandle() {
+  Widget _buildDragHandle(BuildContext context) {
     return Center(
       child: Container(
         width: 40,
         height: 4,
         margin: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+          color: context.appOnSurface.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(2),
         ),
       ),
@@ -789,9 +789,9 @@ class _UserContextMenu extends StatelessWidget {
 enum UserStatusFilter { all, active, inactive }
 
 // Constants for avatar gradients
-const List<Color> _activeAvatarColors = [
-  AppTheme.primaryColor,
-  Color(0xFF1976D2),
+final List<Color> _activeAvatarColors = [
+  const Color(0xFF6366F1),
+  const Color(0xFF1976D2),
 ];
 
 const List<Color> _inactiveAvatarColors = [

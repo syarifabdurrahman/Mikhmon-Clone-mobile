@@ -9,6 +9,7 @@ import '../services/models.dart';
 import '../services/cache_service.dart';
 import '../services/traffic_rate_service.dart';
 import '../services/resource_history.dart';
+import '../services/theme_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -45,36 +46,29 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, AppThemeMode>
 });
 
 class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
-  static const String _storageKey = 'app_theme_mode';
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-
   ThemeModeNotifier() : super(AppThemeMode.purple) {
     _loadThemeMode();
   }
 
   Future<void> _loadThemeMode() async {
-    try {
-      final savedMode = await _storage.read(key: _storageKey);
-      if (savedMode != null) {
-        final mode = AppThemeMode.values.firstWhere(
-          (e) => e.toString() == savedMode,
-          orElse: () => AppThemeMode.purple,
-        );
-        state = mode;
-      }
-    } catch (e) {
-      debugPrint('[Theme] Error loading theme mode: $e');
-    }
+    final mode = await ThemeService.loadThemeMode();
+    state = mode;
   }
 
   Future<void> setThemeMode(AppThemeMode mode) async {
     state = mode;
-    try {
-      await _storage.write(key: _storageKey, value: mode.toString());
-      debugPrint('[Theme] Theme mode saved: ${mode.toString()}');
-    } catch (e) {
-      debugPrint('[Theme] Error saving theme mode: $e');
-    }
+    await ThemeService.saveThemeMode(mode);
+  }
+
+  /// Clear saved theme (reset to default)
+  Future<void> clearTheme() async {
+    await ThemeService.clearThemeMode();
+    state = AppThemeMode.purple;
+  }
+
+  /// Get theme data for current mode
+  ThemeData getThemeData() {
+    return ThemeService.getThemeData(state);
   }
 }
 

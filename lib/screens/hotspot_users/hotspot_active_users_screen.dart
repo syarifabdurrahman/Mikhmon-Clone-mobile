@@ -89,19 +89,19 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
     final service = ref.watch(routerOSServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/dashboard'),
         ),
         title: Text(
           'Active Users',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -113,13 +113,13 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppTheme.primaryColor.withValues(alpha: 0.2),
-                    AppTheme.primaryColor.withValues(alpha: 0.1),
+                    context.appPrimary.withValues(alpha: 0.2),
+                    context.appPrimary.withValues(alpha: 0.1),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  color: context.appPrimary.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -127,14 +127,14 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                 children: [
                   Icon(
                     Icons.science_rounded,
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     size: 16,
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Text(
                     'DEMO',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.primaryColor,
+                          color: context.appPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
@@ -142,7 +142,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(Icons.refresh_rounded),
             onPressed: () {
               ref.read(hotspotActiveUsersProvider.notifier).refresh();
             },
@@ -164,7 +164,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
 
                 return RefreshIndicator(
                   onRefresh: () => ref.read(hotspotActiveUsersProvider.notifier).refresh(),
-                  color: AppTheme.primaryColor,
+                  color: context.appPrimary,
                   child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
@@ -189,9 +189,9 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                   ),
                 );
               },
-              loading: () => const Center(
+              loading: () => Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
                 ),
               ),
               error: (error, stack) => Center(
@@ -201,20 +201,20 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                     Icon(
                       Icons.error_outline_rounded,
                       size: 64,
-                      color: AppTheme.errorColor,
+                      color: context.appError,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     Text(
                       'Error loading active users',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppTheme.onSurfaceColor,
+                            color: context.appOnSurface,
                           ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       error.toString(),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                            color: context.appOnSurface.withValues(alpha: 0.7),
                           ),
                       textAlign: TextAlign.center,
                     ),
@@ -232,7 +232,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: context.appSurface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -246,10 +246,10 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
           TextField(
             decoration: InputDecoration(
               hintText: 'Search by username or IP...',
-              prefixIcon: const Icon(Icons.search_rounded),
+              prefixIcon: Icon(Icons.search_rounded),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
+                      icon: Icon(Icons.clear_rounded),
                       onPressed: () {
                         setState(() {
                           _searchQuery = '';
@@ -258,7 +258,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                     )
                   : null,
               filled: true,
-              fillColor: AppTheme.backgroundColor,
+              fillColor: context.appBackground,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -270,23 +270,23 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
               });
             },
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Icon(
                 Icons.filter_list_rounded,
                 size: 18,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                color: context.appOnSurface.withValues(alpha: 0.6),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
                 'Filter by server:',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.8),
+                      color: context.appOnSurface.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w500,
                     ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: SegmentedButton<String>(
                   segments: const [
@@ -308,15 +308,15 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                   style: ButtonStyle(
                     backgroundColor: WidgetStateProperty.resolveWith((states) {
                       if (states.contains(WidgetState.selected)) {
-                        return AppTheme.primaryColor;
+                        return context.appPrimary;
                       }
-                      return AppTheme.backgroundColor;
+                      return context.appBackground;
                     }),
                     foregroundColor: WidgetStateProperty.resolveWith((states) {
                       if (states.contains(WidgetState.selected)) {
-                        return AppTheme.onPrimaryColor;
+                        return Colors.white;
                       }
-                      return AppTheme.onSurfaceColor;
+                      return context.appOnSurface;
                     }),
                   ),
                 ),
@@ -355,20 +355,20 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
           Icon(
             Icons.wifi_off_rounded,
             size: 64,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+            color: context.appOnSurface.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'No active users',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.onSurfaceColor,
+                  color: context.appOnSurface,
                 ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             'Currently no users are logged into the hotspot',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                  color: context.appOnSurface.withValues(alpha: 0.7),
                 ),
           ),
         ],
@@ -377,11 +377,11 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
   }
 
   Widget _buildLoadingIndicator() {
-    return const Center(
+    return Center(
       child: Padding(
         padding: EdgeInsets.all(16),
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+          valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
         ),
       ),
     );
@@ -390,7 +390,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
   void _showUserDetails(HotspotActiveUser user) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surfaceColor,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -407,7 +407,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.2),
+                color: context.appOnSurface.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -423,19 +423,19 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppTheme.primaryColor,
-                          AppTheme.primaryColor.withValues(alpha: 0.7),
+                          context.appPrimary,
+                          context.appPrimary.withValues(alpha: 0.7),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_rounded,
                       color: Colors.white,
                       size: 32,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,11 +443,11 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                         Text(
                           user.username,
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppTheme.onSurfaceColor,
+                                color: context.appOnSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -465,7 +465,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                                 size: 6,
                                 color: Colors.green,
                               ),
-                              const SizedBox(width: 4),
+                              SizedBox(width: 4),
                               Text(
                                 'Connected',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -495,16 +495,16 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                   _buildDetailTile(Icons.swap_vert_rounded, 'Data Used', user.dataUsed),
                   _buildDetailTile(Icons.cloud_rounded, 'Server', user.server ?? 'N/A'),
                   _buildDetailTile(Icons.card_membership_rounded, 'Profile', user.profile),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(sheetContext);
                       _confirmLogout(user);
                     },
-                    icon: const Icon(Icons.logout_rounded),
-                    label: const Text('Logout User'),
+                    icon: Icon(Icons.logout_rounded),
+                    label: Text('Logout User'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.errorColor,
+                      backgroundColor: context.appError,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -523,18 +523,18 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         icon,
-        color: AppTheme.primaryColor,
+        color: context.appPrimary,
       ),
       title: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+              color: context.appOnSurface.withValues(alpha: 0.7),
             ),
       ),
       subtitle: Text(
         value,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.onSurfaceColor,
+              color: context.appOnSurface,
               fontWeight: FontWeight.w600,
             ),
       ),
@@ -555,13 +555,13 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        title: const Text('Logout User'),
+        backgroundColor: context.appSurface,
+        title: Text('Logout User'),
         content: Text('Are you sure you want to logout "${user.username}" from ${user.address}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -572,7 +572,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('User "${user.username}" logged out successfully'),
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: context.appPrimary,
                     ),
                   );
                 }
@@ -581,16 +581,16 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Failed to logout user: $e'),
-                      backgroundColor: AppTheme.errorColor,
+                      backgroundColor: context.appError,
                     ),
                   );
                 }
               }
             },
             style: TextButton.styleFrom(
-              foregroundColor: AppTheme.errorColor,
+              foregroundColor: context.appError,
             ),
-            child: const Text('Logout'),
+            child: Text('Logout'),
           ),
         ],
       ),
@@ -700,12 +700,12 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          color: context.appPrimary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -727,18 +727,18 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppTheme.primaryColor,
-                          AppTheme.primaryColor.withValues(alpha: 0.7),
+                          context.appPrimary,
+                          context.appPrimary.withValues(alpha: 0.7),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person_rounded,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,23 +746,23 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                         Text(
                           widget.user.username,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: AppTheme.onSurfaceColor,
+                                color: context.appOnSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                         Row(
                           children: [
                             Icon(
                               Icons.computer_rounded,
                               size: 14,
-                              color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                              color: context.appOnSurface.withValues(alpha: 0.6),
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text(
                               widget.user.address,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                                    color: context.appOnSurface.withValues(alpha: 0.7),
                                     fontFamily: 'monospace',
                                   ),
                             ),
@@ -788,7 +788,7 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                           size: 8,
                           color: Colors.green,
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           'Online',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -801,12 +801,12 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Divider(
                 height: 1,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                color: context.appOnSurface.withValues(alpha: 0.1),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -814,13 +814,13 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                       Icons.access_time_rounded,
                       'Uptime',
                       _displayUptime,
-                      AppTheme.primaryColor,
+                      context.appPrimary,
                     ),
                   ),
                   Container(
                     width: 1,
                     height: 40,
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                    color: context.appOnSurface.withValues(alpha: 0.1),
                   ),
                   Expanded(
                     child: _buildStatItem(
@@ -833,7 +833,7 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                   Container(
                     width: 1,
                     height: 40,
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                    color: context.appOnSurface.withValues(alpha: 0.1),
                   ),
                   Expanded(
                     child: _buildStatItem(
@@ -845,26 +845,26 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton.icon(
                     onPressed: widget.onDetails,
-                    icon: const Icon(Icons.info_outline_rounded, size: 18),
-                    label: const Text('Details'),
+                    icon: Icon(Icons.info_outline_rounded, size: 18),
+                    label: Text('Details'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.primaryColor,
+                      foregroundColor: context.appPrimary,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: widget.onLogout,
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text('Logout'),
+                    icon: Icon(Icons.logout_rounded, size: 18),
+                    label: Text('Logout'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.errorColor.withValues(alpha: 0.1),
-                      foregroundColor: AppTheme.errorColor,
+                      backgroundColor: context.appError.withValues(alpha: 0.1),
+                      foregroundColor: context.appError,
                       elevation: 0,
                     ),
                   ),
@@ -885,18 +885,18 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
           size: 18,
           color: color,
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                color: context.appOnSurface.withValues(alpha: 0.6),
               ),
         ),
-        const SizedBox(height: 2),
+        SizedBox(height: 2),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),

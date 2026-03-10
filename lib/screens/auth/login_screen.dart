@@ -137,10 +137,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isSmallScreen = size.height < 700;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
@@ -149,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         title: Text(
           'ΩMMON',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -177,7 +177,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       'RouterOS Login',
                       style:
                           Theme.of(context).textTheme.displayMedium?.copyWith(
-                                color: AppTheme.onBackgroundColor,
+                                color: context.appOnBackground,
                                 fontWeight: FontWeight.bold,
                               ),
                       textAlign: TextAlign.center,
@@ -195,7 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           _errorMessage!,
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppTheme.onBackgroundColor,
+                                    color: context.appOnBackground,
                                   ),
                           textAlign: TextAlign.center,
                         ),
@@ -286,7 +286,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     if (states.contains(WidgetState.selected)) {
                                       return Colors.green;
                                     }
-                                    return AppTheme.onSurfaceColor.withValues(alpha: 0.2);
+                                    return context.appOnSurface.withValues(alpha: 0.2);
                                   }),
                                 ),
                                 const SizedBox(width: 8),
@@ -302,7 +302,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(
-                                          color: AppTheme.onSurfaceColor,
+                                          color: context.appOnSurface,
                                         ),
                                   ),
                                 ),
@@ -320,19 +320,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         gradient: LinearGradient(
                           colors: _demoMode
                               ? [
-                                  AppTheme.primaryColor.withValues(alpha: 0.15),
-                                  AppTheme.primaryColor.withValues(alpha: 0.08),
+                                  context.appPrimary.withValues(alpha: 0.15),
+                                  context.appPrimary.withValues(alpha: 0.08),
                                 ]
                               : [
-                                  AppTheme.onSurfaceColor.withValues(alpha: 0.05),
-                                  AppTheme.onSurfaceColor.withValues(alpha: 0.02),
+                                  context.appOnSurface.withValues(alpha: 0.05),
+                                  context.appOnSurface.withValues(alpha: 0.02),
                                 ],
                         ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: _demoMode
-                              ? AppTheme.primaryColor.withValues(alpha: 0.3)
-                              : AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                              ? context.appPrimary.withValues(alpha: 0.3)
+                              : context.appOnSurface.withValues(alpha: 0.1),
                           width: 1,
                         ),
                       ),
@@ -341,7 +341,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Icon(
                             _demoMode ? Icons.science_rounded : Icons.router_rounded,
                             size: 20,
-                            color: _demoMode ? AppTheme.primaryColor : AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                            color: _demoMode ? context.appPrimary : context.appOnSurface.withValues(alpha: 0.6),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -352,8 +352,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   _demoMode ? 'Demo Mode' : 'Real Connection',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: _demoMode
-                                            ? AppTheme.primaryColor
-                                            : AppTheme.onSurfaceColor,
+                                            ? context.appPrimary
+                                            : context.appOnSurface,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
@@ -361,7 +361,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   Text(
                                     'Connect to real RouterOS device',
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                                          color: context.appOnSurface.withValues(alpha: 0.6),
                                         ),
                                   ),
                               ],
@@ -376,8 +376,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 _errorMessage = null;
                               });
                             },
-                            activeTrackColor: AppTheme.primaryColor.withValues(alpha: 0.5),
-                            activeThumbColor: AppTheme.primaryColor,
+                            activeTrackColor: context.appPrimary.withValues(alpha: 0.5),
+                            activeThumbColor: context.appPrimary,
                           ),
                         ],
                       ),
@@ -390,14 +390,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             Icon(
                               Icons.info_outline_rounded,
                               size: 14,
-                              color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                              color: context.appOnSurface.withValues(alpha: 0.5),
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 'Using simulated data for testing',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                                      color: context.appOnSurface.withValues(alpha: 0.6),
                                       fontSize: 11,
                                     ),
                               ),
@@ -412,8 +412,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: AppTheme.onPrimaryColor,
+                          backgroundColor: context.appPrimary,
+                          foregroundColor: Colors.white,
                         ),
                         child: _isLoading
                             ? SizedBox(
@@ -422,7 +422,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppTheme.onPrimaryColor),
+                                      Colors.white),
                                 ),
                               )
                             : const Text(
@@ -431,7 +431,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
-                                  color: AppTheme.onPrimaryColor,
+                                  color: Colors.white,
                                 ),
                               ),
                       ),
@@ -466,13 +466,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Icon(
                   Icons.history_rounded,
                   size: 18,
-                  color: AppTheme.onBackgroundColor.withValues(alpha: 0.6),
+                  color: context.appOnBackground.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Saved Connections',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.onBackgroundColor.withValues(alpha: 0.7),
+                        color: context.appOnBackground.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w500,
                       ),
                 ),
@@ -492,7 +492,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildConnectionCard(RouterConnection connection) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -507,13 +507,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  color: context.appPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.router_rounded,
                   size: 18,
-                  color: AppTheme.primaryColor,
+                  color: context.appPrimary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -524,7 +524,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       connection.name,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.onSurfaceColor,
+                            color: context.appOnSurface,
                             fontWeight: FontWeight.w500,
                           ),
                     ),
@@ -532,7 +532,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(
                       connection.address,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                            color: context.appOnSurface.withValues(alpha: 0.6),
                           ),
                     ),
                   ],
@@ -541,7 +541,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Text(
                 connection.username,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                      color: context.appOnSurface.withValues(alpha: 0.5),
                     ),
               ),
             ],
@@ -558,11 +558,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
+        backgroundColor: context.appSurface,
         title: Text(
           'Connect to ${connection.name}',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
               ),
         ),
         content: Column(
@@ -572,13 +572,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Text(
               'Host: ${connection.host}:${connection.port}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                    color: context.appOnSurface.withValues(alpha: 0.7),
                   ),
             ),
             Text(
               'Username: ${connection.username}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                    color: context.appOnSurface.withValues(alpha: 0.7),
                   ),
             ),
             const SizedBox(height: 16),
@@ -605,7 +605,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
-              style: TextStyle(color: AppTheme.onSurfaceColor.withValues(alpha: 0.6)),
+              style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
             ),
           ),
           ElevatedButton(
@@ -615,8 +615,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               _login(savedConnection: connection);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: AppTheme.onPrimaryColor,
+              backgroundColor: context.appPrimary,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Connect'),
           ),
@@ -630,18 +630,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       width: isSmallScreen ? 80 : 100,
       height: isSmallScreen ? 80 : 100,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryColor,
-            Color(0xFF1976D2),
+            context.appPrimary,
+            const Color(0xFF1976D2),
           ],
         ),
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+            color: context.appPrimary.withValues(alpha: 0.3),
             blurRadius: 16,
             spreadRadius: 4,
           ),
@@ -650,7 +650,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       child: Icon(
         Icons.router_rounded,
         size: isSmallScreen ? 35 : 45,
-        color: AppTheme.onPrimaryColor,
+        color: Colors.white,
       ),
     );
   }

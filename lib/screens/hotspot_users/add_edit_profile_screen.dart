@@ -107,7 +107,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             content: Text(widget.profile == null
                 ? 'Profile "${profile.name}" created successfully'
                 : 'Profile "${profile.name}" updated successfully'),
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: context.appPrimary,
           ),
         );
         context.pop();
@@ -117,7 +117,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save profile: $e'),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: context.appError,
           ),
         );
         setState(() {
@@ -132,19 +132,19 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
     final isEditing = widget.profile != null;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
         title: Text(
           isEditing ? 'Edit Profile' : 'Add Profile',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -158,19 +158,19 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(isEditing),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 _buildNameField(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildPriceField(),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 _buildRateLimitSection(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildValiditySection(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildSharedUsersSection(),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildAutologoutSwitch(),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 _buildSubmitButton(isEditing),
               ],
             ),
@@ -182,12 +182,12 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
 
   Widget _buildHeader(bool isEditing) {
     return Card(
-      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+      color: context.appPrimary.withValues(alpha: 0.1),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+          color: context.appPrimary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -197,16 +197,16 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
           children: [
             Icon(
               isEditing ? Icons.edit_rounded : Icons.add_card_rounded,
-              color: AppTheme.primaryColor,
+              color: context.appPrimary,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 isEditing
                     ? 'Update the profile settings below'
                     : 'Create a new user profile with custom settings',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onSurfaceColor,
+                      color: context.appOnSurface,
                     ),
               ),
             ),
@@ -223,17 +223,17 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
         Text(
           'Profile Name',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: _nameController,
           textCapitalization: TextCapitalization.none,
           decoration: InputDecoration(
             hintText: 'e.g., premium, 1hour, trial',
-            prefixIcon: const Icon(Icons.card_membership_rounded),
+            prefixIcon: Icon(Icons.card_membership_rounded),
             helperText: 'Profile names should be lowercase (e.g., default, premium)',
           ),
           validator: (value) {
@@ -257,17 +257,17 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
         Text(
           'Price',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: _priceController,
           keyboardType: TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             hintText: '0.00',
-            prefixIcon: const Icon(Icons.payments_rounded),
+            prefixIcon: Icon(Icons.payments_rounded),
             suffixText: '\$',
           ),
           validator: (value) {
@@ -294,7 +294,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             Text(
               'Rate Limit',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
+                    color: context.appOnSurface,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -313,7 +313,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Opacity(
           opacity: _unlimitedRateLimit ? 0.5 : 1.0,
           child: IgnorePointer(
@@ -329,7 +329,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                         decoration: InputDecoration(
                           labelText: 'Upload',
                           hintText: '512k',
-                          prefixIcon: const Icon(Icons.upload_rounded),
+                          prefixIcon: Icon(Icons.upload_rounded),
                           helperText: 'e.g., 512k, 1M, 2M',
                         ),
                         validator: _unlimitedRateLimit
@@ -342,7 +342,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                               },
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
                         controller: _rateLimitDownloadController,
@@ -350,7 +350,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                         decoration: InputDecoration(
                           labelText: 'Download',
                           hintText: '1M',
-                          prefixIcon: const Icon(Icons.download_rounded),
+                          prefixIcon: Icon(Icons.download_rounded),
                           helperText: 'e.g., 1M, 2M, 5M',
                         ),
                         validator: _unlimitedRateLimit
@@ -382,7 +382,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             Text(
               'Validity Period',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
+                    color: context.appOnSurface,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -400,7 +400,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Opacity(
           opacity: _unlimitedValidity ? 0.5 : 1.0,
           child: IgnorePointer(
@@ -409,7 +409,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
               controller: _validityController,
               decoration: InputDecoration(
                 hintText: '1h',
-                prefixIcon: const Icon(Icons.access_time_rounded),
+                prefixIcon: Icon(Icons.access_time_rounded),
                 helperText: 'e.g., 30m, 1h, 1d, 1w, 1m',
               ),
               validator: _unlimitedValidity
@@ -436,7 +436,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             Text(
               'Shared Users',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
+                    color: context.appOnSurface,
                     fontWeight: FontWeight.w600,
                   ),
             ),
@@ -451,7 +451,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Opacity(
           opacity: _unlimitedSharedUsers ? 0.5 : 1.0,
           child: IgnorePointer(
@@ -461,7 +461,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 hintText: '1',
-                prefixIcon: const Icon(Icons.people_rounded),
+                prefixIcon: Icon(Icons.people_rounded),
                 helperText: 'Number of users that can share this profile (0 = unlimited)',
               ),
               validator: _unlimitedSharedUsers
@@ -487,10 +487,10 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+          color: context.appOnSurface.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -498,9 +498,9 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
         children: [
           Icon(
             _autologout ? Icons.logout_rounded : Icons.login_rounded,
-            color: AppTheme.primaryColor,
+            color: context.appPrimary,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,17 +508,17 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                 Text(
                   'Auto Logout',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppTheme.onSurfaceColor,
+                        color: context.appOnSurface,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   _autologout
                       ? 'Users will be logged out when limit is reached'
                       : 'Users stay connected until they logout manually',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                        color: context.appOnSurface.withValues(alpha: 0.6),
                       ),
                 ),
               ],
@@ -531,8 +531,8 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                 _autologout = value;
               });
             },
-            activeTrackColor: AppTheme.primaryColor.withValues(alpha: 0.5),
-            activeThumbColor: AppTheme.primaryColor,
+            activeTrackColor: context.appPrimary.withValues(alpha: 0.5),
+            activeThumbColor: context.appPrimary,
           ),
         ],
       ),
@@ -546,12 +546,12 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
       child: ElevatedButton(
         onPressed: _isLoading ? null : _saveProfile,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: AppTheme.onPrimaryColor,
-          disabledBackgroundColor: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+          backgroundColor: context.appPrimary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: context.appOnSurface.withValues(alpha: 0.1),
         ),
         child: _isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
@@ -563,10 +563,10 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(isEditing ? Icons.save_rounded : Icons.add_rounded),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     isEditing ? 'Save Changes' : 'Create Profile',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,

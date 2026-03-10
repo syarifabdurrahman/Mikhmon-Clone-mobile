@@ -30,19 +30,19 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/hosts'),
         ),
-        title: const Text('Host Details'),
+        title: Text('Host Details'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(Icons.refresh_rounded),
             onPressed: () {
               // TODO: Implement refresh
             },
@@ -55,14 +55,14 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeaderCard(context),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _buildStatusCard(context),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _buildConnectionDetailsCard(context),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             if (host.bytesIn != null || host.bytesOut != null) ...[
               _buildTrafficCard(context),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
             ],
             _buildActionsCard(context),
           ],
@@ -73,12 +73,12 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
 
   Widget _buildHeaderCard(BuildContext context) {
     return Card(
-      color: AppTheme.cardColor,
+      color: context.appCard,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppTheme.onSurfaceColor.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha:0.05),
           width: 1,
         ),
       ),
@@ -89,7 +89,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _getStatusColor().withOpacity(0.15),
+                color: _getStatusColor().withValues(alpha:0.15),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
@@ -98,7 +98,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                 size: 32,
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,16 +106,16 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                   Text(
                     host.deviceName,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppTheme.onSurfaceColor,
+                          color: context.appOnSurface,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                   if (host.macAddress != null) ...[
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       host.macAddress!,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                            color: context.appOnSurface.withValues(alpha:0.7),
                             fontFamily: 'monospace',
                           ),
                     ),
@@ -131,12 +131,12 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
 
   Widget _buildStatusCard(BuildContext context) {
     return Card(
-      color: AppTheme.cardColor,
+      color: context.appCard,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppTheme.onSurfaceColor.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha:0.05),
           width: 1,
         ),
       ),
@@ -148,35 +148,35 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
             Text(
               'Status',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 _buildStatusBadge(),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 if (host.user != null) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: context.appPrimary.withValues(alpha:0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.person,
                           size: 14,
-                          color: AppTheme.primaryColor,
+                          color: context.appPrimary,
                         ),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         Text(
                           host.user!,
-                          style: const TextStyle(
-                            color: AppTheme.primaryColor,
+                          style: TextStyle(
+                            color: context.appPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
@@ -195,12 +195,12 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
 
   Widget _buildConnectionDetailsCard(BuildContext context) {
     return Card(
-      color: AppTheme.cardColor,
+      color: context.appCard,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppTheme.onSurfaceColor.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha:0.05),
           width: 1,
         ),
       ),
@@ -212,22 +212,22 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
             Text(
               'Connection Details',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: 16),
-            _buildDetailTile(Icons.router_rounded, 'Server', host.server ?? 'N/A'),
+            SizedBox(height: 16),
+            _buildDetailTile(context, Icons.router_rounded, 'Server', host.server ?? 'N/A'),
             if (host.macAddress != null)
-              _buildDetailTile(Icons.badge_rounded, 'MAC Address', host.macAddress!),
+              _buildDetailTile(context, Icons.badge_rounded, 'MAC Address', host.macAddress!),
             if (host.address != null)
-              _buildDetailTile(Icons.computer_rounded, 'IP Address', host.address!),
+              _buildDetailTile(context, Icons.computer_rounded, 'IP Address', host.address!),
             if (host.uptime != null)
-              _buildDetailTile(Icons.access_time_rounded, 'Uptime', host.uptime!),
+              _buildDetailTile(context, Icons.access_time_rounded, 'Uptime', host.uptime!),
             if (host.idleTime != null)
-              _buildDetailTile(Icons.timer_outlined, 'Idle Time', host.idleTime!),
+              _buildDetailTile(context, Icons.timer_outlined, 'Idle Time', host.idleTime!),
             if (host.comment != null)
-              _buildDetailTile(Icons.comment_rounded, 'Comment', host.comment!),
+              _buildDetailTile(context, Icons.comment_rounded, 'Comment', host.comment!),
           ],
         ),
       ),
@@ -239,12 +239,12 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
     final totalPackets = (host.packetsIn ?? 0) + (host.packetsOut ?? 0);
 
     return Card(
-      color: AppTheme.cardColor,
+      color: context.appCard,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppTheme.onSurfaceColor.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha:0.05),
           width: 1,
         ),
       ),
@@ -256,11 +256,11 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
             Text(
               'Traffic Statistics',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -269,26 +269,26 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                     'Download',
                     _formatBytes(host.bytesIn),
                     _formatPackets(host.packetsIn) + ' pkts',
-                    AppTheme.secondaryColor,
+                    context.appSecondary,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: _buildTrafficTile(
                     Icons.upload_rounded,
                     'Upload',
                     _formatBytes(host.bytesOut),
                     _formatPackets(host.packetsOut) + ' pkts',
-                    AppTheme.primaryColor,
+                    context.appPrimary,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.backgroundColor,
+                color: context.appBackground,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -300,15 +300,15 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                       Text(
                         'Total Data',
                         style: TextStyle(
-                          color: AppTheme.onSurfaceColor.withOpacity(0.6),
+                          color: context.appOnSurface.withValues(alpha:0.6),
                           fontSize: 12,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         _formatBytes(totalBytes),
                         style: TextStyle(
-                          color: AppTheme.onSurfaceColor,
+                          color: context.appOnSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
@@ -321,15 +321,15 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                       Text(
                         'Total Packets',
                         style: TextStyle(
-                          color: AppTheme.onSurfaceColor.withOpacity(0.6),
+                          color: context.appOnSurface.withValues(alpha:0.6),
                           fontSize: 12,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         _formatPackets(totalPackets),
                         style: TextStyle(
-                          color: AppTheme.onSurfaceColor,
+                          color: context.appOnSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
@@ -347,12 +347,12 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
 
   Widget _buildActionsCard(BuildContext context) {
     return Card(
-      color: AppTheme.cardColor,
+      color: context.appCard,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: AppTheme.onSurfaceColor.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha:0.05),
           width: 1,
         ),
       ),
@@ -364,11 +364,11 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
             Text(
               'Actions',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _buildActionButton(
               Icons.logout_rounded,
               'Remove Host',
@@ -377,7 +377,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                 _showRemoveDialog(context);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _buildActionButton(
               Icons.block_rounded,
               'Block MAC Address',
@@ -392,13 +392,13 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailTile(IconData icon, String label, String value) {
+  Widget _buildDetailTile(BuildContext context, IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppTheme.onSurfaceColor.withOpacity(0.5)),
-          const SizedBox(width: 12),
+          Icon(icon, size: 20, color: context.appOnSurface.withValues(alpha: 0.5)),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,15 +406,15 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                    color: context.appOnSurface.withValues(alpha: 0.5),
                     fontSize: 11,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
-                    color: AppTheme.onSurfaceColor,
+                    color: context.appOnSurface,
                     fontWeight: FontWeight.w500,
                     fontSize: 13,
                   ),
@@ -437,22 +437,22 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
-              color: color.withOpacity(0.7),
+              color: color.withValues(alpha:0.7),
               fontSize: 11,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
@@ -461,11 +461,11 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
               fontSize: 16,
             ),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             subtext,
             style: TextStyle(
-              color: color.withOpacity(0.6),
+              color: color.withValues(alpha:0.6),
               fontSize: 10,
             ),
           ),
@@ -486,13 +486,13 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
             Icon(icon, color: color, size: 20),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Text(
               label,
               style: TextStyle(
@@ -516,7 +516,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -546,24 +546,24 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        title: const Text('Remove Host'),
+        backgroundColor: context.appSurface,
+        title: Text('Remove Host'),
         content: Text('Remove host ${host.displayName} from the hotspot?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               // TODO: Implement remove logic
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Host removed successfully')),
+                SnackBar(content: Text('Host removed successfully')),
               );
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Remove'),
+            child: Text('Remove'),
           ),
         ],
       ),
@@ -574,24 +574,24 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
-        title: const Text('Block MAC Address'),
+        backgroundColor: context.appSurface,
+        title: Text('Block MAC Address'),
         content: Text('Block MAC address ${host.macAddress ?? "N/A"}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               // TODO: Implement block logic
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('MAC address blocked')),
+                SnackBar(content: Text('MAC address blocked')),
               );
             },
             style: TextButton.styleFrom(foregroundColor: Colors.orange),
-            child: const Text('Block'),
+            child: Text('Block'),
           ),
         ],
       ),

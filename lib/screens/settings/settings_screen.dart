@@ -11,10 +11,10 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surfaceColor,
-        foregroundColor: AppTheme.onSurfaceColor,
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
@@ -23,7 +23,7 @@ class SettingsScreen extends ConsumerWidget {
         title: Text(
           'Settings',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -53,7 +53,7 @@ class SettingsScreen extends ConsumerWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppTheme.onBackgroundColor.withValues(alpha: 0.6),
+              color: context.appOnBackground.withValues(alpha: 0.6),
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
             ),
@@ -65,7 +65,7 @@ class SettingsScreen extends ConsumerWidget {
     final currentTheme = ref.watch(themeModeProvider);
 
     return Card(
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -84,7 +84,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           Divider(
             height: 1,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+            color: context.appOnSurface.withValues(alpha: 0.1),
           ),
           _buildThemeOption(
             context,
@@ -99,7 +99,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           Divider(
             height: 1,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+            color: context.appOnSurface.withValues(alpha: 0.1),
           ),
           _buildThemeOption(
             context,
@@ -113,7 +113,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           Divider(
             height: 1,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+            color: context.appOnSurface.withValues(alpha: 0.1),
           ),
           _buildThemeOption(
             context,
@@ -127,7 +127,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           Divider(
             height: 1,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+            color: context.appOnSurface.withValues(alpha: 0.1),
           ),
           _buildThemeOption(
             context,
@@ -190,7 +190,7 @@ class SettingsScreen extends ConsumerWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.onSurfaceColor,
+                          color: context.appOnSurface,
                           fontWeight: FontWeight.w500,
                         ),
                   ),
@@ -198,7 +198,7 @@ class SettingsScreen extends ConsumerWidget {
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                          color: context.appOnSurface.withValues(alpha: 0.6),
                         ),
                   ),
                 ],
@@ -213,7 +213,7 @@ class SettingsScreen extends ConsumerWidget {
             else
               Icon(
                 Icons.chevron_right_rounded,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.4),
+                color: context.appOnSurface.withValues(alpha: 0.4),
                 size: 20,
               ),
           ],
@@ -226,7 +226,7 @@ class SettingsScreen extends ConsumerWidget {
     final connectionsAsync = ref.watch(savedConnectionsProvider);
 
     return Card(
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -241,12 +241,12 @@ class SettingsScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    color: context.appPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.router_rounded,
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     size: 22,
                   ),
                 ),
@@ -258,7 +258,7 @@ class SettingsScreen extends ConsumerWidget {
                       Text(
                         'Saved Routers',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppTheme.onSurfaceColor,
+                              color: context.appOnSurface,
                               fontWeight: FontWeight.w500,
                             ),
                       ),
@@ -267,14 +267,14 @@ class SettingsScreen extends ConsumerWidget {
                           return Text(
                             '${connections.length} saved',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                                  color: context.appOnSurface.withValues(alpha: 0.6),
                                 ),
                           );
                         },
                         loading: () => Text(
                           'Loading...',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                                color: context.appOnSurface.withValues(alpha: 0.6),
                               ),
                         ),
                         error: (_, __) => const SizedBox(),
@@ -284,12 +284,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_rounded),
-                  color: AppTheme.primaryColor,
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Add router coming soon - use login screen')),
-                    );
-                  },
+                  color: context.appPrimary,
+                  onPressed: () => _showAddRouterDialog(context, ref),
                 ),
               ],
             ),
@@ -304,7 +300,7 @@ class SettingsScreen extends ConsumerWidget {
                         'No saved routers yet.\nLogin to save a connection.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                              color: context.appOnSurface.withValues(alpha: 0.5),
                             ),
                       ),
                     ),
@@ -335,48 +331,60 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildConnectionTile(BuildContext context, WidgetRef ref, RouterConnection connection) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.backgroundColor.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.router_rounded,
-            color: AppTheme.primaryColor.withValues(alpha: 0.7),
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  connection.name,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.onSurfaceColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  connection.address,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
-                      ),
-                ),
-              ],
+    return InkWell(
+      onTap: () => _showEditRouterDialog(context, ref, connection),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: context.appBackground.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.router_rounded,
+              color: context.appPrimary.withValues(alpha: 0.7),
+              size: 20,
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded),
-            color: AppTheme.errorColor,
-            iconSize: 20,
-            onPressed: () => _showDeleteDialog(context, ref, connection),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    connection.name,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.appOnSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    connection.address,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.appOnSurface.withValues(alpha: 0.6),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              color: context.appOnSurface.withValues(alpha: 0.6),
+              iconSize: 20,
+              onPressed: () => _showEditRouterDialog(context, ref, connection),
+              tooltip: 'Edit',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded),
+              color: context.appError,
+              iconSize: 20,
+              onPressed: () => _showDeleteDialog(context, ref, connection),
+              tooltip: 'Delete',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -385,17 +393,17 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
+        backgroundColor: context.appSurface,
         title: Text(
           'Delete Connection?',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: context.appOnSurface,
               ),
         ),
         content: Text(
           'Remove "${connection.name}" from saved connections?',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.8),
+                color: context.appOnSurface.withValues(alpha: 0.8),
               ),
         ),
         actions: [
@@ -403,7 +411,7 @@ class SettingsScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(color: AppTheme.onSurfaceColor.withValues(alpha: 0.6)),
+              style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
             ),
           ),
           TextButton(
@@ -414,9 +422,9 @@ class SettingsScreen extends ConsumerWidget {
                 SnackBar(content: Text('Deleted "${connection.name}"')),
               );
             },
-            child: const Text(
+            child: Text(
               'Delete',
-              style: TextStyle(color: AppTheme.errorColor),
+              style: TextStyle(color: context.appError),
             ),
           ),
         ],
@@ -426,7 +434,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildAboutCard(BuildContext context) {
     return Card(
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -458,7 +466,7 @@ class SettingsScreen extends ConsumerWidget {
                     Text(
                       'About',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppTheme.onSurfaceColor,
+                            color: context.appOnSurface,
                             fontWeight: FontWeight.w500,
                           ),
                     ),
@@ -466,7 +474,7 @@ class SettingsScreen extends ConsumerWidget {
                     Text(
                       'Version 1.0.0',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                            color: context.appOnSurface.withValues(alpha: 0.6),
                           ),
                     ),
                   ],
@@ -474,7 +482,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.4),
+                color: context.appOnSurface.withValues(alpha: 0.4),
                 size: 20,
               ),
             ],
@@ -488,7 +496,7 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: AppTheme.surfaceColor,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ),
@@ -505,8 +513,8 @@ class SettingsScreen extends ConsumerWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppTheme.primaryColor,
-                      AppTheme.secondaryColor,
+                      context.appPrimary,
+                      context.appSecondary,
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
@@ -523,7 +531,7 @@ class SettingsScreen extends ConsumerWidget {
               Text(
                 'ΩMMON',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: AppTheme.onSurfaceColor,
+                      color: context.appOnSurface,
                       fontWeight: FontWeight.w800,
                     ),
               ),
@@ -533,7 +541,7 @@ class SettingsScreen extends ConsumerWidget {
               Text(
                 'Open Mikrotik Monitor',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.secondaryColor,
+                      color: context.appSecondary,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -543,7 +551,7 @@ class SettingsScreen extends ConsumerWidget {
               Text(
                 'Version 1.0.0',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                      color: context.appOnSurface.withValues(alpha: 0.6),
                     ),
               ),
               const SizedBox(height: 24),
@@ -553,7 +561,7 @@ class SettingsScreen extends ConsumerWidget {
                 'A professional RouterOS management solution for monitoring and managing Mikrotik devices.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.8),
+                      color: context.appOnSurface.withValues(alpha: 0.8),
                       height: 1.5,
                     ),
               ),
@@ -566,7 +574,7 @@ class SettingsScreen extends ConsumerWidget {
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                      context.appOnSurface.withValues(alpha: 0.1),
                       Colors.transparent,
                     ],
                   ),
@@ -580,14 +588,14 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   Icon(
                     Icons.code_rounded,
-                    color: AppTheme.primaryColor,
+                    color: context.appPrimary,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Developed by',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppTheme.onSurfaceColor,
+                          color: context.appOnSurface,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -622,7 +630,7 @@ class SettingsScreen extends ConsumerWidget {
               FilledButton(
                 onPressed: () => Navigator.pop(context),
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
+                  backgroundColor: context.appPrimary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -646,10 +654,10 @@ class SettingsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.backgroundColor.withValues(alpha: 0.5),
+        color: context.appBackground.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          color: context.appPrimary.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -657,7 +665,7 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           Icon(
             icon,
-            color: AppTheme.primaryColor,
+            color: context.appPrimary,
             size: 28,
           ),
           const SizedBox(height: 8),
@@ -667,7 +675,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Text(
               name,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
+                    color: context.appOnSurface,
                     fontWeight: FontWeight.w600,
                   ),
               textAlign: TextAlign.center,
@@ -675,6 +683,406 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Show dialog to add a new router connection
+  void _showAddRouterDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    final hostController = TextEditingController();
+    final portController = TextEditingController(text: '8728');
+    final usernameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => _RouterConnectionDialog(
+        title: 'Add Router',
+        nameController: nameController,
+        hostController: hostController,
+        portController: portController,
+        usernameController: usernameController,
+        onSave: () {
+          if (nameController.text.trim().isEmpty ||
+              hostController.text.trim().isEmpty ||
+              usernameController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please fill in all required fields')),
+            );
+            return;
+          }
+
+          ref.read(savedConnectionsProvider.notifier).addConnection(
+            name: nameController.text.trim(),
+            host: hostController.text.trim(),
+            port: portController.text.trim(),
+            username: usernameController.text.trim(),
+          );
+
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Added "${nameController.text.trim()}"')),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Show dialog to edit an existing router connection
+  void _showEditRouterDialog(BuildContext context, WidgetRef ref, RouterConnection connection) {
+    final nameController = TextEditingController(text: connection.name);
+    final hostController = TextEditingController(text: connection.host);
+    final portController = TextEditingController(text: connection.port);
+    final usernameController = TextEditingController(text: connection.username);
+
+    showDialog(
+      context: context,
+      builder: (context) => _RouterConnectionDialog(
+        title: 'Edit Router',
+        nameController: nameController,
+        hostController: hostController,
+        portController: portController,
+        usernameController: usernameController,
+        onSave: () {
+          if (nameController.text.trim().isEmpty ||
+              hostController.text.trim().isEmpty ||
+              usernameController.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please fill in all required fields')),
+            );
+            return;
+          }
+
+          final updatedConnection = RouterConnection(
+            id: connection.id,
+            name: nameController.text.trim(),
+            host: hostController.text.trim(),
+            port: portController.text.trim(),
+            username: usernameController.text.trim(),
+            createdAt: connection.createdAt,
+          );
+
+          ref.read(savedConnectionsProvider.notifier).updateConnection(updatedConnection);
+
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Updated "${nameController.text.trim()}"')),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Dialog widget for adding/editing router connections
+class _RouterConnectionDialog extends StatefulWidget {
+  final String title;
+  final TextEditingController nameController;
+  final TextEditingController hostController;
+  final TextEditingController portController;
+  final TextEditingController usernameController;
+  final VoidCallback onSave;
+
+  const _RouterConnectionDialog({
+    required this.title,
+    required this.nameController,
+    required this.hostController,
+    required this.portController,
+    required this.usernameController,
+    required this.onSave,
+  });
+
+  @override
+  State<_RouterConnectionDialog> createState() => _RouterConnectionDialogState();
+}
+
+class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    widget.nameController.dispose();
+    widget.hostController.dispose();
+    widget.portController.dispose();
+    widget.usernameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            context.appPrimary.withValues(alpha: 0.2),
+                            context.appSecondary.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.router_rounded,
+                        color: context.appPrimary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: context.appOnSurface,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Enter router connection details',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: context.appOnSurface.withValues(alpha: 0.6),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Name Field
+                TextFormField(
+                  controller: widget.nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Connection Name *',
+                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    hintText: 'e.g., Office Router',
+                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon: Icon(Icons.bookmark_rounded, color: context.appPrimary),
+                    filled: true,
+                    fillColor: context.appBackground.withValues(alpha: 0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                    ),
+                  ),
+                  style: TextStyle(color: context.appOnSurface),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a connection name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Host Field
+                TextFormField(
+                  controller: widget.hostController,
+                  decoration: InputDecoration(
+                    labelText: 'Host/IP Address *',
+                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    hintText: 'e.g., 192.168.88.1',
+                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon: Icon(Icons.computer_rounded, color: context.appPrimary),
+                    filled: true,
+                    fillColor: context.appBackground.withValues(alpha: 0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                    ),
+                  ),
+                  style: TextStyle(color: context.appOnSurface),
+                  keyboardType: TextInputType.text,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a host or IP address';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Port Field
+                TextFormField(
+                  controller: widget.portController,
+                  decoration: InputDecoration(
+                    labelText: 'Port *',
+                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    hintText: 'e.g., 8728',
+                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon: Icon(Icons.settings_ethernet_rounded, color: context.appPrimary),
+                    filled: true,
+                    fillColor: context.appBackground.withValues(alpha: 0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                    ),
+                  ),
+                  style: TextStyle(color: context.appOnSurface),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a port number';
+                    }
+                    final port = int.tryParse(value.trim());
+                    if (port == null || port < 1 || port > 65535) {
+                      return 'Please enter a valid port (1-65535)';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Username Field
+                TextFormField(
+                  controller: widget.usernameController,
+                  decoration: InputDecoration(
+                    labelText: 'Username *',
+                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    hintText: 'e.g., admin',
+                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon: Icon(Icons.person_rounded, color: context.appPrimary),
+                    filled: true,
+                    fillColor: context.appBackground.withValues(alpha: 0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                    ),
+                  ),
+                  style: TextStyle(color: context.appOnSurface),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a username';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Note about password
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: context.appPrimary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: context.appPrimary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Password will be required when connecting',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: context.appOnSurface,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: context.appOnSurface.withValues(alpha: 0.7),
+                          side: BorderSide(
+                            color: context.appOnSurface.withValues(alpha: 0.2),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: widget.onSave,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: context.appPrimary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Save'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

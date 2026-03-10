@@ -150,7 +150,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
             horizontalInterval: 25,
             getDrawingHorizontalLine: (value) {
               return FlLine(
-                color: AppTheme.onSurfaceColor.withValues(alpha: 0.1),
+                color: context.appOnSurface.withValues(alpha: 0.1),
                 strokeWidth: 1,
               );
             },
@@ -176,7 +176,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
                   return Text(
                     _formatTime(index),
                     style: TextStyle(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                      color: context.appOnSurface.withValues(alpha: 0.6),
                       fontSize: 10,
                     ),
                   );
@@ -193,7 +193,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
                   return Text(
                     '${value.toInt()}',
                     style: TextStyle(
-                      color: AppTheme.onSurfaceColor.withValues(alpha: 0.6),
+                      color: context.appOnSurface.withValues(alpha: 0.6),
                       fontSize: 10,
                     ),
                   );
@@ -246,7 +246,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
                 return touchedSpots.map((spot) {
                   return LineTooltipItem(
                     '${spot.y.toStringAsFixed(1)}$widget.unit',
-                    const TextStyle(
+                    TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -271,13 +271,13 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
           Icon(
             Icons.show_chart_rounded,
             size: 48,
-            color: AppTheme.onSurfaceColor.withValues(alpha: 0.3),
+            color: context.appOnSurface.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             'Collecting data...',
             style: TextStyle(
-              color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+              color: context.appOnSurface.withValues(alpha: 0.5),
               fontSize: 12,
             ),
           ),
@@ -292,7 +292,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
     final historyPoints = widget.dataPoints.length;
 
     return Card(
-      color: AppTheme.surfaceColor,
+      color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -316,7 +316,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,36 +324,36 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
                       Text(
                         widget.title,
                         style: TextStyle(
-                          color: AppTheme.onSurfaceColor.withValues(alpha: 0.7),
+                          color: context.appOnSurface.withValues(alpha: 0.7),
                           fontSize: 12,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Row(
                         children: [
                           Text(
                             '${currentValue.toStringAsFixed(1)}${widget.unit}',
-                            style: const TextStyle(
-                              color: AppTheme.onSurfaceColor,
+                            style: TextStyle(
+                              color: context.appOnSurface,
                               fontWeight: FontWeight.bold,
                               fontSize: 20,
                             ),
                           ),
                           if (historyPoints > 0) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                color: context.appPrimary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '$historyPoints pts',
                                 style: TextStyle(
-                                  color: AppTheme.primaryColor,
+                                  color: context.appPrimary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -367,7 +367,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
                 ),
                 Icon(
                   Icons.more_vert_rounded,
-                  color: AppTheme.onSurfaceColor.withValues(alpha: 0.5),
+                  color: context.appOnSurface.withValues(alpha: 0.5),
                   size: 20,
                 ),
               ],
