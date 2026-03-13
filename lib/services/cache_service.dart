@@ -360,4 +360,9 @@ class CacheService {
       debugPrint('[CacheService] Error saving interface traffic: $e');
     }
   }
+
+  /// Clear user profiles cache (useful when switching from demo to real mode)
+  Future<void> clearUserProfiles() async {
+    await clearEntry(_userProfilesKey);
+  }
 }

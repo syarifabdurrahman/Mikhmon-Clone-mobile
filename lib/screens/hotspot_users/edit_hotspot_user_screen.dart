@@ -418,7 +418,6 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
-                  key: ValueKey('profile_dropdown_$validInitialValue'),
                   initialValue: validInitialValue,
                   decoration: InputDecoration(
                     hintText: 'Select profile',

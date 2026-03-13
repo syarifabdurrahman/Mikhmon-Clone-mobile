@@ -30,13 +30,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
   @override
   void initState() {
     super.initState();
-    // Trigger profile load if not already loaded
-    Future.microtask(() {
-      final profilesAsync = ref.read(userProfileProvider);
-      if (!profilesAsync.hasValue || profilesAsync.isLoading) {
-        ref.read(userProfileProvider.notifier).refresh();
-      }
-    });
+    // Provider will auto-load on first access
+    // No manual refresh needed
   }
 
   @override
@@ -454,10 +449,13 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
             }
 
             // Find the currently selected profile in the list
-            final selectedProfile = profiles.firstWhere(
-              (p) => p.id == _selectedProfileId,
-              orElse: () => profiles.first,
-            );
+            // Safe selection - if _selectedProfileId is null or not found, use first profile
+            final selectedProfile = _selectedProfileId != null
+                ? profiles.firstWhere(
+                    (p) => p.id == _selectedProfileId,
+                    orElse: () => profiles.first,
+                  )
+                : profiles.first;
 
             // Use the selected profile's ID, which is guaranteed to be in the list
             final validInitialValue = selectedProfile.id;
@@ -466,7 +464,6 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
-                  key: ValueKey('profile_dropdown_$validInitialValue'),
                   initialValue: validInitialValue,
                   decoration: InputDecoration(
                     hintText: 'Select profile',

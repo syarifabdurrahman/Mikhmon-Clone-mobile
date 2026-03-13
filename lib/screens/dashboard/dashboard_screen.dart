@@ -41,8 +41,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _loadDashboardData(showLoading: !hasCachedData && !service.isDemoMode);
     _startPeriodicRefresh();
 
-    // Preload user profiles in background
-    Future.microtask(() => ref.read(userProfileProvider.notifier).build());
+    // Preload user profiles in background - just read provider to trigger initial load
+    Future.microtask(() => ref.read(userProfileProvider));
   }
 
   @override

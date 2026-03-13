@@ -95,6 +95,11 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
   }
 
   Future<void> _silentRefresh() async {
+    if (!mounted) {
+      debugPrint('[Traffic] Widget disposed, skipping refresh');
+      return;
+    }
+
     debugPrint('[Traffic] _silentRefresh() starting');
 
     // Trigger a silent refresh without showing loading
@@ -102,6 +107,12 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
     debugPrint('[Traffic] Calling notifier.silentRefresh()');
     await notifier.silentRefresh();
     debugPrint('[Traffic] notifier.silentRefresh() completed');
+
+    // Check again after async operation - widget might have been disposed
+    if (!mounted) {
+      debugPrint('[Traffic] Widget disposed during async operation, skipping update');
+      return;
+    }
 
     // Get the updated data
     final trafficAsync = ref.read(interfaceTrafficProvider);
@@ -186,8 +197,9 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
       error: (_, __) => {},
     );
 
-    return Card(
-      color: context.appSurface,
+    return RepaintBoundary(
+      child: Card(
+        color: context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -232,6 +244,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
               _buildInterfaceList(context, _currentData!),
           ],
         ),
+      ),
       ),
     );
   }

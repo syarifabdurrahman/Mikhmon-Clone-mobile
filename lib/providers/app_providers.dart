@@ -373,10 +373,22 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     }
 
     final allUsers = await client.getHotspotUsersList();
+
+    // Filter out system/default users like "trial"
+    final systemUserNames = {'trial'};
+    final filteredUsers = allUsers.where((user) {
+      final userName = user['name'] as String? ?? '';
+      if (systemUserNames.contains(userName.toLowerCase())) {
+        debugPrint('[HotspotUsers] Filtering out system user: $userName');
+        return false;
+      }
+      return true;
+    }).toList();
+
     final startIndex = (page - 1) * _pageSize;
     final endIndex = startIndex + _pageSize;
-    final hasMore = endIndex < allUsers.length;
-    final users = allUsers.skip(startIndex).take(_pageSize).toList();
+    final hasMore = endIndex < filteredUsers.length;
+    final users = filteredUsers.skip(startIndex).take(_pageSize).toList();
 
     return PaginatedUsers(
       users: users,
@@ -915,7 +927,7 @@ final userProfileProviderAlways = Provider<List<UserProfile>>((ref) {
   final asyncValue = ref.watch(userProfileProvider);
   return asyncValue.maybeWhen(
     data: (profiles) => profiles,
-    orElse: () => _demoProfilesCache.isNotEmpty ? List.from(_demoProfilesCache) : [],
+    orElse: () => [], // Return empty list instead of demo fallback
   );
 });
 
@@ -929,22 +941,53 @@ List<UserProfile> _demoProfilesCache = [];
 bool _demoProfilesInitialized = false;
 
 class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
-  // Private method to fetch profiles - used by both build() and refresh()
-  Future<List<UserProfile>> _fetchProfiles() async {
+  @override
+  Future<List<UserProfile>> build() async {
+    // Keep the provider alive even when no listeners are attached
+    ref.keepAlive();
+
     final service = ref.read(routerOSServiceProvider);
+    final cache = ref.read(cacheServiceProvider);
+
+    // Initialize demo profiles cache ONLY in demo mode
+    if (service.isDemoMode && !_demoProfilesInitialized) {
+      _demoProfilesCache = _getDemoProfiles();
+      _demoProfilesInitialized = true;
+    }
 
     if (service.isDemoMode) {
-      if (!_demoProfilesInitialized) {
-        _demoProfilesCache = _getDemoProfiles();
-        _demoProfilesInitialized = true;
-      }
       return List.from(_demoProfilesCache);
     }
 
-    // Fetch from real RouterOS API
+    // REAL MODE: Always clear any demo profiles from cache first
+    final cachedProfiles = cache.getUserProfiles();
+    if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
+      // Check if cached profiles are demo profiles (from previous demo session)
+      // Demo profiles have IDs starting with '*'
+      final hasDemoProfiles = cachedProfiles.any((p) =>
+        p['id'] != null && p['id'].toString().startsWith('*'));
+
+      if (hasDemoProfiles) {
+        debugPrint('[UserProfiles] Demo profiles found in cache, clearing and fetching real profiles');
+        // Clear the demo profiles from cache
+        await cache.clearUserProfiles();
+        // Fetch real profiles (bypass cache)
+        return await _fetchProfilesAndCacheInternal();
+      }
+
+      debugPrint('[UserProfiles] Using cached real data (${cachedProfiles.length} profiles)');
+      // Convert cached maps back to UserProfile objects
+      return cachedProfiles.map((data) => UserProfile.fromJson(data)).toList();
+    }
+
+    // No cache or cache was cleared, fetch from API
+    return await _fetchProfilesAndCacheInternal();
+  }
+
+  Future<List<UserProfile>> _fetchProfilesAndCacheInternal() async {
+    final service = ref.read(routerOSServiceProvider);
     final client = service.client;
     if (client == null) {
-      // Return empty list when not connected - will show empty state
       debugPrint('[UserProfiles] No client available, returning empty list');
       return [];
     }
@@ -953,12 +996,22 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       final profilesData = await client.getUserProfiles();
 
       debugPrint('[UserProfiles] Received ${profilesData.length} profiles from RouterOS');
-      for (var i = 0; i < profilesData.length; i++) {
-        debugPrint('[UserProfiles] Profile $i: ${profilesData[i]}');
-      }
 
       // Convert API data to UserProfile objects
-      return profilesData.map((data) {
+      // Filter out system/default profiles like "trial", "default"
+      final systemProfileNames = {'trial', 'default'};
+
+      final profiles = profilesData
+          .where((data) {
+            final profileName = data['name'] as String? ?? '';
+            // Skip system/default profiles
+            if (systemProfileNames.contains(profileName.toLowerCase())) {
+              debugPrint('[UserProfiles] Skipping system profile: $profileName');
+              return false;
+            }
+            return true;
+          })
+          .map((data) {
         // Parse rate-limit (format: "upload/download" or "unlimited")
         final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
         String upload = 'unlimited';
@@ -986,11 +1039,17 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
           rateLimitUpload: upload,
           rateLimitDownload: download,
           validity: data['session-timeout']?.toString() ?? data['on-logout'] as String? ?? 'unlimited',
-          price: 0.0, // Price is stored separately, not in RouterOS
+          price: 0.0,
           sharedUsers: 1,
           autologout: true,
         );
       }).toList();
+
+      // Save to cache
+      final cache = ref.read(cacheServiceProvider);
+      await cache.saveUserProfiles(profiles.map((e) => e.toJson()).toList());
+
+      return profiles;
     } catch (e) {
       debugPrint('[UserProfiles] Error fetching profiles: $e');
       // Return empty list on error
@@ -998,14 +1057,62 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
   }
 
-  @override
-  Future<List<UserProfile>> build() async {
-    return _fetchProfiles();
+  Future<void> refresh() async {
+    await silentRefresh();
   }
 
-  Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = AsyncValue.data(await _fetchProfiles());
+  /// Silent refresh - updates data without showing loading state
+  Future<void> silentRefresh() async {
+    debugPrint('[UserProfiles] silentRefresh() called');
+    final service = ref.read(routerOSServiceProvider);
+
+    try {
+      List<UserProfile> newData;
+
+      if (service.isDemoMode) {
+        newData = List.from(_demoProfilesCache);
+      } else {
+        debugPrint('[UserProfiles] Starting real-time profiles fetch');
+        // In real mode, always clear demo profiles from cache first
+        final cache = ref.read(cacheServiceProvider);
+        final cachedProfiles = cache.getUserProfiles();
+        if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
+          final hasDemoProfiles = cachedProfiles.any((p) =>
+            p['id'] != null && p['id'].toString().startsWith('*'));
+          if (hasDemoProfiles) {
+            debugPrint('[UserProfiles] Clearing demo profiles from cache during refresh');
+            await cache.clearUserProfiles();
+          }
+        }
+        newData = await _fetchProfilesAndCacheInternal();
+        debugPrint('[UserProfiles] Fetched ${newData.length} profiles');
+      }
+
+      // Update state directly without loading
+      debugPrint('[UserProfiles] Updating provider state with ${newData.length} profiles');
+      state = AsyncValue.data(newData);
+      debugPrint('[UserProfiles] Provider state updated successfully');
+    } catch (e) {
+      // Silent fail - don't show error on auto-refresh
+      debugPrint('[UserProfiles] Silent refresh failed: $e');
+    }
+  }
+
+  // Force refresh that clears demo profiles first
+  Future<void> forceRefresh() async {
+    debugPrint('[UserProfiles] forceRefresh() called');
+    final service = ref.read(routerOSServiceProvider);
+
+    if (!service.isDemoMode) {
+      // In real mode, clear demo profiles from cache
+      final cache = ref.read(cacheServiceProvider);
+      await cache.clearUserProfiles();
+      // Fetch fresh data
+      final newProfiles = await _fetchProfilesAndCacheInternal();
+      state = AsyncValue.data(newProfiles);
+    } else {
+      await silentRefresh();
+    }
   }
 
   Future<void> addProfile(UserProfile profile) async {
@@ -1031,39 +1138,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     await client.addUserProfile(
       name: profile.name,
       rateLimit: rateLimit,
-      sessionTimeout: profile.validity, // Time limit for the session
+      sessionTimeout: profile.validity,
     );
 
-    // Refresh the list by rebuilding
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final profilesData = await client.getUserProfiles();
-      return profilesData.map((data) {
-        // Parse rate-limit (format: "upload/download" or "unlimited")
-        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
-        String upload = 'unlimited';
-        String download = 'unlimited';
-
-        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
-          final parts = rateLimit.split('/');
-          if (parts.length == 2) {
-            upload = parts[0];
-            download = parts[1];
-          }
-        }
-
-        return UserProfile(
-          id: data['.id'] ?? data['id'] ?? '',
-          name: data['name'] ?? 'default',
-          rateLimitUpload: upload,
-          rateLimitDownload: download,
-          validity: data['session-timeout']?.toString(),
-          price: data['price'] != null ? double.tryParse(data['price'].toString()) : null,
-          sharedUsers: data['shared-users'] != null ? int.tryParse(data['shared-users'].toString()) : null,
-          autologout: data['autologout'] == 'true' || data['autologout'] == true,
-        );
-      }).toList();
-    });
+    // Refresh using silent method (no loading state)
+    await silentRefresh();
   }
 
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -1093,39 +1172,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       id: updatedProfile.id,
       name: updatedProfile.name,
       rateLimit: rateLimit,
-      sessionTimeout: updatedProfile.validity, // Time limit for the session
+      sessionTimeout: updatedProfile.validity,
     );
 
-    // Refresh the list by rebuilding
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final profilesData = await client.getUserProfiles();
-      return profilesData.map((data) {
-        // Parse rate-limit (format: "upload/download" or "unlimited")
-        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
-        String upload = 'unlimited';
-        String download = 'unlimited';
-
-        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
-          final parts = rateLimit.split('/');
-          if (parts.length == 2) {
-            upload = parts[0];
-            download = parts[1];
-          }
-        }
-
-        return UserProfile(
-          id: data['.id'] ?? data['id'] ?? '',
-          name: data['name'] ?? 'default',
-          rateLimitUpload: upload,
-          rateLimitDownload: download,
-          validity: data['session-timeout']?.toString(),
-          price: data['price'] != null ? double.tryParse(data['price'].toString()) : null,
-          sharedUsers: data['shared-users'] != null ? int.tryParse(data['shared-users'].toString()) : null,
-          autologout: data['autologout'] == 'true' || data['autologout'] == true,
-        );
-      }).toList();
-    });
+    // Refresh using silent method (no loading state)
+    await silentRefresh();
   }
 
   Future<void> deleteProfile(String id) async {
@@ -1144,36 +1195,8 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
     await client.removeUserProfile(id);
 
-    // Refresh the list by rebuilding
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final profilesData = await client.getUserProfiles();
-      return profilesData.map((data) {
-        // Parse rate-limit (format: "upload/download" or "unlimited")
-        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
-        String upload = 'unlimited';
-        String download = 'unlimited';
-
-        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
-          final parts = rateLimit.split('/');
-          if (parts.length == 2) {
-            upload = parts[0];
-            download = parts[1];
-          }
-        }
-
-        return UserProfile(
-          id: data['.id'] ?? data['id'] ?? '',
-          name: data['name'] ?? 'default',
-          rateLimitUpload: upload,
-          rateLimitDownload: download,
-          validity: data['session-timeout']?.toString(),
-          price: data['price'] != null ? double.tryParse(data['price'].toString()) : null,
-          sharedUsers: data['shared-users'] != null ? int.tryParse(data['shared-users'].toString()) : null,
-          autologout: data['autologout'] == 'true' || data['autologout'] == true,
-        );
-      }).toList();
-    });
+    // Refresh using silent method (no loading state)
+    await silentRefresh();
   }
 
   List<UserProfile> _getDemoProfiles() {
