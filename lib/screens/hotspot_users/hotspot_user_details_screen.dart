@@ -547,7 +547,7 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('User "${_user.name}" removed (demo mode)'),
-              backgroundColor: context.appPrimary,
+              backgroundColor: context.appSuccess,
             ),
           );
           // Dialog is already closed, just pop the details screen
@@ -563,7 +563,7 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('User "${_user.name}" deleted successfully'),
-              backgroundColor: context.appPrimary,
+              backgroundColor: context.appSuccess,
             ),
           );
           // Dialog is already closed, just pop the details screen

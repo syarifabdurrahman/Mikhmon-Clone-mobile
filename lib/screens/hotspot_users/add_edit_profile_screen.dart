@@ -410,7 +410,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
               decoration: InputDecoration(
                 hintText: '1h',
                 prefixIcon: Icon(Icons.access_time_rounded),
-                helperText: 'e.g., 30m, 1h, 1d, 1w, 1m',
+                helperText: 'e.g., 5s (sec), 5m (min), 1h (hour), 1d (day), 1mo (month)',
               ),
               validator: _unlimitedValidity
                   ? null

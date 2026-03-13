@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
+import '../../utils/validity_parser.dart';
 
 // Enum for user mode
 enum UserMode { up, vc }
@@ -79,6 +81,18 @@ class _VoucherGenerationScreenState
   bool _generationSuccessful = false;
   String? _generationStatus;
   int _generatedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger profile load if not already loaded
+    Future.microtask(() {
+      final profilesAsync = ref.read(userProfileProvider);
+      if (!profilesAsync.hasValue || profilesAsync.isLoading) {
+        ref.read(userProfileProvider.notifier).refresh();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -202,7 +216,7 @@ class _VoucherGenerationScreenState
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Not connected to RouterOS. Please login first.'),
-              backgroundColor: Colors.red,
+              backgroundColor: context.appError,
             ),
           );
         }
@@ -230,12 +244,18 @@ class _VoucherGenerationScreenState
               _userMode == UserMode.vc ? username : _generatePassword();
           final comment = _buildComment();
 
+          // Parse validity and data limit
+          final validity = _timeLimitController.text.trim();
+          final dataLimit = _parseDataLimit(_dataLimitController.text.trim());
+
           // Add user via RouterOS API
           await client.addHotspotUser(
             username: username,
             password: password,
             profile: _selectedProfile ?? 'default',
             comment: comment,
+            validity: validity.isEmpty ? null : validity,
+            dataLimit: dataLimit,
           );
 
           // Small delay between requests to avoid overwhelming the router
@@ -259,7 +279,7 @@ class _VoucherGenerationScreenState
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to generate vouchers: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: context.appError,
               duration: const Duration(seconds: 5),
             ),
           );
@@ -312,16 +332,63 @@ class _VoucherGenerationScreenState
     }
   }
 
-  // Build comment string
+  // Build comment string with expiry date
   String _buildComment() {
     final mode = _userMode == UserMode.up ? 'up' : 'vc';
-    final code = DateTime.now().millisecondsSinceEpoch % 1000;
-    final date = DateTime.now();
-    final dateStr =
-        '${date.month}.${date.day}.${date.year.toString().substring(2)}';
-    final comment = _commentController.text;
+    final validity = _timeLimitController.text.trim();
+    final comment = _commentController.text.trim();
 
-    return '$mode-$code-$dateStr-$comment';
+    return ValidityParser.buildCommentWithExpiry(
+      mode: mode,
+      validity: validity,
+      comment: comment.isEmpty ? null : comment,
+    );
+  }
+
+  // Parse data limit string (e.g., "5G", "1500M") to bytes for MikroTik
+  String? _parseDataLimit(String dataLimit) {
+    if (dataLimit.isEmpty) {
+      return null;
+    }
+
+    // Match pattern: number followed by unit
+    final match = RegExp(r'^(\d+(?:\.\d+)?)\s*([a-z]+)$', caseSensitive: false)
+        .firstMatch(dataLimit);
+    if (match == null) {
+      return null;
+    }
+
+    final value = double.tryParse(match.group(1) ?? '');
+    final unit = (match.group(2) ?? '').toLowerCase();
+
+    if (value == null) {
+      return null;
+    }
+
+    // Convert to bytes
+    int bytes;
+    switch (unit) {
+      case 'k':
+      case 'kb':
+        bytes = (value * 1024).toInt();
+        break;
+      case 'm':
+      case 'mb':
+        bytes = (value * 1024 * 1024).toInt();
+        break;
+      case 'g':
+      case 'gb':
+        bytes = (value * 1024 * 1024 * 1024).toInt();
+        break;
+      case 't':
+      case 'tb':
+        bytes = (value * 1024 * 1024 * 1024 * 1024).toInt();
+        break;
+      default:
+        return null;
+    }
+
+    return bytes.toString();
   }
 
   @override
@@ -492,9 +559,14 @@ class _VoucherGenerationScreenState
                     // Profile
                     profilesAsync.when(
                       data: (profiles) {
+                        // Only set value if it exists in the current profiles list
+                        final validValue = profiles.any((p) => p.name == _selectedProfile)
+                            ? _selectedProfile
+                            : null;
+
                         return _buildDropdown<String>(
                           label: 'Profile',
-                          value: _selectedProfile,
+                          value: validValue,
                           items: profiles.map((profile) {
                             return DropdownMenuItem(
                               value: profile.name,
@@ -541,7 +613,7 @@ class _VoucherGenerationScreenState
                       label: 'Time Limit',
                       controller: _timeLimitController,
                       icon: Icons.access_time,
-                      helperText: 'e.g., 1d, 1h, 30m, 0s (unlimited)',
+                      helperText: 'e.g., 5s (sec), 5m (min), 1h (hour), 1d (day), 1mo (month)',
                       textCapitalization: TextCapitalization.none,
                     ),
 
@@ -618,7 +690,7 @@ class _VoucherGenerationScreenState
                                   ref.invalidate(hotspotUsersProvider);
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: context.appSuccess,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(6),

@@ -211,6 +211,8 @@ class RouterOSDioClient {
     required String password,
     required String profile,
     String? comment,
+    String? validity, // For limit-uptime (e.g., "5m", "1h", "1d")
+    String? dataLimit, // For limit-bytes-total (e.g., "1G", "500M")
   }) async {
     try {
       final response = await dio.post(
@@ -220,6 +222,10 @@ class RouterOSDioClient {
           'password': password,
           'profile': profile,
           if (comment != null) 'comment': comment,
+          if (validity != null && validity.isNotEmpty && validity != 'unlimited')
+            'limit-uptime': validity,
+          if (dataLimit != null && dataLimit.isNotEmpty)
+            'limit-bytes-total': dataLimit,
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,

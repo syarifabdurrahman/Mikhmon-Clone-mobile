@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
+import '../../utils/validity_parser.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 
@@ -27,6 +28,18 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
   bool _obscureConfirmPassword = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Trigger profile load if not already loaded
+    Future.microtask(() {
+      final profilesAsync = ref.read(userProfileProvider);
+      if (!profilesAsync.hasValue || profilesAsync.isLoading) {
+        ref.read(userProfileProvider.notifier).refresh();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
@@ -46,25 +59,53 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
 
     try {
       final usersNotifier = ref.read(hotspotUsersProvider.notifier);
-      final profiles = ref.read(userProfileProvider).value ?? [];
+
+      // Get profiles from the provider's value
+      final profilesAsync = ref.read(userProfileProvider);
+      final profiles = profilesAsync.maybeWhen(
+        data: (profiles) => profiles,
+        orElse: () => <UserProfile>[],
+      );
+
+      if (profiles.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No profiles available. Please create a profile first.'),
+              backgroundColor: context.appError,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
 
       // Get the profile name from the selected profile
-      final selectedProfile = profiles.firstWhere(
-        (p) => p.id == _selectedProfileId,
-        orElse: () => UserProfile(id: 'default', name: 'default'),
-      );
+      final selectedProfile = _selectedProfileId != null
+          ? profiles.firstWhere((p) => p.id == _selectedProfileId)
+          : profiles.first;
 
       // Check if demo mode is enabled
       final service = ref.read(routerOSServiceProvider);
       if (service.isDemoMode) {
-        // Add user using the provider
+        // Build comment with expiry for demo mode
+        final validity = selectedProfile.validity ?? 'unlimited';
+        final commentWithExpiry = ValidityParser.buildCommentWithExpiry(
+          mode: 'up',
+          validity: validity,
+          comment: _commentController.text.trim().isEmpty
+              ? null
+              : _commentController.text.trim(),
+        );
+
+        // Add user using the provider (demo mode)
         await usersNotifier.addUser(
           username: _usernameController.text.trim(),
           password: _passwordController.text,
           profile: selectedProfile.name,
-          comment: _commentController.text.trim().isEmpty
-              ? null
-              : _commentController.text.trim(),
+          comment: commentWithExpiry,
         );
 
         if (mounted) {
@@ -72,7 +113,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
             SnackBar(
               content: Text(
                   'User "${_usernameController.text}" created successfully'),
-              backgroundColor: context.appPrimary,
+              backgroundColor: context.appSuccess,
             ),
           );
           context.pop(true); // Return true to indicate success
@@ -80,18 +121,58 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         return;
       }
 
-      // For real RouterOS connection (not fully implemented yet)
+      // Real RouterOS API call
+      final client = service.client;
+      if (client == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Not connected to RouterOS. Please login first.'),
+              backgroundColor: context.appError,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Create user on RouterOS
+      // Get validity from selected profile
+      final validity = ValidityParser.formatValidityForMikroTik(
+        selectedProfile.validity ?? 'unlimited',
+      );
+
+      await client.addHotspotUser(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+        profile: selectedProfile.name,
+        comment: _commentController.text.trim().isEmpty
+            ? null
+            : _commentController.text.trim(),
+        validity: validity == 'unlimited' ? null : validity,
+      );
+
+      // Also add to local state for immediate UI update
+      await usersNotifier.addUser(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+        profile: selectedProfile.name,
+        comment: _commentController.text.trim().isEmpty
+            ? null
+            : _commentController.text.trim(),
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Add user not implemented for real RouterOS connection yet'),
-            backgroundColor: context.appError,
+                'User "${_usernameController.text}" created successfully on RouterOS'),
+            backgroundColor: context.appSuccess,
           ),
         );
-        setState(() {
-          _isLoading = false;
-        });
+        context.pop(true); // Return true to indicate success
       }
     } catch (e) {
       if (mounted) {
@@ -319,12 +400,27 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'User Profile',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.w600,
-              ),
+        Row(
+          children: [
+            Text(
+              'User Profile',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: context.appOnSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            Spacer(),
+            // Refresh button
+            IconButton(
+              icon: Icon(Icons.refresh, size: 18),
+              onPressed: () async {
+                await ref.read(userProfileProvider.notifier).refresh();
+              },
+              tooltip: 'Refresh profiles',
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints(),
+            ),
+          ],
         ),
         SizedBox(height: 8),
         profilesAsync.when(
@@ -362,11 +458,16 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
               orElse: () => profiles.first,
             );
 
+            // Only set initialValue if it exists in the current profiles list
+            final validInitialValue = profiles.any((p) => p.id == _selectedProfileId)
+                ? _selectedProfileId
+                : profiles.first.id;
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedProfileId ?? profiles.first.id,
+                  initialValue: validInitialValue,
                   decoration: InputDecoration(
                     hintText: 'Select profile',
                     prefixIcon: Icon(Icons.card_membership_rounded),
@@ -434,19 +535,44 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
               child: CircularProgressIndicator(),
             ),
           ),
-          error: (_, __) => Card(
+          error: (error, __) => Card(
             color: context.appSurface,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.error_outline_rounded, color: context.appError),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Failed to load profiles',
-                      style: TextStyle(color: context.appError),
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.error_outline_rounded, color: context.appError),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Failed to load profiles',
+                              style: TextStyle(color: context.appError),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              error.toString(),
+                              style: TextStyle(
+                                color: context.appOnSurface.withValues(alpha: 0.6),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.refresh),
+                        onPressed: () async {
+                          await ref.read(userProfileProvider.notifier).refresh();
+                        },
+                        tooltip: 'Retry',
+                      ),
+                    ],
                   ),
                 ],
               ),

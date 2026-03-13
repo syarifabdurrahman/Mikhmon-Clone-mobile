@@ -909,6 +909,16 @@ final userProfileProvider = AsyncNotifierProvider<UserProfileNotifier, List<User
   return UserProfileNotifier();
 });
 
+// Provider that always returns profiles (for dependency-free access)
+final userProfileProviderAlways = Provider<List<UserProfile>>((ref) {
+  // This provider watches the async provider but doesn't cause circular dependency
+  final asyncValue = ref.watch(userProfileProvider);
+  return asyncValue.maybeWhen(
+    data: (profiles) => profiles,
+    orElse: () => _demoProfilesCache.isNotEmpty ? List.from(_demoProfilesCache) : [],
+  );
+});
+
 // Interface Traffic Provider
 final interfaceTrafficProvider = AsyncNotifierProvider<InterfaceTrafficNotifier, List<InterfaceTraffic>>(() {
   return InterfaceTrafficNotifier();
@@ -919,8 +929,8 @@ List<UserProfile> _demoProfilesCache = [];
 bool _demoProfilesInitialized = false;
 
 class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
-  @override
-  Future<List<UserProfile>> build() async {
+  // Private method to fetch profiles - used by both build() and refresh()
+  Future<List<UserProfile>> _fetchProfiles() async {
     final service = ref.read(routerOSServiceProvider);
 
     if (service.isDemoMode) {
@@ -934,61 +944,68 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     // Fetch from real RouterOS API
     final client = service.client;
     if (client == null) {
+      // Return empty list when not connected - will show empty state
+      debugPrint('[UserProfiles] No client available, returning empty list');
       return [];
     }
 
-    final profilesData = await client.getUserProfiles();
+    try {
+      final profilesData = await client.getUserProfiles();
 
-    debugPrint('[UserProfiles] Received ${profilesData.length} profiles from RouterOS');
-    for (var i = 0; i < profilesData.length; i++) {
-      debugPrint('[UserProfiles] Profile $i: ${profilesData[i]}');
-    }
-
-    // Convert API data to UserProfile objects
-    return profilesData.map((data) {
-      // Parse rate-limit (format: "upload/download" or "unlimited")
-      final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
-      String upload = 'unlimited';
-      String download = 'unlimited';
-
-      if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
-        final parts = rateLimit.split('/');
-        if (parts.length == 2) {
-          upload = parts[0];
-          download = parts[1];
-        }
+      debugPrint('[UserProfiles] Received ${profilesData.length} profiles from RouterOS');
+      for (var i = 0; i < profilesData.length; i++) {
+        debugPrint('[UserProfiles] Profile $i: ${profilesData[i]}');
       }
 
-      final profileId = data['.id'] as String?;
-      final profileName = data['name'] as String? ?? 'unknown';
+      // Convert API data to UserProfile objects
+      return profilesData.map((data) {
+        // Parse rate-limit (format: "upload/download" or "unlimited")
+        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
+        String upload = 'unlimited';
+        String download = 'unlimited';
 
-      // Use profile name as fallback ID if .id is missing
-      final id = profileId ?? '*$profileName';
+        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
+          final parts = rateLimit.split('/');
+          if (parts.length == 2) {
+            upload = parts[0];
+            download = parts[1];
+          }
+        }
 
-      debugPrint('[UserProfiles] Parsed profile: $id ($profileName)');
+        final profileId = data['.id'] as String?;
+        final profileName = data['name'] as String? ?? 'unknown';
 
-      return UserProfile(
-        id: id,
-        name: profileName,
-        rateLimitUpload: upload,
-        rateLimitDownload: download,
-        validity: data['session-timeout']?.toString() ?? data['on-logout'] as String? ?? 'unlimited',
-        price: 0.0, // Price is stored separately, not in RouterOS
-        sharedUsers: 1,
-        autologout: true,
-      );
-    }).toList();
+        // Use profile name as fallback ID if .id is missing
+        final id = profileId ?? '*$profileName';
+
+        debugPrint('[UserProfiles] Parsed profile: $id ($profileName)');
+
+        return UserProfile(
+          id: id,
+          name: profileName,
+          rateLimitUpload: upload,
+          rateLimitDownload: download,
+          validity: data['session-timeout']?.toString() ?? data['on-logout'] as String? ?? 'unlimited',
+          price: 0.0, // Price is stored separately, not in RouterOS
+          sharedUsers: 1,
+          autologout: true,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('[UserProfiles] Error fetching profiles: $e');
+      // Return empty list on error
+      return [];
+    }
+  }
+
+  @override
+  Future<List<UserProfile>> build() async {
+    return _fetchProfiles();
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      state = AsyncValue.data(List.from(_demoProfilesCache));
-    } else {
-      state = AsyncValue.data(await build());
-    }
+    state = AsyncValue.data(await _fetchProfiles());
   }
 
   Future<void> addProfile(UserProfile profile) async {

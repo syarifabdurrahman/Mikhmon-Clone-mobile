@@ -27,6 +27,13 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
   @override
   void initState() {
     super.initState();
+    // Trigger profile load if not already loaded
+    Future.microtask(() {
+      final profilesAsync = ref.read(userProfileProvider);
+      if (!profilesAsync.hasValue || profilesAsync.isLoading) {
+        ref.read(userProfileProvider.notifier).refresh();
+      }
+    });
     // Profile will be set after profiles are loaded
     _commentController.text = widget.user['comment'] ?? '';
   }
@@ -49,13 +56,36 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
 
     try {
       final usersNotifier = ref.read(hotspotUsersProvider.notifier);
-      final profiles = ref.read(userProfileProvider).value ?? [];
+
+      // Get profiles from the provider's value
+      final profilesAsync = ref.read(userProfileProvider);
+      final profiles = profilesAsync.maybeWhen(
+        data: (profiles) => profiles,
+        orElse: () => <UserProfile>[],
+      );
+
+      if (profiles.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No profiles available. Please create a profile first.'),
+              backgroundColor: context.appError,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
 
       // Get the profile name from the selected profile
-      final selectedProfile = profiles.firstWhere(
-        (p) => p.id == _selectedProfileId,
-        orElse: () => UserProfile(id: 'default', name: 'default'),
-      );
+      final selectedProfile = _selectedProfileId != null
+          ? profiles.firstWhere(
+              (p) => p.id == _selectedProfileId,
+              orElse: () => UserProfile(id: 'default', name: 'default'),
+            )
+          : profiles.first;
 
       // Check if demo mode is enabled
       final service = ref.read(routerOSServiceProvider);
@@ -75,7 +105,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
             SnackBar(
               content:
                   Text('User "${widget.user['name']}" updated successfully'),
-              backgroundColor: context.appPrimary,
+              backgroundColor: context.appSuccess,
             ),
           );
           Navigator.pop(context, true); // Return true to indicate success
@@ -83,18 +113,64 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         return;
       }
 
-      // For real RouterOS connection (not implemented yet)
+      // Real RouterOS API call
+      final client = service.client;
+      if (client == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Not connected to RouterOS. Please login first.'),
+              backgroundColor: context.appError,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Get the user's ID
+      final userId = widget.user['.id'];
+      if (userId == null) {
+        throw Exception('User ID not found');
+      }
+
+      // Use existing password if not changed
+      final password = _passwordController.text.trim().isEmpty
+          ? (widget.user['password'] ?? '')
+          : _passwordController.text.trim();
+
+      // Update user on RouterOS
+      await client.updateHotspotUser(
+        id: userId,
+        username: widget.user['name'],
+        password: password,
+        profile: selectedProfile.name,
+        comment: _commentController.text.trim().isEmpty
+            ? null
+            : _commentController.text.trim(),
+      );
+
+      // Also update local state for immediate UI update
+      await usersNotifier.updateUser(
+        id: widget.user['.id'],
+        username: widget.user['name'],
+        profile: selectedProfile.name,
+        comment: _commentController.text.trim().isEmpty
+            ? null
+            : _commentController.text.trim(),
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Update user not implemented for real RouterOS connection yet'),
-            backgroundColor: context.appError,
+            content:
+                Text('User "${widget.user['name']}" updated successfully on RouterOS'),
+            backgroundColor: context.appSuccess,
           ),
         );
-        setState(() {
-          _isLoading = false;
-        });
+        Navigator.pop(context, true); // Return true to indicate success
       }
     } catch (e) {
       if (mounted) {
@@ -334,11 +410,16 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
               orElse: () => profiles.first,
             );
 
+            // Only set initialValue if it exists in the current profiles list
+            final validInitialValue = profiles.any((p) => p.id == (_selectedProfileId ?? currentProfileId))
+                ? (_selectedProfileId ?? currentProfileId)
+                : profiles.first.id;
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedProfileId ?? currentProfileId ?? profiles.first.id,
+                  initialValue: validInitialValue,
                   decoration: InputDecoration(
                     hintText: 'Select profile',
                     prefixIcon: Icon(Icons.card_membership_rounded, size: 20),

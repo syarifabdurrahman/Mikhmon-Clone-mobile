@@ -6,6 +6,8 @@ import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/hotspot_hosts_screen.dart';
+import '../screens/hotspot_users/hotspot_host_detail_screen.dart';
+import '../services/models.dart';
 
 class AppRouter {
   static const String initialRoute = '/';
@@ -15,6 +17,7 @@ class AppRouter {
   static const String profilesRoute = '/profiles';
   static const String hostsRoute = '/hosts';
   static const String settingsRoute = '/settings';
+  static const String hostDetailRoute = '/hosts/:id';
 
   static final router = GoRouter(
     initialLocation: initialRoute,
@@ -42,6 +45,16 @@ class AppRouter {
       GoRoute(
         path: hostsRoute,
         pageBuilder: (context, state) => const MaterialPage(child: HotspotHostsScreen()),
+      ),
+      GoRoute(
+        path: hostDetailRoute,
+        pageBuilder: (context, state) {
+          final host = state.extra as HotspotHost?;
+          if (host == null) {
+            return const MaterialPage(child: Scaffold(body: Center(child: Text('Host not found'))));
+          }
+          return MaterialPage(child: HotspotHostDetailScreen(host: host));
+        },
       ),
     ],
   );

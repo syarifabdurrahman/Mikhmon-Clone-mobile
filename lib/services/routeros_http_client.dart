@@ -248,6 +248,8 @@ class RouterOSHttpClient {
     required String password,
     required String profile,
     String? comment,
+    String? validity, // For limit-uptime (e.g., "5m", "1h", "1d")
+    String? dataLimit, // For limit-bytes-total (e.g., "1G", "500M")
   }) async {
     try {
       _ensureConnected();
@@ -260,6 +262,12 @@ class RouterOSHttpClient {
       };
       if (comment != null) {
         data['comment'] = comment;
+      }
+      if (validity != null && validity.isNotEmpty && validity != 'unlimited') {
+        data['limit-uptime'] = validity;
+      }
+      if (dataLimit != null && dataLimit.isNotEmpty) {
+        data['limit-bytes-total'] = dataLimit;
       }
 
       final response = await _dio!.put(

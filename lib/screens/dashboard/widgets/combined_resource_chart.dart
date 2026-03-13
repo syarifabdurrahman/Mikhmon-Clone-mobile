@@ -360,39 +360,39 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
   }
 
   Widget _buildEmptyState() {
-    return Container(
+    return SizedBox(
       height: 220,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                context.appPrimary.withValues(alpha: 0.5),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Collecting data...',
-            style: TextStyle(
-              color: context.appOnSurface.withValues(alpha: 0.5),
-              fontSize: 12,
+            const SizedBox(height: 16),
+            Text(
+              'Collecting data...',
+              style: TextStyle(
+                color: context.appOnSurface.withValues(alpha: 0.7),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Waiting for first data point',
-            style: TextStyle(
-              color: context.appOnSurface.withValues(alpha: 0.3),
-              fontSize: 10,
+            const SizedBox(height: 4),
+            Text(
+              'Waiting for first data point',
+              style: TextStyle(
+                color: context.appOnSurface.withValues(alpha: 0.5),
+                fontSize: 11,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

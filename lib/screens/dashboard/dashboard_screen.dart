@@ -40,6 +40,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Don't show loading if we have cached data (seamless navigation)
     _loadDashboardData(showLoading: !hasCachedData && !service.isDemoMode);
     _startPeriodicRefresh();
+
+    // Preload user profiles in background
+    Future.microtask(() => ref.read(userProfileProvider.notifier).build());
   }
 
   @override

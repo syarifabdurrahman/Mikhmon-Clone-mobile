@@ -388,6 +388,8 @@ class RouterOSClient {
     required String password,
     required String profile,
     String? comment,
+    String? validity, // For limit-uptime (e.g., "5m", "1h", "1d")
+    String? dataLimit, // For limit-bytes-total (e.g., "1G", "500M")
   }) async {
     try {
       _ensureConnected();
@@ -397,6 +399,12 @@ class RouterOSClient {
       _writeWord('=profile=$profile');
       if (comment != null) {
         _writeWord('=comment=$comment');
+      }
+      if (validity != null && validity.isNotEmpty && validity != 'unlimited') {
+        _writeWord('=limit-uptime=$validity');
+      }
+      if (dataLimit != null && dataLimit.isNotEmpty) {
+        _writeWord('=limit-bytes-total=$dataLimit');
       }
       _writeWord(''); // Empty word to terminate sentence
 
