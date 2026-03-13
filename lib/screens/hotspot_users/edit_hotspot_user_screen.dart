@@ -405,20 +405,20 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                 .firstOrNull
                 ?.id;
 
+            // Find the selected profile in the list, defaulting to first profile
             final selectedProfile = profiles.firstWhere(
-              (p) => p.id == (_selectedProfileId ?? currentProfileId ?? profiles.first.id),
+              (p) => p.id == (_selectedProfileId ?? currentProfileId),
               orElse: () => profiles.first,
             );
 
-            // Only set initialValue if it exists in the current profiles list
-            final validInitialValue = profiles.any((p) => p.id == (_selectedProfileId ?? currentProfileId))
-                ? (_selectedProfileId ?? currentProfileId)
-                : profiles.first.id;
+            // Use the selected profile's ID, which is guaranteed to be in the list
+            final validInitialValue = selectedProfile.id;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
+                  key: ValueKey('profile_dropdown_$validInitialValue'),
                   initialValue: validInitialValue,
                   decoration: InputDecoration(
                     hintText: 'Select profile',
