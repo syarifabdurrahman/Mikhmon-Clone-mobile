@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 
 class HotspotHostDetailsScreen extends ConsumerWidget {
@@ -43,8 +44,13 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh_rounded),
-            onPressed: () {
-              // TODO: Implement refresh
+            onPressed: () async {
+              // Trigger refresh of hotspot hosts data
+              await ref.read(hotspotHostsProvider.notifier).silentRefresh();
+              // Navigate back to show refreshed data
+              if (context.mounted) {
+                context.go('/hosts');
+              }
             },
           ),
         ],
@@ -268,7 +274,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                     Icons.download_rounded,
                     'Download',
                     _formatBytes(host.bytesIn),
-                    _formatPackets(host.packetsIn) + ' pkts',
+                    '${_formatPackets(host.packetsIn)} pkts',
                     context.appSecondary,
                   ),
                 ),
@@ -278,7 +284,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
                     Icons.upload_rounded,
                     'Upload',
                     _formatBytes(host.bytesOut),
-                    _formatPackets(host.packetsOut) + ' pkts',
+                    '${_formatPackets(host.packetsOut)} pkts',
                     context.appPrimary,
                   ),
                 ),

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
-import '../../services/routeros_service.dart';
 import '../../services/models.dart';
 import 'hotspot_user_details_screen.dart';
 import 'add_hotspot_user_screen.dart';
@@ -72,11 +71,12 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     final usersAsync = ref.watch(hotspotUsersProvider);
-    final service = ref.watch(routerOSServiceProvider);
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: _buildAppBar(service),
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: _buildAppBar(),
       body: Column(
         children: [
           _SearchAndFilterBar(
@@ -131,7 +131,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                         child: _UserCard(
                           user: filteredUsers[index],
                           onTap: () => _navigateToUserDetails(filteredUsers[index]),
-                          onLongPress: () => _showUserContextMenu(filteredUsers[index]),
+                          onLongPress: () => _toggleSelectionModeAndSelect(filteredUsers[index].id),
+                          onMenuTap: () => _showUserContextMenu(filteredUsers[index]),
                           isSelectionMode: _isSelectionActive,
                           isSelected: _selectedUserIds.contains(filteredUsers[index].id),
                           onToggleSelection: () => _toggleUserSelection(filteredUsers[index].id),
@@ -178,10 +179,11 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         ],
       ),
       bottomNavigationBar: _isSelectionActive ? _buildBulkActionBar(context) : null,
+      ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(RouterOSService service) {
+  PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: context.appSurface,
       foregroundColor: context.appOnSurface,
@@ -207,7 +209,6 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
             ),
       actions: [
         if (!_isSelectionActive) ...[
-          if (service.isDemoMode) _buildDemoBadge(),
           IconButton(
             icon: Icon(Icons.checklist_rounded),
             onPressed: _toggleSelectionMode,
@@ -234,6 +235,23 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     setState(() {
       _isSelectionActive = true;
       _selectedUserIds.clear();
+    });
+  }
+
+  void _toggleSelectionModeAndSelect(String userId) {
+    setState(() {
+      if (!_isSelectionActive) {
+        _isSelectionActive = true;
+        _selectedUserIds.clear();
+      }
+      if (_selectedUserIds.contains(userId)) {
+        _selectedUserIds.remove(userId);
+        if (_selectedUserIds.isEmpty) {
+          _isSelectionActive = false;
+        }
+      } else {
+        _selectedUserIds.add(userId);
+      }
     });
   }
 
@@ -345,15 +363,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   }
 
   Future<void> _bulkDeleteUsers() async {
-    final service = ref.read(routerOSServiceProvider);
-
     for (final userId in _selectedUserIds) {
       try {
-        if (service.isDemoMode) {
-          await ref.read(hotspotUsersProvider.notifier).deleteUser(userId);
-        } else {
-          await ref.read(hotspotUsersProvider.notifier).deleteUser(userId);
-        }
+        await ref.read(hotspotUsersProvider.notifier).deleteUser(userId);
       } catch (e) {
         debugPrint('[BulkActions] Error deleting user $userId: $e');
       }
@@ -426,44 +438,6 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         ),
       );
     }
-  }
-
-  Widget _buildDemoBadge() {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            context.appPrimary.withValues(alpha: 0.2),
-            context.appPrimary.withValues(alpha: 0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: context.appPrimary.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.science_rounded,
-            color: context.appPrimary,
-            size: 16,
-          ),
-          SizedBox(width: 6),
-          Text(
-            'DEMO',
-            style: TextStyle(
-              color: context.appPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   List<HotspotUser> _filterUsers(List<HotspotUser> users) {
@@ -654,12 +628,13 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               Navigator.pop(context);
               if (!mounted) return;
               final messenger = ScaffoldMessenger.of(context);
+              final primaryColor = context.appPrimary;
               await ref.read(hotspotUsersProvider.notifier).deleteUser(user.id);
               if (mounted) {
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text('User "${user.name}" deleted successfully'),
-                    backgroundColor: context.appPrimary,
+                    backgroundColor: primaryColor,
                   ),
                 );
               }
@@ -769,10 +744,11 @@ class _SearchAndFilterBar extends StatelessWidget {
 }
 
 // Extracted user card widget for better performance with RepaintBoundary
-class _UserCard extends StatelessWidget {
+class _UserCard extends ConsumerWidget {
   final HotspotUser user;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback? onMenuTap;
   final bool isSelectionMode;
   final bool isSelected;
   final VoidCallback? onToggleSelection;
@@ -781,13 +757,30 @@ class _UserCard extends StatelessWidget {
     required this.user,
     required this.onTap,
     required this.onLongPress,
+    this.onMenuTap,
     this.isSelectionMode = false,
     this.isSelected = false,
     this.onToggleSelection,
   });
 
+  bool _isUserActuallyConnected(WidgetRef ref) {
+    // Check if this user is in the active users list (real-time connection)
+    final activeUsersAsync = ref.watch(hotspotActiveUsersProvider);
+    final activeUsersValue = activeUsersAsync.value;
+
+    if (activeUsersValue == null) return false;
+
+    // Check if this user is in the active users by name
+    // Active users are stored as Map<String, dynamic> with 'user' key for username
+    return activeUsersValue.users.any((activeUserMap) =>
+      activeUserMap['user'] == user.name
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isConnected = _isUserActuallyConnected(ref);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: isSelected
@@ -824,18 +817,35 @@ class _UserCard extends StatelessWidget {
                 ),
                 SizedBox(width: 12),
               ] else ...[
-                _UserAvatar(active: user.active),
+                _UserAvatar(active: user.active, isConnected: isConnected),
                 SizedBox(width: 16),
               ],
               Expanded(
-                child: _UserInfo(user: user),
+                child: _UserInfo(user: user, isConnected: isConnected),
               ),
-              if (!isSelectionMode)
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: context.appOnSurface.withValues(alpha: 0.3),
-                ),
+              if (!isSelectionMode) ...[
+                if (onMenuTap != null) ...[
+                  SizedBox(width: 8),
+                  _ConnectionStatusBadge(isConnected: isConnected),
+                  SizedBox(width: 4),
+                  IconButton(
+                    icon: Icon(Icons.more_vert_rounded),
+                    color: context.appOnSurface.withValues(alpha: 0.6),
+                    onPressed: onMenuTap,
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(),
+                  ),
+                ] else ...[
+                  SizedBox(width: 8),
+                  _ConnectionStatusBadge(isConnected: isConnected),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: context.appOnSurface.withValues(alpha: 0.3),
+                  ),
+                ],
+              ],
             ],
           ),
         ),
@@ -847,26 +857,59 @@ class _UserCard extends StatelessWidget {
 // Extracted user avatar widget
 class _UserAvatar extends StatelessWidget {
   final bool active;
+  final bool isConnected;
 
-  const _UserAvatar({required this.active});
+  const _UserAvatar({required this.active, required this.isConnected});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: active ? _activeAvatarColors : _inactiveAvatarColors,
+    return Stack(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: active ? _activeAvatarColors : _inactiveAvatarColors,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: isConnected
+                ? Border.all(
+                    color: Colors.green,
+                    width: 2,
+                  )
+                : null,
+          ),
+          child: Icon(
+            Icons.person_rounded,
+            color: active ? Colors.white : context.appOnSurface.withValues(alpha: 0.5),
+          ),
         ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        Icons.person_rounded,
-        color: active ? Colors.white : context.appOnSurface.withValues(alpha: 0.5),
-      ),
+        if (isConnected)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: context.appBackground,
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.check,
+                color: Colors.white,
+                size: 10,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -874,23 +917,36 @@ class _UserAvatar extends StatelessWidget {
 // Extracted user info widget
 class _UserInfo extends StatelessWidget {
   final HotspotUser user;
+  final bool isConnected;
 
-  const _UserInfo({required this.user});
+  const _UserInfo({required this.user, required this.isConnected});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          user.name,
-          style: TextStyle(
-            color: context.appOnSurface,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          children: [
+            Text(
+              user.name,
+              style: TextStyle(
+                color: context.appOnSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (isConnected) ...[
+              SizedBox(width: 6),
+              Icon(
+                Icons.wifi_rounded,
+                size: 14,
+                color: Colors.green,
+              ),
+            ],
+          ],
         ),
         SizedBox(height: 4),
-        _UserStatusBadge(user: user),
+        _UserStatusBadge(user: user, isConnected: isConnected),
       ],
     );
   }
@@ -899,8 +955,9 @@ class _UserInfo extends StatelessWidget {
 // Extracted user status badge widget
 class _UserStatusBadge extends StatelessWidget {
   final HotspotUser user;
+  final bool isConnected;
 
-  const _UserStatusBadge({required this.user});
+  const _UserStatusBadge({required this.user, required this.isConnected});
 
   @override
   Widget build(BuildContext context) {
@@ -933,15 +990,15 @@ class _UserStatusBadge extends StatelessWidget {
         ),
         SizedBox(width: 8),
         Icon(
-          user.active ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+          isConnected ? Icons.wifi_rounded : Icons.wifi_off_rounded,
           size: 16,
-          color: user.active ? Colors.green : context.appOnSurface.withValues(alpha: 0.4),
+          color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.4),
         ),
         SizedBox(width: 4),
         Text(
-          user.active ? 'Connected' : 'Disconnected',
+          isConnected ? 'Connected' : 'Active',
           style: TextStyle(
-            color: user.active ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
+            color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
             fontSize: 12,
           ),
         ),
@@ -1076,6 +1133,51 @@ class _BulkActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: color.withValues(alpha: 0.3)),
         ),
+      ),
+    );
+  }
+}
+
+// Real-time connection status badge widget
+class _ConnectionStatusBadge extends StatelessWidget {
+  final bool isConnected;
+
+  const _ConnectionStatusBadge({required this.isConnected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isConnected
+            ? Colors.green.withValues(alpha: 0.15)
+            : context.appOnSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isConnected
+              ? Colors.green.withValues(alpha: 0.3)
+              : context.appOnSurface.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isConnected ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+            size: 12,
+            color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
+          ),
+          SizedBox(width: 4),
+          Text(
+            isConnected ? 'Live' : 'Offline',
+            style: TextStyle(
+              color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

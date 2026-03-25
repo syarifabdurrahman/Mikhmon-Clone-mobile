@@ -8,12 +8,10 @@ import '../../../services/resource_history.dart';
 /// Animates and scrolls right-to-left like a system monitor (Linux Mint style)
 class CombinedResourceChart extends StatefulWidget {
   final ResourceHistoryNotifier resourceHistory;
-  final bool isDemoMode;
 
   const CombinedResourceChart({
     super.key,
     required this.resourceHistory,
-    this.isDemoMode = false,
   });
 
   @override
@@ -52,10 +50,6 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
       _animationController.value = 1.0;
     }
 
-    if (widget.isDemoMode) {
-      _startDemoMode();
-    }
-
     // Listen to resource history changes for real-time updates
     widget.resourceHistory.addListener(_onDataChanged);
   }
@@ -88,20 +82,6 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
     _animationController.dispose();
     widget.resourceHistory.removeListener(_onDataChanged);
     super.dispose();
-  }
-
-  void _startDemoMode() {
-    // Update demo data every 2 seconds to simulate real-time monitoring
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (mounted) {
-        widget.resourceHistory.addDataPoint(ResourceDataPoint(
-          timestamp: DateTime.now(),
-          cpuLoad: 15 + (timer.tick % 20) * 2.0,
-          memoryUsage: 35 + (timer.tick % 15) * 2.0,
-          diskUsage: 25 + (timer.tick % 10) * 2.5,
-        ));
-      }
-    });
   }
 
   void _generateSpots() {
@@ -151,9 +131,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
   }
 
   Widget _buildChart() {
-    final hasData = _cpuSpots.isNotEmpty || widget.isDemoMode;
-
-    if (!hasData) {
+    if (_cpuSpots.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -465,10 +443,6 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                                 _buildLegendItem('CPU', latest.cpuLoad, const Color(0xFF6366F1), isSmallScreen),
                                 _buildLegendItem('RAM', latest.memoryUsage, const Color(0xFF10B981), isSmallScreen),
                                 _buildLegendItem('Disk', latest.diskUsage, const Color(0xFFF59E0B), isSmallScreen),
-                              ] else if (widget.isDemoMode && _cpuSpots.isNotEmpty) ...[
-                                _buildLegendItem('CPU', _cpuSpots.last.y, const Color(0xFF6366F1), isSmallScreen),
-                                _buildLegendItem('RAM', _memorySpots.last.y, const Color(0xFF10B981), isSmallScreen),
-                                _buildLegendItem('Disk', _diskSpots.last.y, const Color(0xFFF59E0B), isSmallScreen),
                               ] else ...[
                                 Text(
                                   'Loading...',

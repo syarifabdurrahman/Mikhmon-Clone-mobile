@@ -11,7 +11,6 @@ class ResourceLineChart extends StatefulWidget {
   final Color chartColor;
   final IconData icon;
   final String unit;
-  final bool isDemoMode;
 
   const ResourceLineChart({
     super.key,
@@ -20,7 +19,6 @@ class ResourceLineChart extends StatefulWidget {
     required this.chartColor,
     required this.icon,
     this.unit = '%',
-    this.isDemoMode = false,
   });
 
   @override
@@ -35,9 +33,6 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
   void initState() {
     super.initState();
     _spots = _generateSpots();
-    if (widget.isDemoMode && widget.dataPoints.isEmpty) {
-      _startDemoMode();
-    }
   }
 
   @override
@@ -54,16 +49,6 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
-  }
-
-  void _startDemoMode() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (mounted) {
-        setState(() {
-          _spots = _generateDemoSpots();
-        });
-      }
-    });
   }
 
   List<FlSpot> _generateSpots() {
@@ -93,29 +78,6 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
     }).toList();
   }
 
-  List<FlSpot> _generateDemoSpots() {
-    final now = DateTime.now();
-    final spots = <FlSpot>[];
-
-    for (int i = 0; i < 30; i++) {
-      final baseValue = widget.title.toLowerCase() == 'cpu load'
-          ? 20.0
-          : widget.title.toLowerCase() == 'memory'
-              ? 45.0
-              : 35.0;
-
-      final variance = (i % 10) * 3.0;
-      final noise = (now.millisecond % 20) - 10;
-
-      spots.add(FlSpot(
-        i.toDouble(),
-        (baseValue + variance + noise).clamp(0.0, 100.0),
-      ));
-    }
-
-    return spots;
-  }
-
   String _formatTime(int index) {
     if (widget.dataPoints.isEmpty) return '';
     final reversedIndex = widget.dataPoints.length - 1 - index;
@@ -136,7 +98,7 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
   }
 
   Widget _buildChart() {
-    if (_spots.isEmpty && !widget.isDemoMode) {
+    if (_spots.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -386,12 +348,10 @@ class _ResourceLineChartState extends State<ResourceLineChart> {
 /// CPU Load Chart Widget
 class CpuLoadChart extends StatelessWidget {
   final List<ResourceDataPoint> dataPoints;
-  final bool isDemoMode;
 
   const CpuLoadChart({
     super.key,
     required this.dataPoints,
-    this.isDemoMode = false,
   });
 
   @override
@@ -402,7 +362,6 @@ class CpuLoadChart extends StatelessWidget {
       chartColor: const Color(0xFF6366F1),
       icon: Icons.memory_rounded,
       unit: '%',
-      isDemoMode: isDemoMode,
     );
   }
 }
@@ -410,12 +369,10 @@ class CpuLoadChart extends StatelessWidget {
 /// Memory Usage Chart Widget
 class MemoryUsageChart extends StatelessWidget {
   final List<ResourceDataPoint> dataPoints;
-  final bool isDemoMode;
 
   const MemoryUsageChart({
     super.key,
     required this.dataPoints,
-    this.isDemoMode = false,
   });
 
   @override
@@ -426,7 +383,6 @@ class MemoryUsageChart extends StatelessWidget {
       chartColor: const Color(0xFF10B981),
       icon: Icons.storage_rounded,
       unit: '%',
-      isDemoMode: isDemoMode,
     );
   }
 }
@@ -434,12 +390,10 @@ class MemoryUsageChart extends StatelessWidget {
 /// Disk Usage Chart Widget
 class DiskUsageChart extends StatelessWidget {
   final List<ResourceDataPoint> dataPoints;
-  final bool isDemoMode;
 
   const DiskUsageChart({
     super.key,
     required this.dataPoints,
-    this.isDemoMode = false,
   });
 
   @override
@@ -450,7 +404,6 @@ class DiskUsageChart extends StatelessWidget {
       chartColor: const Color(0xFFF59E0B),
       icon: Icons.sd_storage_rounded,
       unit: '%',
-      isDemoMode: isDemoMode,
     );
   }
 }

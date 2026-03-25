@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -121,18 +120,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      // Connect to RouterOS first
       final service = ref.read(routerOSServiceProvider);
 
-      // Check if demo mode
-      if (service.isDemoMode) {
-        return const AuthState(
-          isAuthenticated: true,
-          systemResources: null, // Will be loaded by dashboard
-        );
-      }
-
-      // Real connection
+      // Connect to RouterOS
       final client = await service.connectWithCredentials(
         host: host,
         port: port,
@@ -140,20 +130,18 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         password: password,
       );
 
-      // Pre-fetch system resources during login for seamless experience
+      // Pre-fetch system resources during login
       Map<String, dynamic>? resources;
       try {
         debugPrint('[Auth] Pre-fetching system resources...');
         resources = await client.getSystemResources();
         debugPrint('[Auth] System resources fetched successfully');
 
-        // Save to cache for instant loading next time
         final cache = ref.read(cacheServiceProvider);
         await cache.saveSystemResources(resources);
         debugPrint('[Auth] System resources cached');
       } catch (e) {
         debugPrint('[Auth] Warning: Failed to pre-fetch resources: $e');
-        // Continue anyway - dashboard will retry or use cache
       }
 
       // Store credentials if remember me is checked
@@ -183,15 +171,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       return const AuthState(isAuthenticated: false);
     });
-  }
-
-  Future<void> setDemoMode(bool enabled) async {
-    final service = ref.read(routerOSServiceProvider);
-    service.setDemoMode(enabled);
-    state = AsyncValue.data(AuthState(
-      isAuthenticated: enabled,
-      systemResources: null,
-    ));
   }
 
   // Clear pre-fetched resources after dashboard has consumed them
@@ -298,13 +277,6 @@ final hotspotUsersProvider = AsyncNotifierProvider<HotspotUsersNotifier, Paginat
   return HotspotUsersNotifier();
 });
 
-// In-memory storage for demo mode users (persists across provider rebuilds)
-List<Map<String, dynamic>> _demoUsersCache = [];
-bool _demoUsersInitialized = false;
-
-// Cache for demo active sessions - maps user ID to their session data
-final Map<String, Map<String, dynamic>> _demoActiveSessions = {};
-
 // Pagination state class
 class PaginatedUsers {
   final List<Map<String, dynamic>> users;
@@ -345,28 +317,6 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
   Future<PaginatedUsers> _loadUsers({required int page}) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // Initialize demo users only once
-      if (!_demoUsersInitialized) {
-        _demoUsersCache = _getDemoUsers();
-        _demoUsersInitialized = true;
-      }
-
-      // Simulate pagination
-      final startIndex = (page - 1) * _pageSize;
-      final endIndex = startIndex + _pageSize;
-      final hasMore = endIndex < _demoUsersCache.length;
-      final users = _demoUsersCache.skip(startIndex).take(_pageSize).toList();
-
-      return PaginatedUsers(
-        users: users,
-        hasMore: hasMore,
-        currentPage: page,
-        pageSize: _pageSize,
-      );
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -426,37 +376,6 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     String? comment,
   }) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // Create new user with unique ID
-      final newId = '*${DateTime.now().millisecondsSinceEpoch}';
-      final newUser = {
-        '.id': newId,
-        'name': username,
-        'profile': profile,
-        'comment': comment ?? '',
-        'bytes-in': '0',
-        'bytes-out': '0',
-        'limit-uptime': '0',
-        'uptime': '0',
-        'disabled': 'false',
-      };
-
-      // Add to cache and update state
-      _demoUsersCache.add(newUser);
-      final currentUsers = state.value?.users ?? [];
-      state = AsyncValue.data(PaginatedUsers(
-        users: [...currentUsers, newUser],
-        hasMore: false,
-        currentPage: _currentPage,
-        pageSize: _pageSize,
-      ));
-
-      // Also refresh active users list to include the new user
-      ref.invalidate(hotspotActiveUsersProvider);
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -469,30 +388,11 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       comment: comment,
     );
 
-    // Refresh the list
     ref.invalidate(hotspotUsersProvider);
   }
 
   Future<void> deleteUser(String id) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // Remove from cache
-      _demoUsersCache.removeWhere((user) => user['.id'] == id);
-      final currentUsers = (state.value?.users ?? []).where((u) => u['.id'] != id).toList();
-      state = AsyncValue.data(PaginatedUsers(
-        users: currentUsers,
-        hasMore: false,
-        currentPage: _currentPage,
-        pageSize: _pageSize,
-      ));
-
-      // Also remove from active sessions
-      _demoActiveSessions.remove(id);
-      ref.invalidate(hotspotActiveUsersProvider);
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -500,8 +400,29 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
     await client.removeHotspotUser(id);
 
-    // Refresh the list
-    ref.invalidate(hotspotUsersProvider);
+    // Immediately remove user from current state for instant UI update
+    final currentState = state.value;
+    if (currentState != null) {
+      final updatedUsers = currentState.users.where((user) => user['.id'] != id).toList();
+      state = AsyncValue.data(PaginatedUsers(
+        users: updatedUsers,
+        hasMore: currentState.hasMore,
+        currentPage: currentState.currentPage,
+        pageSize: currentState.pageSize,
+      ));
+    }
+
+    // Then refresh in background to ensure data is accurate
+    silentRefresh();
+  }
+
+  Future<void> silentRefresh() async {
+    try {
+      final newData = await _loadUsers(page: 1);
+      state = AsyncValue.data(newData);
+    } catch (e) {
+      debugPrint('[HotspotUsers] Silent refresh failed: $e');
+    }
   }
 
   Future<void> updateUser({
@@ -511,34 +432,6 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     String? comment,
   }) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // Find and update user in cache
-      final index = _demoUsersCache.indexWhere((user) => user['.id'] == id);
-      if (index != -1) {
-        _demoUsersCache[index] = {
-          ..._demoUsersCache[index],
-          'name': username,
-          'profile': profile,
-          'comment': comment ?? _demoUsersCache[index]['comment'] ?? '',
-        };
-        final currentUsers = state.value?.users ?? [];
-        final updatedUsers = currentUsers.map((u) {
-          if (u['.id'] == id) {
-            return _demoUsersCache[index];
-          }
-          return u;
-        }).toList();
-        state = AsyncValue.data(PaginatedUsers(
-          users: updatedUsers,
-          hasMore: state.value?.hasMore ?? false,
-          currentPage: _currentPage,
-          pageSize: _pageSize,
-        ));
-      }
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -564,98 +457,65 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
   Future<void> toggleUserStatus(String id) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // Find user and toggle disabled status
-      final index = _demoUsersCache.indexWhere((user) => user['.id'] == id);
-      if (index != -1) {
-        final currentStatus = _demoUsersCache[index]['disabled'] == 'true';
-        _demoUsersCache[index] = {
-          ..._demoUsersCache[index],
-          'disabled': (!currentStatus).toString(),
-        };
-        final currentUsers = state.value?.users ?? [];
-        final updatedUsers = currentUsers.map((u) {
-          if (u['.id'] == id) {
-            return _demoUsersCache[index];
-          }
-          return u;
-        }).toList();
-        state = AsyncValue.data(PaginatedUsers(
-          users: updatedUsers,
-          hasMore: state.value?.hasMore ?? false,
-          currentPage: _currentPage,
-          pageSize: _pageSize,
-        ));
-
-        // Also refresh active users list to sync the change
-        ref.invalidate(hotspotActiveUsersProvider);
-      }
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
     }
 
-    // Get current user status
-    final allUsers = await client.getHotspotUsersList();
-    final currentUser = allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
-    final isCurrentlyDisabled = currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
+    // Get current user status from current state
+    final currentState = state.value;
+    if (currentState != null) {
+      final currentUser = currentState.users.firstWhere((u) => u['.id'] == id, orElse: () => {});
+      final isCurrentlyDisabled = currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
 
-    // Toggle the status
-    await client.setHotspotUserStatus(
-      id: id,
-      disabled: !isCurrentlyDisabled,
-    );
+      // Immediately update UI by toggling the disabled status in current state
+      final updatedUsers = currentState.users.map((user) {
+        if (user['.id'] == id) {
+          final updatedUser = Map<String, dynamic>.from(user);
+          updatedUser['disabled'] = isCurrentlyDisabled ? 'false' : 'true';
+          updatedUser['active'] = isCurrentlyDisabled ? 'true' : 'false';
+          return updatedUser;
+        }
+        return user;
+      }).toList();
 
-    // Refresh the list
-    ref.invalidate(hotspotUsersProvider);
+      state = AsyncValue.data(PaginatedUsers(
+        users: updatedUsers,
+        hasMore: currentState.hasMore,
+        currentPage: currentState.currentPage,
+        pageSize: currentState.pageSize,
+      ));
+
+      // Toggle the status on RouterOS
+      try {
+        await client.setHotspotUserStatus(
+          id: id,
+          disabled: !isCurrentlyDisabled,
+        );
+      } catch (e) {
+        debugPrint('[HotspotUsers] Error toggling status: $e');
+        // Revert UI change on error
+        state = AsyncValue.data(currentState);
+        rethrow;
+      }
+
+      // Refresh in background to ensure data is accurate
+      silentRefresh();
+    } else {
+      // Fallback if no current state
+      final allUsers = await client.getHotspotUsersList();
+      final currentUser = allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
+      final isCurrentlyDisabled = currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
+
+      await client.setHotspotUserStatus(
+        id: id,
+        disabled: !isCurrentlyDisabled,
+      );
+
+      ref.invalidate(hotspotUsersProvider);
+    }
+
     ref.invalidate(hotspotActiveUsersProvider);
-  }
-
-  void resetDemoUsers() {
-    _demoUsersInitialized = false;
-    _demoUsersCache = [];
-  }
-
-  List<Map<String, dynamic>> _getDemoUsers() {
-    return [
-      {
-        '.id': 'demo-1',
-        'name': 'demo_user1',
-        'profile': 'default',
-        'bytes-in': '1048576',
-        'bytes-out': '2097152',
-        'limit-uptime': '1h',
-        'uptime': '30m',
-        'disabled': 'false',
-        'comment': 'Demo user 1',
-      },
-      {
-        '.id': 'demo-2',
-        'name': 'demo_user2',
-        'profile': 'premium',
-        'bytes-in': '5242880',
-        'bytes-out': '10485760',
-        'limit-uptime': '24h',
-        'uptime': '2h',
-        'disabled': 'false',
-        'comment': 'Demo user 2',
-      },
-      {
-        '.id': 'demo-3',
-        'name': 'expired_user',
-        'profile': 'default',
-        'bytes-in': '0',
-        'bytes-out': '0',
-        'limit-uptime': '0',
-        'uptime': '0',
-        'disabled': 'true',
-        'comment': 'Expired demo user',
-      },
-    ];
   }
 }
 
@@ -667,60 +527,34 @@ final systemResourcesProvider = AsyncNotifierProvider<SystemResourcesNotifier, M
 class SystemResourcesNotifier extends AsyncNotifier<Map<String, dynamic>> {
   @override
   Future<Map<String, dynamic>> build() async {
-    // Keep the provider alive even when no listeners are attached
     ref.keepAlive();
 
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      return _getDemoResources();
-    }
-
-    // First, try to load from cache immediately (for seamless UX)
     final cache = ref.read(cacheServiceProvider);
-    final cachedResources = cache.getSystemResources();
-    final lastUpdate = cache.getLastUpdate();
 
-    // If we have cached data that's less than 10 seconds old, use it immediately
-    // Otherwise, still use cached data but refresh in background
+    // Try cache first
+    final cachedResources = cache.getSystemResources();
     if (cachedResources != null) {
+      final lastUpdate = cache.getLastUpdate();
       debugPrint('[SystemResources] Using cached resources, last update: $lastUpdate');
       return cachedResources;
     }
 
-    // No cache available, fetch from API
+    // No cache, fetch from API
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
     }
 
     final resources = await client.getSystemResources();
-
-    // Save to cache for next time
     await cache.saveSystemResources(resources);
-
     return resources;
   }
 
   Future<void> refresh() async {
-    // Force refresh (clear cache and fetch fresh)
     final cache = ref.read(cacheServiceProvider);
     await cache.clearEntry('system_resources');
     ref.invalidate(systemResourcesProvider);
-  }
-
-  Map<String, dynamic> _getDemoResources() {
-    return {
-      'cpu-load': '25',
-      'free-memory': '104857600',
-      'total-memory': '524288000',
-      'free-hdd-space': '524288000',
-      'total-hdd-space': '2097152000',
-      'uptime': '2d 3h 45m',
-      'platform': 'MikroTik',
-      'board-name': 'RB750Gr3',
-      'version': '7.10',
-    };
   }
 }
 
@@ -746,23 +580,6 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
   Future<PaginatedUsers> _loadActiveUsers({required int page}) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // Return demo active users synced with enabled users
-      final allActiveUsers = _getDemoActiveUsers();
-      final startIndex = (page - 1) * _pageSize;
-      final endIndex = startIndex + _pageSize;
-      final hasMore = endIndex < allActiveUsers.length;
-      final users = allActiveUsers.skip(startIndex).take(_pageSize).toList();
-
-      return PaginatedUsers(
-        users: users,
-        hasMore: hasMore,
-        currentPage: page,
-        pageSize: _pageSize,
-      );
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -805,20 +622,6 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
   Future<void> logoutUser(String id) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // Remove from demo active sessions
-      _demoActiveSessions.remove(id);
-      final currentUsers = (state.value?.users ?? []).where((u) => u['.id'] != id).toList();
-      state = AsyncValue.data(PaginatedUsers(
-        users: currentUsers,
-        hasMore: false,
-        currentPage: _currentPage,
-        pageSize: _pageSize,
-      ));
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -826,93 +629,6 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
     await client.logoutHotspotUser(id);
     ref.invalidate(hotspotActiveUsersProvider);
-  }
-
-  List<Map<String, dynamic>> _getDemoActiveUsers() {
-    // Get the current users from the users provider
-    final usersAsync = ref.read(hotspotUsersProvider);
-    final paginatedUsers = usersAsync.value;
-    if (paginatedUsers == null) return [];
-
-    final allUsers = paginatedUsers.users;
-
-    // Filter for enabled users (disabled != 'true' or disabled == 'false')
-    final enabledUsers = allUsers.where((user) => user['disabled'] != 'true');
-
-    // Build active users list from enabled users
-    final now = DateTime.now();
-    final activeUsers = <Map<String, dynamic>>[];
-    final random = Random(now.millisecondsSinceEpoch);
-
-    for (final user in enabledUsers) {
-      final userId = user['.id'] as String;
-      final userName = user['name'] as String;
-      final profile = user['profile'] as String? ?? 'default';
-
-      // Check if this user already has an active session
-      if (!_demoActiveSessions.containsKey(userId)) {
-        // Create a new session for this user with initial random values
-        _demoActiveSessions[userId] = {
-          'login-time': now.subtract(Duration(minutes: random.nextInt(120))).millisecondsSinceEpoch ~/ 1000,
-          'bytes-in': random.nextInt(10485760).toString(), // Start with 0-10 MB
-          'bytes-out': random.nextInt(10485760).toString(),
-        };
-      }
-
-      // Update the session data
-      final session = _demoActiveSessions[userId]!;
-      final loginTime = session['login-time'] as int;
-      final uptimeSeconds = now.millisecondsSinceEpoch ~/ 1000 - loginTime;
-      final uptime = _formatUptime(uptimeSeconds);
-
-      // Increment bytes significantly to make changes visible (every 2 seconds)
-      final currentBytesIn = int.parse(session['bytes-in'] as String);
-      final currentBytesOut = int.parse(session['bytes-out'] as String);
-      // Add 100KB-2MB random data per refresh cycle to simulate active usage
-      final bytesInIncrement = 102400 + random.nextInt(2048000);
-      final bytesOutIncrement = 51200 + random.nextInt(1024000);
-      final newBytesIn = currentBytesIn + bytesInIncrement;
-      final newBytesOut = currentBytesOut + bytesOutIncrement;
-      session['bytes-in'] = newBytesIn.toString();
-      session['bytes-out'] = newBytesOut.toString();
-
-      // Generate IP address based on user ID
-      final ipSuffix = userId.replaceAll('*', '').padLeft(3, '0');
-      final address = '192.168.88.$ipSuffix';
-
-      // Generate MAC address
-      final macSuffix = int.parse(ipSuffix).toRadixString(16).padLeft(2, '0').toUpperCase();
-      final macAddress = 'AA:BB:CC:DD:EE:$macSuffix';
-
-      activeUsers.add({
-        '.id': userId,
-        'user': userName,
-        'address': address,
-        'mac-address': macAddress,
-        'login-time': loginTime.toString(),
-        'uptime': uptime,
-        'bytes-in': newBytesIn.toString(),
-        'bytes-out': newBytesOut.toString(),
-        'server': 'hotspot1',
-        'profile': profile,
-      });
-    }
-
-    return activeUsers;
-  }
-
-  String _formatUptime(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-
-    if (hours > 0) {
-      return '${hours}h ${minutes}m ${secs}s';
-    } else if (minutes > 0) {
-      return '${minutes}m ${secs}s';
-    } else {
-      return '${secs}s';
-    }
   }
 }
 
@@ -926,123 +642,49 @@ final interfaceTrafficProvider = AsyncNotifierProvider<InterfaceTrafficNotifier,
   return InterfaceTrafficNotifier();
 });
 
-// In-memory storage for demo mode profiles
-List<UserProfile> _demoProfilesCache = [];
-bool _demoProfilesInitialized = false;
-
 class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
   @override
   Future<List<UserProfile>> build() async {
-    // Keep the provider alive even when no listeners are attached
-    ref.keepAlive();
-
-    final service = ref.read(routerOSServiceProvider);
     final cache = ref.read(cacheServiceProvider);
 
-    // Initialize demo profiles cache ONLY in demo mode
-    if (service.isDemoMode && !_demoProfilesInitialized) {
-      _demoProfilesCache = _getDemoProfiles();
-      _demoProfilesInitialized = true;
-    }
-
-    if (service.isDemoMode) {
-      return List.from(_demoProfilesCache);
-    }
-
-    // REAL MODE: Always clear any demo profiles from cache first
+    // Try to get cached profiles first
     final cachedProfiles = cache.getUserProfiles();
     if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
-      // Check if cached profiles are demo profiles (from previous demo session)
-      // Demo profiles have IDs starting with 'demo-'
-      final hasDemoProfiles = cachedProfiles.any((p) =>
-        p['id'] != null && p['id'].toString().startsWith('demo-'));
-
-      if (hasDemoProfiles) {
-        debugPrint('[UserProfiles] Demo profiles found in cache, clearing and fetching real profiles');
-        // Clear the demo profiles from cache
-        await cache.clearUserProfiles();
-        // Fetch real profiles (bypass cache)
-        return await _fetchProfilesAndCacheInternal();
-      }
-
-      debugPrint('[UserProfiles] Using cached real data (${cachedProfiles.length} profiles)');
-      // Convert cached maps back to UserProfile objects
+      debugPrint('[UserProfiles] Using cached data (${cachedProfiles.length} profiles)');
       return cachedProfiles.map((data) => UserProfile.fromJson(data)).toList();
     }
 
-    // No cache or cache was cleared, fetch from API
-    return await _fetchProfilesAndCacheInternal();
+    // No cache, fetch from API
+    return await _fetchProfilesAndCache();
   }
 
-  Future<List<UserProfile>> _fetchProfilesAndCacheInternal() async {
+  Future<List<UserProfile>> _fetchProfilesAndCache() async {
     final service = ref.read(routerOSServiceProvider);
+    final cache = ref.read(cacheServiceProvider);
     final client = service.client;
     if (client == null) {
-      debugPrint('[UserProfiles] No client available, returning empty list');
+      debugPrint('[UserProfiles] No client available');
       return [];
     }
 
     try {
       final profilesData = await client.getUserProfiles();
-
       debugPrint('[UserProfiles] Received ${profilesData.length} profiles from RouterOS');
 
-      // Convert API data to UserProfile objects
-      // Filter out system/default profiles like "trial", "default"
+      // Filter out system profiles
       final systemProfileNames = {'trial', 'default'};
-
       final profiles = profilesData
-          .where((data) {
-            final profileName = data['name'] as String? ?? '';
-            // Skip system/default profiles
-            if (systemProfileNames.contains(profileName.toLowerCase())) {
-              debugPrint('[UserProfiles] Skipping system profile: $profileName');
-              return false;
-            }
-            return true;
-          })
-          .map((data) {
-        // Parse rate-limit (format: "upload/download" or "unlimited")
-        final rateLimit = data['rate-limit'] as String? ?? 'unlimited';
-        String upload = 'unlimited';
-        String download = 'unlimited';
+          .where((p) => !systemProfileNames.contains(p['name']?.toString().toLowerCase()))
+          .map((data) => UserProfile.fromJson(data))
+          .toList();
 
-        if (rateLimit != 'unlimited' && rateLimit.contains('/')) {
-          final parts = rateLimit.split('/');
-          if (parts.length == 2) {
-            upload = parts[0];
-            download = parts[1];
-          }
-        }
+      // Cache the profiles
+      await cache.saveUserProfiles(profilesData);
 
-        final profileId = data['.id'] as String?;
-        final profileName = data['name'] as String? ?? 'unknown';
-
-        // Use profile name as fallback ID if .id is missing
-        final id = profileId ?? '*$profileName';
-
-        debugPrint('[UserProfiles] Parsed profile: $id ($profileName)');
-
-        return UserProfile(
-          id: id,
-          name: profileName,
-          rateLimitUpload: upload,
-          rateLimitDownload: download,
-          validity: data['session-timeout']?.toString() ?? data['on-logout'] as String? ?? 'unlimited',
-          price: 0.0,
-          sharedUsers: 1,
-          autologout: true,
-        );
-      }).toList();
-
-      // Save to cache
-      final cache = ref.read(cacheServiceProvider);
-      await cache.saveUserProfiles(profiles.map((e) => e.toJson()).toList());
-
+      debugPrint('[UserProfiles] Loaded ${profiles.length} profiles');
       return profiles;
     } catch (e) {
-      debugPrint('[UserProfiles] Error fetching profiles: $e');
-      // Return empty list on error
+      debugPrint('[UserProfiles] Error loading profiles: $e');
       return [];
     }
   }
@@ -1051,52 +693,18 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     await silentRefresh();
   }
 
-  /// Silent refresh - updates data without showing loading state
   Future<void> silentRefresh() async {
     debugPrint('[UserProfiles] silentRefresh() called');
-    final service = ref.read(routerOSServiceProvider);
-
     try {
-      List<UserProfile> newData;
-
-      if (service.isDemoMode) {
-        newData = List.from(_demoProfilesCache);
-      } else {
-        debugPrint('[UserProfiles] Starting real-time profiles fetch');
-        // In real mode, always clear demo profiles from cache first
-        final cache = ref.read(cacheServiceProvider);
-        final cachedProfiles = cache.getUserProfiles();
-        if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
-          final hasDemoProfiles = cachedProfiles.any((p) =>
-            p['id'] != null && p['id'].toString().startsWith('demo-'));
-          if (hasDemoProfiles) {
-            debugPrint('[UserProfiles] Clearing demo profiles from cache during refresh');
-            await cache.clearUserProfiles();
-          }
-        }
-        newData = await _fetchProfilesAndCacheInternal();
-        debugPrint('[UserProfiles] Fetched ${newData.length} profiles');
-      }
-
-      // Update state directly without loading
-      debugPrint('[UserProfiles] Updating provider state with ${newData.length} profiles');
+      final newData = await _fetchProfilesAndCache();
       state = AsyncValue.data(newData);
-      debugPrint('[UserProfiles] Provider state updated successfully');
     } catch (e) {
-      // Silent fail - don't show error on auto-refresh
       debugPrint('[UserProfiles] Silent refresh failed: $e');
     }
   }
 
   Future<void> addProfile(UserProfile profile) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      _demoProfilesCache.add(profile);
-      state = AsyncValue.data(List.from(_demoProfilesCache));
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -1114,22 +722,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       sessionTimeout: profile.validity,
     );
 
-    // Refresh using silent method (no loading state)
     await silentRefresh();
   }
 
   Future<void> updateProfile(UserProfile updatedProfile) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      final index = _demoProfilesCache.indexWhere((p) => p.id == updatedProfile.id);
-      if (index != -1) {
-        _demoProfilesCache[index] = updatedProfile;
-        state = AsyncValue.data(List.from(_demoProfilesCache));
-      }
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -1148,19 +745,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       sessionTimeout: updatedProfile.validity,
     );
 
-    // Refresh using silent method (no loading state)
     await silentRefresh();
   }
 
   Future<void> deleteProfile(String id) async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      _demoProfilesCache.removeWhere((p) => p.id == id);
-      state = AsyncValue.data(List.from(_demoProfilesCache));
-      return;
-    }
-
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -1170,61 +759,6 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
     // Refresh using silent method (no loading state)
     await silentRefresh();
-  }
-
-  List<UserProfile> _getDemoProfiles() {
-    return [
-      UserProfile(
-        id: 'demo-1',
-        name: 'default',
-        rateLimitUpload: 'unlimited',
-        rateLimitDownload: 'unlimited',
-        validity: 'unlimited',
-        price: 0.0,
-        sharedUsers: 1,
-        autologout: true,
-      ),
-      UserProfile(
-        id: 'demo-2',
-        name: '1hour',
-        rateLimitUpload: '512k',
-        rateLimitDownload: '1M',
-        validity: '1h',
-        price: 1.0,
-        sharedUsers: 1,
-        autologout: true,
-      ),
-      UserProfile(
-        id: 'demo-3',
-        name: '1day',
-        rateLimitUpload: '256k',
-        rateLimitDownload: '512k',
-        validity: '1d',
-        price: 2.50,
-        sharedUsers: 1,
-        autologout: true,
-      ),
-      UserProfile(
-        id: 'demo-4',
-        name: '1week',
-        rateLimitUpload: '128k',
-        rateLimitDownload: '256k',
-        validity: '7d',
-        price: 10.0,
-        sharedUsers: 1,
-        autologout: true,
-      ),
-      UserProfile(
-        id: 'demo-5',
-        name: '1month',
-        rateLimitUpload: '64k',
-        rateLimitDownload: '128k',
-        validity: '30d',
-        price: 25.0,
-        sharedUsers: 1,
-        autologout: true,
-      ),
-    ];
   }
 }
 
@@ -1253,25 +787,10 @@ class IncomeState {
   }
 }
 
-// In-memory storage for demo mode sales
-List<SalesTransaction> _demoSalesCache = [];
-
 class IncomeNotifier extends AsyncNotifier<IncomeState> {
   @override
   Future<IncomeState> build() async {
-    final service = ref.read(routerOSServiceProvider);
     final cache = ref.read(cacheServiceProvider);
-
-    if (service.isDemoMode) {
-      // Initialize demo sales if empty
-      if (_demoSalesCache.isEmpty) {
-        _demoSalesCache = _getDemoSales();
-      }
-      return IncomeState(
-        transactions: List.from(_demoSalesCache),
-        summary: _calculateIncomeSummary(_demoSalesCache),
-      );
-    }
 
     // Try to load from cache first
     final cachedTransactions = cache.getSalesTransactions();
@@ -1308,7 +827,6 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
     required double price,
     String? comment,
   }) async {
-    final service = ref.read(routerOSServiceProvider);
     final cache = ref.read(cacheServiceProvider);
 
     final transaction = SalesTransaction(
@@ -1319,18 +837,6 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
       timestamp: DateTime.now(),
       comment: comment,
     );
-
-    if (service.isDemoMode) {
-      _demoSalesCache.add(transaction);
-      final currentState = state.value;
-      if (currentState != null) {
-        state = AsyncValue.data(IncomeState(
-          transactions: List.from(_demoSalesCache),
-          summary: _calculateIncomeSummary(_demoSalesCache),
-        ));
-      }
-      return;
-    }
 
     // Save to cache
     await cache.saveSalesTransaction(transaction.toJson());
@@ -1343,112 +849,9 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => build());
   }
-
-  IncomeSummary _calculateIncomeSummary(List<SalesTransaction> transactions) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final monthStart = DateTime(now.year, now.month, 1);
-
-    double todayIncome = 0;
-    double thisMonthIncome = 0;
-    int transactionsToday = 0;
-    int transactionsThisMonth = 0;
-
-    for (final transaction in transactions) {
-      if (transaction.timestamp.isAfter(today)) {
-        todayIncome += transaction.price;
-        transactionsToday++;
-      }
-      if (transaction.timestamp.isAfter(monthStart)) {
-        thisMonthIncome += transaction.price;
-        transactionsThisMonth++;
-      }
-    }
-
-    return IncomeSummary(
-      todayIncome: todayIncome,
-      thisMonthIncome: thisMonthIncome,
-      transactionsToday: transactionsToday,
-      transactionsThisMonth: transactionsThisMonth,
-    );
-  }
-
-  List<SalesTransaction> _getDemoSales() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final monthStart = DateTime(now.year, now.month, 1);
-
-    return [
-      // Today's sales
-      SalesTransaction(
-        id: '1',
-        username: 'user001',
-        profile: '1hour',
-        price: 1.0,
-        timestamp: today.add(const Duration(hours: 2)),
-        comment: 'Voucher sale',
-      ),
-      SalesTransaction(
-        id: '2',
-        username: 'user002',
-        profile: '1day',
-        price: 2.50,
-        timestamp: today.add(const Duration(hours: 5)),
-        comment: 'Daily pass',
-      ),
-      SalesTransaction(
-        id: '3',
-        username: 'user003',
-        profile: '1week',
-        price: 10.0,
-        timestamp: today.add(const Duration(hours: 8)),
-      ),
-      // Yesterday's sales
-      SalesTransaction(
-        id: '4',
-        username: 'user004',
-        profile: '1hour',
-        price: 1.0,
-        timestamp: today.subtract(const Duration(days: 1)),
-      ),
-      SalesTransaction(
-        id: '5',
-        username: 'user005',
-        profile: '1day',
-        price: 2.50,
-        timestamp: today.subtract(const Duration(days: 1)),
-      ),
-      // Earlier this month
-      SalesTransaction(
-        id: '6',
-        username: 'user006',
-        profile: '1month',
-        price: 25.0,
-        timestamp: monthStart.add(const Duration(days: 3)),
-      ),
-      SalesTransaction(
-        id: '7',
-        username: 'user007',
-        profile: '1week',
-        price: 10.0,
-        timestamp: monthStart.add(const Duration(days: 7)),
-      ),
-      SalesTransaction(
-        id: '8',
-        username: 'user008',
-        profile: '1day',
-        price: 2.50,
-        timestamp: monthStart.add(const Duration(days: 10)),
-      ),
-    ];
-  }
-
-  void resetDemoSales() {
-    _demoSalesCache = [];
-  }
 }
 
-// Saved Router Connections Provider
+// Interface Traffic Provider
 final savedConnectionsProvider = AsyncNotifierProvider<SavedConnectionsNotifier, List<RouterConnection>>(() {
   return SavedConnectionsNotifier();
 });
@@ -1517,42 +920,6 @@ class SavedConnectionsNotifier extends AsyncNotifier<List<RouterConnection>> {
 // Traffic rate service for calculating real-time rates
 final _trafficRateService = TrafficRateService();
 
-// Demo mode traffic simulation state
-final _demoTrafficState = {
-  'ether1': _DemoTrafficState(
-    txBytes: 104857600 * 5, // 500 MB
-    rxBytes: 104857600 * 25, // 25 GB
-    txRate: 1024 * 1024 * 5, // 5 MB/s
-    rxRate: 1024 * 1024 * 50, // 50 MB/s
-  ),
-  'wlan1': _DemoTrafficState(
-    txBytes: 104857600 * 250, // 250 GB
-    rxBytes: 104857600 * 150, // 150 GB
-    txRate: 1024 * 512, // 512 KB/s
-    rxRate: 1024 * 1024 * 10, // 10 MB/s
-  ),
-};
-
-class _DemoTrafficState {
-  int txBytes;
-  int rxBytes;
-  final int txRate;
-  final int rxRate;
-
-  _DemoTrafficState({
-    required this.txBytes,
-    required this.rxBytes,
-    required this.txRate,
-    required this.rxRate,
-  });
-
-  // Update cumulative bytes based on rate (simulating 3 seconds passing)
-  void updateCumulative() {
-    txBytes += txRate * 3;
-    rxBytes += rxRate * 3;
-  }
-}
-
 class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
   @override
   Future<List<InterfaceTraffic>> build() async {
@@ -1560,11 +927,6 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
     ref.keepAlive();
 
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      final demoInterfaces = _getDemoInterfaceStats();
-      return _trafficRateService.calculateRates(demoInterfaces);
-    }
 
     // Check cache first for instant display (seamless UX)
     final cache = ref.read(cacheServiceProvider);
@@ -1607,42 +969,35 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
     final service = ref.read(routerOSServiceProvider);
 
     try {
-      List<InterfaceTraffic> newData;
-
-      if (service.isDemoMode) {
-        final demoInterfaces = _getDemoInterfaceStats();
-        newData = _trafficRateService.calculateRates(demoInterfaces);
-      } else {
-        debugPrint('[TrafficReal] Starting real-time traffic fetch');
-        final client = service.client;
-        if (client == null) {
-          debugPrint('[TrafficReal] Client is null, aborting refresh');
-          return;
-        }
-
-        final interfacesData = await client.getInterfaceStats();
-        final interfaces = interfacesData.map((data) {
-          return InterfaceTraffic.fromJson(data);
-        }).toList();
-
-        // Log raw data before rate calculation
-        for (final iface in interfaces) {
-          debugPrint('[TrafficReal] ${iface.name}: txBytes=${iface.txBytes}, rxBytes=${iface.rxBytes}, running=${iface.running}');
-        }
-
-        // Calculate rates using historical data
-        debugPrint('[TrafficReal] Calculating rates...');
-        newData = _trafficRateService.calculateRates(interfaces);
-
-        // Log results after rate calculation
-        for (final iface in newData) {
-          debugPrint('[TrafficReal] ${iface.name}: txRate=${iface.txBytesPerSecond} B/s, rxRate=${iface.rxBytesPerSecond} B/s');
-        }
-
-        // Save to cache
-        final cache = ref.read(cacheServiceProvider);
-        await cache.saveInterfaceTraffic(newData.map((e) => e.toJson()).toList());
+      debugPrint('[TrafficReal] Starting real-time traffic fetch');
+      final client = service.client;
+      if (client == null) {
+        debugPrint('[TrafficReal] Client is null, aborting refresh');
+        return;
       }
+
+      final interfacesData = await client.getInterfaceStats();
+      final interfaces = interfacesData.map((data) {
+        return InterfaceTraffic.fromJson(data);
+      }).toList();
+
+      // Log raw data before rate calculation
+      for (final iface in interfaces) {
+        debugPrint('[TrafficReal] ${iface.name}: txBytes=${iface.txBytes}, rxBytes=${iface.rxBytes}, running=${iface.running}');
+      }
+
+      // Calculate rates using historical data
+      debugPrint('[TrafficReal] Calculating rates...');
+      final newData = _trafficRateService.calculateRates(interfaces);
+
+      // Log results after rate calculation
+      for (final iface in newData) {
+        debugPrint('[TrafficReal] ${iface.name}: txRate=${iface.txBytesPerSecond} B/s, rxRate=${iface.rxBytesPerSecond} B/s');
+      }
+
+      // Save to cache
+      final cache = ref.read(cacheServiceProvider);
+      await cache.saveInterfaceTraffic(newData.map((e) => e.toJson()).toList());
 
       // Update state directly without loading
       debugPrint('[TrafficReal] Updating provider state with ${newData.length} interfaces');
@@ -1652,41 +1007,6 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
       // Silent fail - don't show error on auto-refresh
       debugPrint('[Traffic] Silent refresh failed: $e');
     }
-  }
-
-  List<InterfaceTraffic> _getDemoInterfaceStats() {
-    // Update demo cumulative bytes to simulate real traffic
-    for (var entry in _demoTrafficState.entries) {
-      final oldTx = entry.value.txBytes;
-      final oldRx = entry.value.rxBytes;
-      entry.value.updateCumulative();
-      debugPrint('[TrafficDemo] ${entry.key}: txBytes $oldTx → ${entry.value.txBytes}, rxBytes $oldRx → ${entry.value.rxBytes}');
-    }
-
-    return [
-      InterfaceTraffic(
-        name: 'ether1',
-        type: 'ether',
-        txBytes: _demoTrafficState['ether1']!.txBytes,
-        rxBytes: _demoTrafficState['ether1']!.rxBytes,
-        txBytesPerSecond: null, // Will be calculated by rate service
-        rxBytesPerSecond: null,
-        mtu: '1500',
-        running: true,
-        enabled: true,
-      ),
-      InterfaceTraffic(
-        name: 'wlan1',
-        type: 'wlan',
-        txBytes: _demoTrafficState['wlan1']!.txBytes,
-        rxBytes: _demoTrafficState['wlan1']!.rxBytes,
-        txBytesPerSecond: null, // Will be calculated by rate service
-        rxBytesPerSecond: null,
-        mtu: '1500',
-        running: true,
-        enabled: true,
-      ),
-    ];
   }
 }
 
@@ -1709,10 +1029,6 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
 
   Future<List<HotspotHost>> _fetchHosts() async {
     final service = ref.read(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      return _getDemoHosts();
-    }
 
     final client = service.client;
     if (client == null) {
@@ -1747,73 +1063,6 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
     } catch (e) {
       debugPrint('[Hosts] Silent refresh failed: $e');
     }
-  }
-
-  List<HotspotHost> _getDemoHosts() {
-    final now = DateTime.now();
-    return [
-      HotspotHost(
-        id: 'demo-1',
-        macAddress: 'AA:BB:CC:DD:EE:01',
-        address: '192.168.88.100',
-        server: 'hotspot1',
-        user: 'demo1',
-        hostname: 'iPhone-14-Pro',
-        uptime: '${now.minute}m ${now.second}s',
-        idleTime: '10s',
-        authorized: true,
-        bypassed: false,
-        bytesIn: 15728640, // ~15 MB
-        bytesOut: 5242880, // ~5 MB
-        packetsIn: 15234,
-        packetsOut: 8456,
-      ),
-      HotspotHost(
-        id: 'demo-2',
-        macAddress: 'AA:BB:CC:DD:EE:02',
-        address: '192.168.88.101',
-        server: 'hotspot1',
-        user: 'demo2',
-        hostname: 'Samsung-Galaxy-S23',
-        uptime: '${now.minute - 2}m ${now.second}s',
-        idleTime: '30s',
-        authorized: true,
-        bypassed: false,
-        bytesIn: 52428800, // ~50 MB
-        bytesOut: 20971520, // ~20 MB
-        packetsIn: 45123,
-        packetsOut: 25678,
-      ),
-      HotspotHost(
-        id: 'demo-3',
-        macAddress: 'AA:BB:CC:DD:EE:03',
-        address: '192.168.88.102',
-        server: 'hotspot1',
-        user: null,
-        hostname: 'MacBook-Pro',
-        uptime: '5m 0s',
-        idleTime: '2m 30s',
-        authorized: false,
-        bypassed: true,
-        comment: 'Bypassed device',
-        bytesIn: 10485760, // ~10 MB
-        bytesOut: 5242880, // ~5 MB
-        packetsIn: 8912,
-        packetsOut: 4521,
-      ),
-      HotspotHost(
-        id: 'demo-4',
-        macAddress: 'AA:BB:CC:DD:EE:04',
-        address: '192.168.88.103',
-        server: 'hotspot1',
-        user: null,
-        hostname: 'Windows-PC',
-        uptime: null,
-        idleTime: null,
-        authorized: false,
-        bypassed: false,
-      ),
-    ];
   }
 
   // Note: AsyncNotifier doesn't have dispose, timer will be cancelled when provider is disposed

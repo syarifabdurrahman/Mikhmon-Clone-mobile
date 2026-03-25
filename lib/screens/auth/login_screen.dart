@@ -24,7 +24,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _saveConnection = true;
-  bool _demoMode = true;
 
   @override
   void dispose() {
@@ -42,91 +41,86 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login({RouterConnection? savedConnection}) async {
-    if (_demoMode || _formKey.currentState!.validate() || savedConnection != null) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+    if (!_formKey.currentState!.validate() && savedConnection == null) {
+      return;
+    }
 
-      try {
-        // Set demo mode via the auth state provider
-        await ref.read(authStateProvider.notifier).setDemoMode(_demoMode);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-        if (!_demoMode) {
-          String host, port, username, password;
+    try {
+      String host, port, username, password;
 
-          if (savedConnection != null) {
-            // Use saved connection
-            host = savedConnection.host;
-            port = savedConnection.port;
-            username = savedConnection.username;
-            password = ''; // Password not saved, user needs to enter
-          } else {
-            // Use form fields
-            host = _ipController.text;
-            port = _portController.text.trim().isEmpty ? '8728' : _portController.text.trim();
-            username = _usernameController.text;
-            password = _passwordController.text;
-          }
+      if (savedConnection != null) {
+        // Use saved connection
+        host = savedConnection.host;
+        port = savedConnection.port;
+        username = savedConnection.username;
+        password = ''; // Password not saved, user needs to enter
+      } else {
+        // Use form fields
+        host = _ipController.text;
+        port = _portController.text.trim().isEmpty ? '8728' : _portController.text.trim();
+        username = _usernameController.text;
+        password = _passwordController.text;
+      }
 
-          // Log connection attempt
-          debugPrint('=== LOGIN ATTEMPT ===');
-          debugPrint('Host: $host:$port');
-          debugPrint('Username: $username');
-          debugPrint('Demo Mode: $_demoMode');
+      // Log connection attempt
+      debugPrint('=== LOGIN ATTEMPT ===');
+      debugPrint('Host: $host:$port');
+      debugPrint('Username: $username');
 
-          await ref.read(authStateProvider.notifier).login(
-                host: host,
-                port: port,
-                username: username,
-                password: password,
-                rememberMe: false,
-              );
+      await ref.read(authStateProvider.notifier).login(
+        host: host,
+        port: port,
+        username: username,
+        password: password,
+        rememberMe: false,
+      );
 
-          debugPrint('=== LOGIN SUCCESS ===');
+      debugPrint('=== LOGIN SUCCESS ===');
 
-          // Save connection if requested and not already saved
-          if (_saveConnection && savedConnection == null) {
-            final connections = ref.read(savedConnectionsProvider);
-            final connectionsList = connections.value ?? [];
+      // Save connection if requested and not already saved
+      if (_saveConnection && savedConnection == null) {
+        final connections = ref.read(savedConnectionsProvider);
+        final connectionsList = connections.value ?? [];
 
-            // Check if this connection already exists
-            final exists = connectionsList.any((c) =>
-              c.host == host &&
-              c.port == port &&
-              c.username == username
-            );
+        // Check if this connection already exists
+        final exists = connectionsList.any((c) =>
+          c.host == host &&
+          c.port == port &&
+          c.username == username
+        );
 
-            if (!exists) {
-              // Generate a name for the connection
-              final name = '$username@${host}_$port';
+        if (!exists) {
+          // Generate a name for the connection
+          final name = '$username@${host}_$port';
 
-              await ref.read(savedConnectionsProvider.notifier).addConnection(
-                name: name,
-                host: host,
-                port: port,
-                username: username,
-              );
-              debugPrint('Connection saved: $name');
-            }
-          }
+          await ref.read(savedConnectionsProvider.notifier).addConnection(
+            name: name,
+            host: host,
+            port: port,
+            username: username,
+          );
+          debugPrint('Connection saved: $name');
         }
+      }
 
-        if (mounted) {
-          context.go('/dashboard');
-        }
-      } catch (e) {
-        debugPrint('=== LOGIN FAILED ===');
-        debugPrint('Error: $e');
-        debugPrint('Error Type: ${e.runtimeType}');
+      if (mounted) {
+        context.go('/dashboard');
+      }
+    } catch (e) {
+      debugPrint('=== LOGIN FAILED ===');
+      debugPrint('Error: $e');
+      debugPrint('Error Type: ${e.runtimeType}');
 
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            // Show actual error message
-            _errorMessage = e.toString();
-          });
-        }
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString();
+        });
       }
     }
   }
@@ -201,13 +195,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     const SizedBox(height: 24),
-                    // Connection Form Fields - disabled in demo mode
-                    Opacity(
-                      opacity: _demoMode ? 0.4 : 1.0,
-                      child: IgnorePointer(
-                        ignoring: _demoMode,
-                        child: Column(
-                          children: [
+                    // Connection Form Fields
+                    Column(
+                      children: [
                             TextFormField(
                               controller: _ipController,
                               keyboardType: TextInputType.url,
@@ -310,101 +300,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Demo Mode Toggle
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: _demoMode
-                              ? [
-                                  context.appPrimary.withValues(alpha: 0.15),
-                                  context.appPrimary.withValues(alpha: 0.08),
-                                ]
-                              : [
-                                  context.appOnSurface.withValues(alpha: 0.05),
-                                  context.appOnSurface.withValues(alpha: 0.02),
-                                ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _demoMode
-                              ? context.appPrimary.withValues(alpha: 0.3)
-                              : context.appOnSurface.withValues(alpha: 0.1),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _demoMode ? Icons.science_rounded : Icons.router_rounded,
-                            size: 20,
-                            color: _demoMode ? context.appPrimary : context.appOnSurface.withValues(alpha: 0.6),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _demoMode ? 'Demo Mode' : 'Real Connection',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: _demoMode
-                                            ? context.appPrimary
-                                            : context.appOnSurface,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                                if (!_demoMode)
-                                  Text(
-                                    'Connect to real RouterOS device',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: context.appOnSurface.withValues(alpha: 0.6),
-                                        ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: _demoMode,
-                            onChanged: (value) {
-                              setState(() {
-                                _demoMode = value;
-                                // Clear error when switching modes
-                                _errorMessage = null;
-                              });
-                            },
-                            activeTrackColor: context.appPrimary.withValues(alpha: 0.5),
-                            activeThumbColor: context.appPrimary,
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_demoMode)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 8),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline_rounded,
-                              size: 14,
-                              color: context.appOnSurface.withValues(alpha: 0.5),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Using simulated data for testing',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: context.appOnSurface.withValues(alpha: 0.6),
-                                      fontSize: 11,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -416,13 +311,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           foregroundColor: Colors.white,
                         ),
                         child: _isLoading
-                            ? SizedBox(
+                            ? const SizedBox(
                                 width: 24,
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
                             : const Text(

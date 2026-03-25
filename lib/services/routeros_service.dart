@@ -9,7 +9,6 @@ class RouterOSService {
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   RouterOSClient? _client;
-  bool _demoMode = false;
 
   // Store connection parameters for reconnect
   String? _lastHost;
@@ -19,11 +18,6 @@ class RouterOSService {
 
   RouterOSClient? get client => _client;
   bool get isConnected => _client?.isConnected ?? false;
-  bool get isDemoMode => _demoMode;
-
-  void setDemoMode(bool enabled) {
-    _demoMode = enabled;
-  }
 
   // Direct connection with provided credentials (for initial login)
   Future<RouterOSClient> connectWithCredentials({

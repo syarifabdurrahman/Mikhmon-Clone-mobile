@@ -82,41 +82,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
           ? profiles.firstWhere((p) => p.id == _selectedProfileId)
           : profiles.first;
 
-      // Check if demo mode is enabled
-      final service = ref.read(routerOSServiceProvider);
-      if (service.isDemoMode) {
-        // Build comment with expiry for demo mode
-        final validity = selectedProfile.validity ?? 'unlimited';
-        final commentWithExpiry = ValidityParser.buildCommentWithExpiry(
-          mode: 'up',
-          validity: validity,
-          comment: _commentController.text.trim().isEmpty
-              ? null
-              : _commentController.text.trim(),
-        );
-
-        // Add user using the provider (demo mode)
-        await usersNotifier.addUser(
-          username: _usernameController.text.trim(),
-          password: _passwordController.text,
-          profile: selectedProfile.name,
-          comment: commentWithExpiry,
-        );
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  'User "${_usernameController.text}" created successfully'),
-              backgroundColor: context.appSuccess,
-            ),
-          );
-          context.pop(true); // Return true to indicate success
-        }
-        return;
-      }
-
       // Real RouterOS API call
+      final service = ref.read(routerOSServiceProvider);
       final client = service.client;
       if (client == null) {
         if (mounted) {

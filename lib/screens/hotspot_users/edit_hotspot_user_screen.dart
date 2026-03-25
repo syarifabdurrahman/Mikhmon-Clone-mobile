@@ -87,33 +87,8 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
             )
           : profiles.first;
 
-      // Check if demo mode is enabled
-      final service = ref.read(routerOSServiceProvider);
-      if (service.isDemoMode) {
-        // Update user in demo mode
-        await usersNotifier.updateUser(
-          id: widget.user['.id'],
-          username: widget.user['name'],
-          profile: selectedProfile.name,
-          comment: _commentController.text.trim().isEmpty
-              ? null
-              : _commentController.text.trim(),
-        );
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('User "${widget.user['name']}" updated successfully'),
-              backgroundColor: context.appSuccess,
-            ),
-          );
-          Navigator.pop(context, true); // Return true to indicate success
-        }
-        return;
-      }
-
       // Real RouterOS API call
+      final service = ref.read(routerOSServiceProvider);
       final client = service.client;
       if (client == null) {
         if (mounted) {

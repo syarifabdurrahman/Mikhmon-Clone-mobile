@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../theme/app_theme.dart';
@@ -112,22 +110,14 @@ class ResourceCard extends StatelessWidget {
 // Real-time CPU Load card that listens to resources updates
 class CpuLoadCard extends StatelessWidget {
   final ValueNotifier<SystemResources?> resourcesNotifier;
-  final bool isDemoMode;
 
   const CpuLoadCard({
     super.key,
     required this.resourcesNotifier,
-    this.isDemoMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (isDemoMode) {
-      // Demo mode: show random values with local timer
-      return _DemoCpuLoadCard();
-    }
-
-    // Real mode: show actual data from router
     return ValueListenableBuilder<SystemResources?>(
       valueListenable: resourcesNotifier,
       builder: (context, resources, _) {
@@ -143,69 +133,17 @@ class CpuLoadCard extends StatelessWidget {
   }
 }
 
-// Demo mode CPU card with random values
-class _DemoCpuLoadCard extends StatefulWidget {
-  @override
-  State<_DemoCpuLoadCard> createState() => _DemoCpuLoadCardState();
-}
-
-class _DemoCpuLoadCardState extends State<_DemoCpuLoadCard> {
-  late int _cpuLoad;
-  Timer? _refreshTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _cpuLoad = 5 + Random().nextInt(36);
-    _startAutoRefresh();
-  }
-
-  @override
-  void dispose() {
-    _refreshTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (mounted) {
-        setState(() {
-          _cpuLoad = 5 + Random().nextInt(36);
-        });
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ResourceCard(
-      icon: Icons.memory_rounded,
-      title: 'CPU Load',
-      value: '$_cpuLoad%',
-      usagePercent: _cpuLoad / 100,
-    );
-  }
-}
-
 // Real-time Memory card that listens to resources updates
 class MemoryCard extends StatelessWidget {
   final ValueNotifier<SystemResources?> resourcesNotifier;
-  final bool isDemoMode;
 
   const MemoryCard({
     super.key,
     required this.resourcesNotifier,
-    this.isDemoMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (isDemoMode) {
-      // Demo mode: show random values with local timer
-      return _DemoMemoryCard();
-    }
-
-    // Real mode: show actual data from router
     return ValueListenableBuilder<SystemResources?>(
       valueListenable: resourcesNotifier,
       builder: (context, resources, _) {
@@ -228,82 +166,17 @@ class MemoryCard extends StatelessWidget {
   }
 }
 
-// Demo mode Memory card with random values
-class _DemoMemoryCard extends StatefulWidget {
-  @override
-  State<_DemoMemoryCard> createState() => _DemoMemoryCardState();
-}
-
-class _DemoMemoryCardState extends State<_DemoMemoryCard> {
-  late int _freeMemory;
-  late int _totalMemory;
-  Timer? _refreshTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _totalMemory = 2097152;
-    _freeMemory = 1048576;
-    _startAutoRefresh();
-  }
-
-  @override
-  void dispose() {
-    _refreshTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
-        setState(() {
-          final random = Random();
-          final fluctuation = random.nextInt(524288) - 262144;
-          _freeMemory = (_freeMemory + fluctuation).clamp(
-            (_totalMemory * 0.2).toInt(),
-            (_totalMemory * 0.8).toInt(),
-          );
-        });
-      }
-    });
-  }
-
-  double get memoryUsagePercent => _totalMemory > 0
-      ? ((_totalMemory - _freeMemory) / _totalMemory)
-      : 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final usedMemory = _totalMemory - _freeMemory;
-    return ResourceCard(
-      icon: Icons.storage_rounded,
-      title: 'Memory',
-      value: '${(usedMemory / 1024 / 1024).toStringAsFixed(1)} MB',
-      usagePercent: memoryUsagePercent,
-      subtitle: '${(_totalMemory / 1024 / 1024).toStringAsFixed(0)} MB Total',
-    );
-  }
-}
-
 // Real-time Disk card that listens to resources updates
 class DiskCard extends StatelessWidget {
   final ValueNotifier<SystemResources?> resourcesNotifier;
-  final bool isDemoMode;
 
   const DiskCard({
     super.key,
     required this.resourcesNotifier,
-    this.isDemoMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (isDemoMode) {
-      // Demo mode: show random values with local timer
-      return _DemoDiskCard();
-    }
-
-    // Real mode: show actual data from router
     return ValueListenableBuilder<SystemResources?>(
       valueListenable: resourcesNotifier,
       builder: (context, resources, _) {
@@ -326,100 +199,12 @@ class DiskCard extends StatelessWidget {
   }
 }
 
-// Demo mode Disk card with random values
-class _DemoDiskCard extends StatefulWidget {
-  @override
-  State<_DemoDiskCard> createState() => _DemoDiskCardState();
-}
-
-class _DemoDiskCardState extends State<_DemoDiskCard> {
-  late int _freeHddSpace;
-  late int _totalHddSpace;
-  Timer? _refreshTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _totalHddSpace = 104857600;
-    _freeHddSpace = 52428800;
-    _startAutoRefresh();
-  }
-
-  @override
-  void dispose() {
-    _refreshTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted) {
-        setState(() {
-          final random = Random();
-          final fluctuation = random.nextInt(1048576) - 524288;
-          _freeHddSpace = (_freeHddSpace + fluctuation).clamp(
-            (_totalHddSpace * 0.1).toInt(),
-            (_totalHddSpace * 0.9).toInt(),
-          );
-        });
-      }
-    });
-  }
-
-  double get hddUsagePercent => _totalHddSpace > 0
-      ? ((_totalHddSpace - _freeHddSpace) / _totalHddSpace)
-      : 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final usedHdd = _totalHddSpace - _freeHddSpace;
-    return ResourceCard(
-      icon: Icons.sd_storage_rounded,
-      title: 'Disk',
-      value: '${(usedHdd / 1024 / 1024).toStringAsFixed(1)} MB',
-      usagePercent: hddUsagePercent,
-      subtitle: '${(_totalHddSpace / 1024 / 1024).toStringAsFixed(0)} MB Total',
-    );
-  }
-}
-
 // Daily Income card - shows today's revenue
 class DailyIncomeCard extends ConsumerWidget {
   const DailyIncomeCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final service = ref.watch(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // In demo mode, use the income provider which has demo data
-      return ref.watch(incomeProvider).when(
-        data: (incomeState) {
-          return _IncomeCard(
-            icon: Icons.attach_money_rounded,
-            title: 'Today\'s Income',
-            value: '\$${incomeState.summary.todayIncome.toStringAsFixed(2)}',
-            subtitle: '${incomeState.summary.transactionsToday} transaction${incomeState.summary.transactionsToday != 1 ? 's' : ''}',
-            color: Colors.green,
-          );
-        },
-        loading: () => const _IncomeCard(
-          icon: Icons.attach_money_rounded,
-          title: 'Today\'s Income',
-          value: '\$0.00',
-          subtitle: 'Loading...',
-          color: Colors.green,
-        ),
-        error: (_, __) => const _IncomeCard(
-          icon: Icons.attach_money_rounded,
-          title: 'Today\'s Income',
-          value: '\$0.00',
-          subtitle: 'Error loading',
-          color: Colors.green,
-        ),
-      );
-    }
-
     return ref.watch(incomeProvider).when(
       data: (incomeState) {
         return _IncomeCard(
@@ -454,37 +239,6 @@ class MonthlyIncomeCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final service = ref.watch(routerOSServiceProvider);
-
-    if (service.isDemoMode) {
-      // In demo mode, use the income provider which has demo data
-      return ref.watch(incomeProvider).when(
-        data: (incomeState) {
-          return _IncomeCard(
-            icon: Icons.account_balance_wallet_rounded,
-            title: 'This Month',
-            value: '\$${incomeState.summary.thisMonthIncome.toStringAsFixed(2)}',
-            subtitle: '${incomeState.summary.transactionsThisMonth} transaction${incomeState.summary.transactionsThisMonth != 1 ? 's' : ''}',
-            color: Colors.blue,
-          );
-        },
-        loading: () => const _IncomeCard(
-          icon: Icons.account_balance_wallet_rounded,
-          title: 'This Month',
-          value: '\$0.00',
-          subtitle: 'Loading...',
-          color: Colors.blue,
-        ),
-        error: (_, __) => const _IncomeCard(
-          icon: Icons.account_balance_wallet_rounded,
-          title: 'This Month',
-          value: '\$0.00',
-          subtitle: 'Error loading',
-          color: Colors.blue,
-        ),
-      );
-    }
-
     return ref.watch(incomeProvider).when(
       data: (incomeState) {
         return _IncomeCard(

@@ -64,18 +64,20 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
   Widget build(BuildContext context) {
     final hostsAsync = ref.watch(hotspotHostsProvider);
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/dashboard'),
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.go('/dashboard'),
+          ),
+          title: Text('Hotspot Hosts'),
         ),
-        title: Text('Hotspot Hosts'),
-      ),
       body: Column(
         children: [
           _buildSearchAndFilter(),
@@ -93,6 +95,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -144,7 +147,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                         _selectedFilter = selected ? filter : HostFilter.all;
                       });
                     },
-                    selectedColor: context.appPrimary.withOpacity(0.2),
+                    selectedColor: context.appPrimary.withValues(alpha: 0.2),
                     checkmarkColor: context.appPrimary,
                     labelStyle: TextStyle(
                       color: isSelected ? context.appPrimary : context.appOnSurface,
@@ -194,7 +197,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: context.appOnSurface.withOpacity(0.05),
+            color: context.appOnSurface.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -208,7 +211,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(host).withOpacity(0.15),
+                      color: _getStatusColor(host).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -233,7 +236,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                           Text(
                             host.macAddress!,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.appOnSurface.withOpacity(0.7),
+                                  color: context.appOnSurface.withValues(alpha: 0.7),
                                   fontFamily: 'monospace',
                                 ),
                           ),
@@ -245,7 +248,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                   Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 14,
-                    color: context.appOnSurface.withOpacity(0.3),
+                    color: context.appOnSurface.withValues(alpha: 0.3),
                   ),
                 ],
               ),
@@ -281,7 +284,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                 Text(
                   host.comment!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: context.appOnSurface.withOpacity(0.5),
+                        color: context.appOnSurface.withValues(alpha: 0.5),
                         fontStyle: FontStyle.italic,
                       ),
                 ),
@@ -300,7 +303,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -318,12 +321,12 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: context.appOnSurface.withOpacity(0.5)),
+        Icon(icon, size: 14, color: context.appOnSurface.withValues(alpha: 0.5)),
         SizedBox(width: 4),
         Text(
           '$label: ',
           style: TextStyle(
-            color: context.appOnSurface.withOpacity(0.5),
+            color: context.appOnSurface.withValues(alpha: 0.5),
             fontSize: 11,
           ),
         ),
@@ -380,7 +383,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
           Text(
             error.toString(),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.appOnSurface.withOpacity(0.6),
+                  color: context.appOnSurface.withValues(alpha: 0.6),
                 ),
             textAlign: TextAlign.center,
           ),
@@ -396,7 +399,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
         children: [
           Icon(
             Icons.lan_outlined,
-            color: context.appOnSurface.withOpacity(0.3),
+            color: context.appOnSurface.withValues(alpha: 0.3),
             size: 64,
           ),
           SizedBox(height: 16),
@@ -410,7 +413,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
           Text(
             'Try changing filters or search terms',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.appOnSurface.withOpacity(0.5),
+                  color: context.appOnSurface.withValues(alpha: 0.5),
                 ),
           ),
         ],

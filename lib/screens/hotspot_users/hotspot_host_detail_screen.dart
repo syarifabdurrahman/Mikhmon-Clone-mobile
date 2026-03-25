@@ -84,13 +84,13 @@ class HotspotHostDetailScreen extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            deviceColor.withOpacity(0.2),
-            deviceColor.withOpacity(0.05),
+            deviceColor.withValues(alpha: 0.2),
+            deviceColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: deviceColor.withOpacity(0.3),
+          color: deviceColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -100,7 +100,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: deviceColor.withOpacity(0.2),
+              color: deviceColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -137,10 +137,10 @@ class HotspotHostDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: deviceColor.withOpacity(0.15),
+              color: deviceColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: deviceColor.withOpacity(0.3),
+                color: deviceColor.withValues(alpha: 0.3),
               ),
             ),
             child: Text(
@@ -170,7 +170,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: context.appOnSurface.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha: 0.05),
         ),
       ),
       child: Padding(
@@ -199,10 +199,10 @@ class HotspotHostDetailScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
+                    color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: statusColor.withOpacity(0.3),
+                      color: statusColor.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -234,7 +234,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
                   child: Text(
                     host.statusDescription,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.appOnSurface.withOpacity(0.6),
+                          color: context.appOnSurface.withValues(alpha: 0.6),
                         ),
                   ),
                 ),
@@ -286,7 +286,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: context.appOnSurface.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha: 0.05),
         ),
       ),
       child: Padding(
@@ -366,7 +366,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: context.appOnSurface.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha: 0.05),
         ),
       ),
       child: Padding(
@@ -435,7 +435,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: context.appOnSurface.withOpacity(0.05),
+          color: context.appOnSurface.withValues(alpha: 0.05),
         ),
       ),
       child: Padding(
@@ -487,7 +487,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
               Text(
                 'MAC vendor not found in database. This device may use a less common network adapter.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.appOnSurface.withOpacity(0.6),
+                      color: context.appOnSurface.withValues(alpha: 0.6),
                       fontStyle: FontStyle.italic,
                     ),
               ),
@@ -509,12 +509,12 @@ class HotspotHostDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: context.appOnSurface.withOpacity(0.5)),
+          Icon(icon, size: 18, color: context.appOnSurface.withValues(alpha: 0.5)),
           SizedBox(width: 12),
           Text(
             '$label:',
             style: TextStyle(
-              color: context.appOnSurface.withOpacity(0.6),
+              color: context.appOnSurface.withValues(alpha: 0.6),
               fontSize: 13,
             ),
           ),
@@ -552,7 +552,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: context.appOnSurface.withOpacity(0.7),
+                  color: context.appOnSurface.withValues(alpha: 0.7),
                   fontSize: 13,
                 ),
               ),
@@ -569,7 +569,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
             Text(
               '${(percentage * 100).toStringAsFixed(1)}%',
               style: TextStyle(
-                color: context.appOnSurface.withOpacity(0.5),
+                color: context.appOnSurface.withValues(alpha: 0.5),
                 fontSize: 12,
               ),
             ),
@@ -580,7 +580,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: percentage,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 6,
           ),

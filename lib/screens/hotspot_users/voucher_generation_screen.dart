@@ -80,7 +80,6 @@ class _VoucherGenerationScreenState
   bool _isGenerating = false;
   bool _generationSuccessful = false;
   String? _generationStatus;
-  int _generatedCount = 0;
 
   @override
   void initState() {
@@ -103,9 +102,6 @@ class _VoucherGenerationScreenState
     _commentController.dispose();
     super.dispose();
   }
-
-  // Check if demo mode is enabled
-  bool get _isDemoMode => ref.read(routerOSServiceProvider).isDemoMode;
 
   // Get available character types based on user mode
   List<CharType> get _availableCharTypes {
@@ -148,7 +144,6 @@ class _VoucherGenerationScreenState
       _isGenerating = false;
       _generationSuccessful = false;
       _generationStatus = null;
-      _generatedCount = 0;
     });
   }
 
@@ -168,122 +163,80 @@ class _VoucherGenerationScreenState
 
     final qty = int.tryParse(_qtyController.text) ?? 1;
 
-    if (_isDemoMode) {
-      setState(() {
-        _isGenerating = true;
-        _generationStatus = 'Generating vouchers...';
-        _generatedCount = 0;
-      });
+    // Real RouterOS API call
+    final service = ref.read(routerOSServiceProvider);
+    final client = service.client;
 
-      // Simulate generation with delay
+    if (client == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Not connected to RouterOS. Please login first.'),
+            backgroundColor: context.appError,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _isGenerating = true;
+      _generationStatus = 'Generating vouchers on RouterOS...';
+    });
+
+    try {
+      // Generate vouchers one by one to avoid overwhelming the router
       for (int i = 1; i <= qty; i++) {
-        await Future.delayed(const Duration(milliseconds: 100));
+        // Update progress
+        setState(() {
+          _generationStatus = 'Generated $i of $qty vouchers...';
+        });
 
         // Generate random voucher
         final username = _generateUsername(i);
         final password =
             _userMode == UserMode.vc ? username : _generatePassword();
-
-        // Build comment
         final comment = _buildComment();
 
-        // Add to demo users
-        await ref.read(hotspotUsersProvider.notifier).addUser(
-              username: username,
-              password: password,
-              profile: _selectedProfile ?? 'default',
-              comment: comment,
-            );
+        // Parse validity and data limit
+        final validity = _timeLimitController.text.trim();
+        final dataLimit = _parseDataLimit(_dataLimitController.text.trim());
 
-        setState(() {
-          _generatedCount = i;
-          _generationStatus = 'Generated $i of $qty vouchers...';
-        });
+        // Add user via RouterOS API
+        await client.addHotspotUser(
+          username: username,
+          password: password,
+          profile: _selectedProfile ?? 'default',
+          comment: comment,
+          validity: validity.isEmpty ? null : validity,
+          dataLimit: dataLimit,
+        );
+
+        // Small delay between requests to avoid overwhelming the router
+        if (i < qty) {
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
       }
 
       setState(() {
         _isGenerating = false;
         _generationSuccessful = true;
-        _generationStatus = 'Generated $qty vouchers successfully!';
+        _generationStatus = 'Successfully generated $qty vouchers!';
       });
-    } else {
-      // Real RouterOS API call
-      final service = ref.read(routerOSServiceProvider);
-      final client = service.client;
-
-      if (client == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Not connected to RouterOS. Please login first.'),
-              backgroundColor: context.appError,
-            ),
-          );
-        }
-        return;
-      }
-
+    } catch (e) {
       setState(() {
-        _isGenerating = true;
-        _generationStatus = 'Generating vouchers on RouterOS...';
-        _generatedCount = 0;
+        _isGenerating = false;
+        _generationStatus = null;
       });
 
-      try {
-        // Generate vouchers one by one to avoid overwhelming the router
-        for (int i = 1; i <= qty; i++) {
-          // Update progress
-          setState(() {
-            _generatedCount = i;
-            _generationStatus = 'Generated $i of $qty vouchers...';
-          });
-
-          // Generate random voucher
-          final username = _generateUsername(i);
-          final password =
-              _userMode == UserMode.vc ? username : _generatePassword();
-          final comment = _buildComment();
-
-          // Parse validity and data limit
-          final validity = _timeLimitController.text.trim();
-          final dataLimit = _parseDataLimit(_dataLimitController.text.trim());
-
-          // Add user via RouterOS API
-          await client.addHotspotUser(
-            username: username,
-            password: password,
-            profile: _selectedProfile ?? 'default',
-            comment: comment,
-            validity: validity.isEmpty ? null : validity,
-            dataLimit: dataLimit,
-          );
-
-          // Small delay between requests to avoid overwhelming the router
-          if (i < qty) {
-            await Future.delayed(const Duration(milliseconds: 200));
-          }
-        }
-
-        setState(() {
-          _isGenerating = false;
-          _generationSuccessful = true;
-          _generationStatus = 'Successfully generated $qty vouchers!';
-        });
-      } catch (e) {
-        setState(() {
-          _isGenerating = false;
-          _generationStatus = null;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to generate vouchers: $e'),
-              backgroundColor: context.appError,
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate vouchers: $e'),
+            backgroundColor: context.appError,
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
     }
   }
@@ -393,7 +346,6 @@ class _VoucherGenerationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isDemo = _isDemoMode;
     final profilesAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
@@ -426,34 +378,6 @@ class _VoucherGenerationScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Demo Mode Banner
-              if (isDemo)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    border:
-                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline,
-                          color: Colors.orange, size: 20),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Demo Mode: Vouchers will be generated locally',
-                          style: TextStyle(
-                              color: Colors.orange.shade200, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
               // General Settings Card
               _buildSectionCard(
                 title: 'General Settings',

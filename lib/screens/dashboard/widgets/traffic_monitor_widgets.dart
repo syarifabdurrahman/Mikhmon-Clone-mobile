@@ -43,7 +43,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
   Future<void> _loadInitialData() async {
     debugPrint('[Traffic] _loadInitialData called');
     final trafficAsync = ref.read(interfaceTrafficProvider);
-    debugPrint('[Traffic] Provider state: ${trafficAsync}');
+    debugPrint('[Traffic] Provider state: $trafficAsync');
     trafficAsync.when(
       data: (interfaces) {
         debugPrint('[Traffic] Initial data loaded: ${interfaces.length} interfaces');

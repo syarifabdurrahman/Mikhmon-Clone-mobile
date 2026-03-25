@@ -105,7 +105,6 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_routerOSService.isDemoMode) _buildDemoBanner(),
                   _buildUserHeader(),
                   SizedBox(height: 16),
                   _buildStatusCard(),
@@ -438,16 +437,7 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                 title: Text('Delete User'),
                 trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 onTap: () {
-                  if (_routerOSService.isDemoMode) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Delete from users list in demo mode'),
-                        backgroundColor: context.appPrimary,
-                      ),
-                    );
-                  } else {
-                    _confirmDeleteUser();
-                  }
+                  _confirmDeleteUser();
                 },
               ),
             ],
@@ -541,21 +531,6 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
 
   Future<void> _deleteUser() async {
     try {
-      // Skip actual deletion in demo mode, just navigate back
-      if (_routerOSService.isDemoMode) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('User "${_user.name}" removed (demo mode)'),
-              backgroundColor: context.appSuccess,
-            ),
-          );
-          // Dialog is already closed, just pop the details screen
-          Navigator.pop(context);
-        }
-        return;
-      }
-
       final client = _routerOSService.client;
       if (client != null) {
         await client.removeHotspotUser(_user.id);
@@ -580,44 +555,5 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
         );
       }
     }
-  }
-
-  Widget _buildDemoBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            context.appPrimary.withValues(alpha: 0.2),
-            context.appPrimary.withValues(alpha: 0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: context.appPrimary.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.science_rounded,
-            color: context.appPrimary,
-            size: 20,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Demo Mode - Showing simulated user data',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.appPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

@@ -287,17 +287,7 @@ class MacVendorDetector {
     }
 
     // Format with colons
-    return cleaned.substring(0, 2) +
-        ':' +
-        cleaned.substring(2, 4) +
-        ':' +
-        cleaned.substring(4, 6) +
-        ':' +
-        cleaned.substring(6, 8) +
-        ':' +
-        cleaned.substring(8, 10) +
-        ':' +
-        cleaned.substring(10, 12);
+    return '${cleaned.substring(0, 2)}:${cleaned.substring(2, 4)}:${cleaned.substring(4, 6)}:${cleaned.substring(6, 8)}:${cleaned.substring(8, 10)}:${cleaned.substring(10, 12)}';
   }
 }
 

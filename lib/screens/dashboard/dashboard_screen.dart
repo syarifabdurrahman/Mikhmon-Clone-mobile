@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
-import '../../services/routeros_service.dart';
 import '../../services/models.dart';
 import '../../providers/app_providers.dart';
 import 'widgets/resource_card_widgets.dart';
@@ -25,6 +24,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Timer? _refreshTimer;
   late final ValueNotifier<SystemResources?> _resourcesNotifier;
   bool _isFetching = false; // Guard against concurrent fetches
+  DateTime? _lastBackPressTime; // Track back button presses for exit confirmation
 
   @override
   void initState() {
@@ -32,17 +32,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _resourcesNotifier = ValueNotifier<SystemResources?>(null);
 
     // Check if we have cached data before showing loading state
-    final service = ref.read(routerOSServiceProvider);
     final cache = ref.read(cacheServiceProvider);
     final hasCachedData = cache.getSystemResources() != null ||
                           ref.read(authStateProvider).value?.systemResources != null;
 
     // Don't show loading if we have cached data (seamless navigation)
-    _loadDashboardData(showLoading: !hasCachedData && !service.isDemoMode);
+    _loadDashboardData(showLoading: !hasCachedData);
     _startPeriodicRefresh();
-
-    // Preload user profiles in background - just read provider to trigger initial load
-    Future.microtask(() => ref.read(userProfileProvider));
   }
 
   @override
@@ -55,14 +51,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// Start periodic refresh every 3 seconds
   /// Uses Future.delayed to skip first tick for seamless navigation
   void _startPeriodicRefresh() {
-    final service = ref.read(routerOSServiceProvider);
-
-    // Only refresh periodically in real mode (not demo)
-    if (service.isDemoMode) {
-      debugPrint('[Dashboard] Demo mode - skipping periodic refresh');
-      return;
-    }
-
     debugPrint('[Dashboard] Starting periodic refresh timer (first tick in 3s)');
 
     // Use Future.delayed to skip first tick, then start periodic timer
@@ -108,27 +96,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       debugPrint('=== DASHBOARD LOADING ===');
       final service = ref.read(routerOSServiceProvider);
       final cache = ref.read(cacheServiceProvider);
-      debugPrint('Demo Mode: ${service.isDemoMode}');
       debugPrint('Is Connected: ${service.isConnected}');
       debugPrint('Initial Load: $_isInitialLoad');
-
-      // Check if demo mode is enabled
-      if (service.isDemoMode) {
-        debugPrint('Using demo mode data');
-        // Simulate loading delay for initial load
-        if (_isInitialLoad) {
-          await Future.delayed(const Duration(milliseconds: 800));
-        }
-
-        if (mounted) {
-          setState(() {
-            _resources = _getDemoResources();
-            _isInitialLoad = false;
-          });
-          _updateResourcesNotifier();
-        }
-        return;
-      }
 
       // Check if we have pre-fetched data from login (fastest path)
       final authState = ref.read(authStateProvider);
@@ -269,56 +238,61 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  SystemResources _getDemoResources() {
-    // Return static base resources - individual widgets handle dynamic updates
-    return SystemResources(
-      platform: 'Mikrotik Cloud Hosted Router',
-      boardName: 'CHR-demo',
-      version: '7.12 (long-term)',
-      cpuFrequency: 1000,
-      cpuLoad: 15,
-      freeMemory: 1048576,
-      totalMemory: 2097152,
-      freeHddSpace: 52428800,
-      totalHddSpace: 104857600,
-      uptimeSeconds: 86400 * 3 + 3600 * 12 + 1800,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () {
-            RouterOSService().setDemoMode(false);
-            context.go('/');
-          },
-        ),
-        title: Text(
-          'Dashboard',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            onPressed: () => context.push('/settings'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        final now = DateTime.now();
+        if (_lastBackPressTime == null ||
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Press back again to exit'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          // Double tap confirmed, exit the app
+          context.go('/');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () {
+              context.go('/');
+            },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
+          title: Text(
+            'Dashboard',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: context.appOnSurface,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
-        ],
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings_rounded),
+              onPressed: () => context.push('/settings'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
+            ),
+          ],
+        ),
+        body: _buildBody(),
       ),
-      body: _buildBody(),
     );
   }
 
@@ -424,7 +398,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (ref.read(routerOSServiceProvider).isDemoMode) _buildDemoBanner(),
             _buildSystemInfoCard(),
             const SizedBox(height: 16),
             _buildResourceChart(),
@@ -515,14 +488,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildResourceChart() {
-    final isDemoMode = ref.read(routerOSServiceProvider).isDemoMode;
-
     return ListenableBuilder(
       listenable: ref.read(resourceHistoryProvider),
       builder: (context, child) {
         return CombinedResourceChart(
           resourceHistory: ref.read(resourceHistoryProvider),
-          isDemoMode: isDemoMode,
         );
       },
     );
@@ -718,43 +688,5 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } else {
       return '${minutes}m';
     }
-  }
-
-  Widget _buildDemoBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            context.appPrimary.withValues(alpha: 0.2),
-            context.appPrimary.withValues(alpha: 0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: context.appPrimary.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.science_rounded,
-            color: context.appPrimary,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Demo Mode - Showing simulated data',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.appPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

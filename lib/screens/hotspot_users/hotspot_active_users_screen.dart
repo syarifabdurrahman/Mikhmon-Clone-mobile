@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -63,15 +62,6 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
   }
 
   void _startAutoRefresh() {
-    final service = ref.read(routerOSServiceProvider);
-
-    // Only refresh periodically in real mode (not demo)
-    // In demo mode, individual cards update themselves
-    if (service.isDemoMode) {
-      debugPrint('[ActiveUsers] Demo mode - skipping periodic refresh');
-      return;
-    }
-
     // Refresh every 5 seconds to get actual data from router
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted) {
@@ -86,7 +76,6 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
   @override
   Widget build(BuildContext context) {
     final activeUsersAsync = ref.watch(hotspotActiveUsersProvider);
-    final service = ref.watch(routerOSServiceProvider);
 
     return Scaffold(
       backgroundColor: context.appBackground,
@@ -106,41 +95,6 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
               ),
         ),
         actions: [
-          if (service.isDemoMode)
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    context.appPrimary.withValues(alpha: 0.2),
-                    context.appPrimary.withValues(alpha: 0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: context.appPrimary.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.science_rounded,
-                    color: context.appPrimary,
-                    size: 16,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'DEMO',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.appPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ],
-              ),
-            ),
           IconButton(
             icon: Icon(Icons.refresh_rounded),
             onPressed: () {
@@ -182,7 +136,6 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                           onTap: () => _showUserDetails(user),
                           onDetails: () => _showUserDetails(user),
                           onLogout: () => _confirmLogout(user),
-                          isDemoMode: service.isDemoMode,
                         ),
                       );
                     },
@@ -605,14 +558,12 @@ class _UserCardWidget extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback onDetails;
   final VoidCallback onLogout;
-  final bool isDemoMode;
 
   const _UserCardWidget({
     required this.user,
     required this.onTap,
     required this.onDetails,
     required this.onLogout,
-    this.isDemoMode = false,
   });
 
   @override
@@ -623,19 +574,12 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
   late String _displayUptime;
   late String _displayDataUsed;
   Timer? _updateTimer;
-  final Random _random = Random();
-
-  // Track initial bytes for demo mode simulation
-  late int _initialBytesIn;
-  late int _initialBytesOut;
 
   @override
   void initState() {
     super.initState();
     _displayUptime = widget.user.uptime;
     _displayDataUsed = widget.user.dataUsed;
-    _initialBytesIn = widget.user.bytesIn;
-    _initialBytesOut = widget.user.bytesOut;
 
     // Start local timer for dynamic updates (every 1 second)
     _startDynamicUpdates();
@@ -652,48 +596,13 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
     _updateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
-          if (widget.isDemoMode) {
-            // Demo mode: simulate data changes
-            _simulateDynamicUpdates();
-          } else {
-            // Real mode: use actual values from user object
-            // (these update when provider refreshes)
-            _displayUptime = widget.user.uptime;
-            _displayDataUsed = widget.user.dataUsed;
-          }
+          // Use actual values from user object
+          // (these update when provider refreshes)
+          _displayUptime = widget.user.uptime;
+          _displayDataUsed = widget.user.dataUsed;
         });
       }
     });
-  }
-
-  void _simulateDynamicUpdates() {
-    // Simulate uptime increment
-    final uptimeParts = widget.user.uptime.split(' ');
-    if (uptimeParts.isNotEmpty) {
-      final lastPart = uptimeParts.last;
-      final value = int.tryParse(lastPart.replaceAll(RegExp(r'[^\d]'), '')) ?? 0;
-      final unit = lastPart.replaceAll(RegExp(r'[\d]'), '');
-
-      if (unit.contains('m') || unit.isEmpty) {
-        final newValue = value + 1;
-        final prefix = uptimeParts.sublist(0, uptimeParts.length - 1).join(' ');
-        _displayUptime = '$prefix${uptimeParts.length > 1 ? ' ' : ''}${newValue}m';
-      }
-    }
-
-    // Simulate data usage increase
-    final additionalBytes = _random.nextInt(1024 * 100); // 0-100KB
-    final currentBytesIn = _initialBytesIn + additionalBytes;
-    final currentBytesOut = _initialBytesOut + (additionalBytes ~/ 2);
-    final totalBytes = currentBytesIn + currentBytesOut;
-
-    if (totalBytes < 1024 * 1024) {
-      _displayDataUsed = '${(totalBytes / 1024).toStringAsFixed(1)} KB';
-    } else if (totalBytes < 1024 * 1024 * 1024) {
-      _displayDataUsed = '${(totalBytes / 1024 / 1024).toStringAsFixed(1)} MB';
-    } else {
-      _displayDataUsed = '${(totalBytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
-    }
   }
 
   @override

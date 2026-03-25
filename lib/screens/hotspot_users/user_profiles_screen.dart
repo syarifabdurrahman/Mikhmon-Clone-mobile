@@ -23,9 +23,11 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     final profilesAsync = ref.watch(userProfileProvider);
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: _buildAppBar(),
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: _buildAppBar(),
       body: profilesAsync.when(
         data: (profiles) {
           if (profiles.isEmpty) {
@@ -68,6 +70,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
         foregroundColor: Colors.white,
         icon: Icon(Icons.add_rounded),
         label: Text('Add Profile'),
+      ),
       ),
     );
   }
@@ -263,14 +266,16 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final primaryColor = context.appPrimary;
               await ref
                   .read(userProfileProvider.notifier)
                   .deleteProfile(profile.id);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text('Profile "${profile.name}" deleted'),
-                    backgroundColor: context.appPrimary,
+                    backgroundColor: primaryColor,
                   ),
                 );
               }

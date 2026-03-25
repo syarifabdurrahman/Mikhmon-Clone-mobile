@@ -415,9 +415,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   Future<void> _quickLogin(RouterConnection connection, String password) async {
     try {
-      // Set demo mode to false since we're using real connection
-      await ref.read(authStateProvider.notifier).setDemoMode(false);
-
       await ref.read(authStateProvider.notifier).login(
             host: connection.host,
             port: connection.port,
