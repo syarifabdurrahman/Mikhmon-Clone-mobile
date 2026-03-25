@@ -623,7 +623,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   List<Map<String, dynamic>> _getDemoUsers() {
     return [
       {
-        '.id': '*1',
+        '.id': 'demo-1',
         'name': 'demo_user1',
         'profile': 'default',
         'bytes-in': '1048576',
@@ -634,7 +634,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
         'comment': 'Demo user 1',
       },
       {
-        '.id': '*2',
+        '.id': 'demo-2',
         'name': 'demo_user2',
         'profile': 'premium',
         'bytes-in': '5242880',
@@ -645,7 +645,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
         'comment': 'Demo user 2',
       },
       {
-        '.id': '*3',
+        '.id': 'demo-3',
         'name': 'expired_user',
         'profile': 'default',
         'bytes-in': '0',
@@ -921,16 +921,6 @@ final userProfileProvider = AsyncNotifierProvider<UserProfileNotifier, List<User
   return UserProfileNotifier();
 });
 
-// Provider that always returns profiles (for dependency-free access)
-final userProfileProviderAlways = Provider<List<UserProfile>>((ref) {
-  // This provider watches the async provider but doesn't cause circular dependency
-  final asyncValue = ref.watch(userProfileProvider);
-  return asyncValue.maybeWhen(
-    data: (profiles) => profiles,
-    orElse: () => [], // Return empty list instead of demo fallback
-  );
-});
-
 // Interface Traffic Provider
 final interfaceTrafficProvider = AsyncNotifierProvider<InterfaceTrafficNotifier, List<InterfaceTraffic>>(() {
   return InterfaceTrafficNotifier();
@@ -963,9 +953,9 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     final cachedProfiles = cache.getUserProfiles();
     if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
       // Check if cached profiles are demo profiles (from previous demo session)
-      // Demo profiles have IDs starting with '*'
+      // Demo profiles have IDs starting with 'demo-'
       final hasDemoProfiles = cachedProfiles.any((p) =>
-        p['id'] != null && p['id'].toString().startsWith('*'));
+        p['id'] != null && p['id'].toString().startsWith('demo-'));
 
       if (hasDemoProfiles) {
         debugPrint('[UserProfiles] Demo profiles found in cache, clearing and fetching real profiles');
@@ -1078,7 +1068,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         final cachedProfiles = cache.getUserProfiles();
         if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
           final hasDemoProfiles = cachedProfiles.any((p) =>
-            p['id'] != null && p['id'].toString().startsWith('*'));
+            p['id'] != null && p['id'].toString().startsWith('demo-'));
           if (hasDemoProfiles) {
             debugPrint('[UserProfiles] Clearing demo profiles from cache during refresh');
             await cache.clearUserProfiles();
@@ -1095,23 +1085,6 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     } catch (e) {
       // Silent fail - don't show error on auto-refresh
       debugPrint('[UserProfiles] Silent refresh failed: $e');
-    }
-  }
-
-  // Force refresh that clears demo profiles first
-  Future<void> forceRefresh() async {
-    debugPrint('[UserProfiles] forceRefresh() called');
-    final service = ref.read(routerOSServiceProvider);
-
-    if (!service.isDemoMode) {
-      // In real mode, clear demo profiles from cache
-      final cache = ref.read(cacheServiceProvider);
-      await cache.clearUserProfiles();
-      // Fetch fresh data
-      final newProfiles = await _fetchProfilesAndCacheInternal();
-      state = AsyncValue.data(newProfiles);
-    } else {
-      await silentRefresh();
     }
   }
 
@@ -1202,7 +1175,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
   List<UserProfile> _getDemoProfiles() {
     return [
       UserProfile(
-        id: '*1',
+        id: 'demo-1',
         name: 'default',
         rateLimitUpload: 'unlimited',
         rateLimitDownload: 'unlimited',
@@ -1212,7 +1185,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         autologout: true,
       ),
       UserProfile(
-        id: '*2',
+        id: 'demo-2',
         name: '1hour',
         rateLimitUpload: '512k',
         rateLimitDownload: '1M',
@@ -1222,7 +1195,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         autologout: true,
       ),
       UserProfile(
-        id: '*3',
+        id: 'demo-3',
         name: '1day',
         rateLimitUpload: '256k',
         rateLimitDownload: '512k',
@@ -1232,7 +1205,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         autologout: true,
       ),
       UserProfile(
-        id: '*4',
+        id: 'demo-4',
         name: '1week',
         rateLimitUpload: '128k',
         rateLimitDownload: '256k',
@@ -1242,7 +1215,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         autologout: true,
       ),
       UserProfile(
-        id: '*5',
+        id: 'demo-5',
         name: '1month',
         rateLimitUpload: '64k',
         rateLimitDownload: '128k',
@@ -1723,7 +1696,6 @@ final hotspotHostsProvider = AsyncNotifierProvider<HotspotHostsNotifier, List<Ho
 });
 
 class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
-  Timer? _refreshTimer;
   bool _timerStarted = false;
 
   @override
@@ -1760,7 +1732,7 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
     if (_timerStarted) return;
     _timerStarted = true;
     debugPrint('[Hosts] Starting auto-refresh timer (every 5 seconds)');
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    Timer.periodic(const Duration(seconds: 5), (timer) {
       debugPrint('[Hosts] Timer fired, calling silentRefresh()');
       silentRefresh();
     });
@@ -1781,7 +1753,7 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
     final now = DateTime.now();
     return [
       HotspotHost(
-        id: '*1',
+        id: 'demo-1',
         macAddress: 'AA:BB:CC:DD:EE:01',
         address: '192.168.88.100',
         server: 'hotspot1',
@@ -1797,7 +1769,7 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
         packetsOut: 8456,
       ),
       HotspotHost(
-        id: '*2',
+        id: 'demo-2',
         macAddress: 'AA:BB:CC:DD:EE:02',
         address: '192.168.88.101',
         server: 'hotspot1',
@@ -1813,7 +1785,7 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
         packetsOut: 25678,
       ),
       HotspotHost(
-        id: '*3',
+        id: 'demo-3',
         macAddress: 'AA:BB:CC:DD:EE:03',
         address: '192.168.88.102',
         server: 'hotspot1',
@@ -1830,7 +1802,7 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
         packetsOut: 4521,
       ),
       HotspotHost(
-        id: '*4',
+        id: 'demo-4',
         macAddress: 'AA:BB:CC:DD:EE:04',
         address: '192.168.88.103',
         server: 'hotspot1',

@@ -23,6 +23,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   UserStatusFilter _statusFilter = UserStatusFilter.all;
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingMore = false;
+  bool _isSelectionActive = false;
+  final Set<String> _selectedUserIds = {};
 
   @override
   bool get wantKeepAlive => true;
@@ -130,6 +132,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                           user: filteredUsers[index],
                           onTap: () => _navigateToUserDetails(filteredUsers[index]),
                           onLongPress: () => _showUserContextMenu(filteredUsers[index]),
+                          isSelectionMode: _isSelectionActive,
+                          isSelected: _selectedUserIds.contains(filteredUsers[index].id),
+                          onToggleSelection: () => _toggleUserSelection(filteredUsers[index].id),
                         ),
                       );
                     },
@@ -147,7 +152,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: Column(
+      floatingActionButton: _isSelectionActive ? null : Column(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -172,6 +177,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
           ),
         ],
       ),
+      bottomNavigationBar: _isSelectionActive ? _buildBulkActionBar(context) : null,
     );
   }
 
@@ -180,27 +186,246 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       backgroundColor: context.appSurface,
       foregroundColor: context.appOnSurface,
       elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_rounded),
-        onPressed: () => context.go('/dashboard'),
-      ),
-      title: Text(
-        'Hotspot Users',
-        style: TextStyle(
-          color: context.appOnSurface,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      leading: _isSelectionActive
+          ? IconButton(
+              icon: Icon(Icons.close_rounded),
+              onPressed: _exitSelectionMode,
+              tooltip: 'Exit selection',
+            )
+          : IconButton(
+              icon: Icon(Icons.arrow_back_rounded),
+              onPressed: () => context.go('/dashboard'),
+            ),
+      title: _isSelectionActive
+          ? Text('${_selectedUserIds.length} selected')
+          : Text(
+              'Hotspot Users',
+              style: TextStyle(
+                color: context.appOnSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
       actions: [
-        if (service.isDemoMode) _buildDemoBadge(),
-        IconButton(
-          icon: Icon(Icons.refresh_rounded),
-          onPressed: () {
-            ref.read(hotspotUsersProvider.notifier).refresh();
-          },
-        ),
+        if (!_isSelectionActive) ...[
+          if (service.isDemoMode) _buildDemoBadge(),
+          IconButton(
+            icon: Icon(Icons.checklist_rounded),
+            onPressed: _toggleSelectionMode,
+            tooltip: 'Select multiple',
+          ),
+          IconButton(
+            icon: Icon(Icons.refresh_rounded),
+            onPressed: () {
+              ref.read(hotspotUsersProvider.notifier).refresh();
+            },
+          ),
+        ] else ...[
+          IconButton(
+            icon: Icon(Icons.select_all_rounded),
+            onPressed: _selectAllVisible,
+            tooltip: 'Select all',
+          ),
+        ],
       ],
     );
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionActive = true;
+      _selectedUserIds.clear();
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionActive = false;
+      _selectedUserIds.clear();
+    });
+  }
+
+  void _toggleUserSelection(String userId) {
+    setState(() {
+      if (_selectedUserIds.contains(userId)) {
+        _selectedUserIds.remove(userId);
+        if (_selectedUserIds.isEmpty) {
+          _isSelectionActive = false;
+        }
+      } else {
+        _selectedUserIds.add(userId);
+      }
+    });
+  }
+
+  void _selectAllVisible() {
+    final usersAsync = ref.read(hotspotUsersProvider).value;
+    if (usersAsync == null) return;
+
+    final users = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final filteredUsers = _filterUsers(users);
+
+    setState(() {
+      _selectedUserIds.clear();
+      _selectedUserIds.addAll(filteredUsers.map((u) => u.id));
+    });
+  }
+
+  Widget _buildBulkActionBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.start,
+                children: [
+                  _BulkActionButton(
+                    icon: Icons.delete_rounded,
+                    label: 'Delete',
+                    color: Colors.red,
+                    onPressed: () => _confirmBulkDelete(context),
+                  ),
+                  _BulkActionButton(
+                    icon: Icons.block_rounded,
+                    label: 'Disable',
+                    color: Colors.orange,
+                    onPressed: () => _bulkDisableUsers(),
+                  ),
+                  _BulkActionButton(
+                    icon: Icons.check_circle_rounded,
+                    label: 'Enable',
+                    color: Colors.green,
+                    onPressed: () => _bulkEnableUsers(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmBulkDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${_selectedUserIds.length} users?'),
+        content: Text('This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _bulkDeleteUsers();
+    }
+  }
+
+  Future<void> _bulkDeleteUsers() async {
+    final service = ref.read(routerOSServiceProvider);
+
+    for (final userId in _selectedUserIds) {
+      try {
+        if (service.isDemoMode) {
+          await ref.read(hotspotUsersProvider.notifier).deleteUser(userId);
+        } else {
+          await ref.read(hotspotUsersProvider.notifier).deleteUser(userId);
+        }
+      } catch (e) {
+        debugPrint('[BulkActions] Error deleting user $userId: $e');
+      }
+    }
+
+    _exitSelectionMode();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_selectedUserIds.length} users deleted'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _bulkDisableUsers() async {
+    final usersAsync = ref.read(hotspotUsersProvider).value;
+    if (usersAsync == null) return;
+
+    final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+
+    for (final userId in _selectedUserIds) {
+      try {
+        final user = allUsers.firstWhere((u) => u.id == userId);
+        // Only disable if currently active (enabled)
+        if (user.active) {
+          await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(userId);
+        }
+      } catch (e) {
+        debugPrint('[BulkActions] Error disabling user $userId: $e');
+      }
+    }
+
+    _exitSelectionMode();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_selectedUserIds.length} users processed'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _bulkEnableUsers() async {
+    final usersAsync = ref.read(hotspotUsersProvider).value;
+    if (usersAsync == null) return;
+
+    final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+
+    for (final userId in _selectedUserIds) {
+      try {
+        final user = allUsers.firstWhere((u) => u.id == userId);
+        // Only enable if currently inactive (disabled)
+        if (!user.active) {
+          await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(userId);
+        }
+      } catch (e) {
+        debugPrint('[BulkActions] Error enabling user $userId: $e');
+      }
+    }
+
+    _exitSelectionMode();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_selectedUserIds.length} users processed'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Widget _buildDemoBadge() {
@@ -548,18 +773,26 @@ class _UserCard extends StatelessWidget {
   final HotspotUser user;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onToggleSelection;
 
   const _UserCard({
     required this.user,
     required this.onTap,
     required this.onLongPress,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onToggleSelection,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: context.appSurface,
+      color: isSelected
+          ? context.appPrimary.withValues(alpha: 0.15)
+          : context.appSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -572,22 +805,37 @@ class _UserCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        onLongPress: onLongPress,
+        onTap: isSelectionMode && onToggleSelection != null
+            ? onToggleSelection
+            : onTap,
+        onLongPress: isSelectionMode ? null : onLongPress,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              _UserAvatar(active: user.active),
-              SizedBox(width: 16),
+              if (isSelectionMode) ...[
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => onToggleSelection?.call(),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  side: BorderSide(color: context.appPrimary),
+                ),
+                SizedBox(width: 12),
+              ] else ...[
+                _UserAvatar(active: user.active),
+                SizedBox(width: 16),
+              ],
               Expanded(
                 child: _UserInfo(user: user),
               ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: context.appOnSurface.withValues(alpha: 0.3),
-              ),
+              if (!isSelectionMode)
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: context.appOnSurface.withValues(alpha: 0.3),
+                ),
             ],
           ),
         ),
@@ -798,3 +1046,37 @@ const List<Color> _inactiveAvatarColors = [
   Color(0x4DFFFFFF),
   Color(0x33FFFFFF),
 ];
+
+// Bulk action button widget
+class _BulkActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  const _BulkActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color.withValues(alpha: 0.15),
+        foregroundColor: color,
+        elevation: 0,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: color.withValues(alpha: 0.3)),
+        ),
+      ),
+    );
+  }
+}
