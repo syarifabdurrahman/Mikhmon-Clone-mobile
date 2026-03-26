@@ -321,6 +321,12 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                     color: Colors.green,
                     onPressed: () => _bulkEnableUsers(),
                   ),
+                  _BulkActionButton(
+                    icon: Icons.swap_horiz_rounded,
+                    label: 'Move Profile',
+                    color: context.appPrimary,
+                    onPressed: () => _showMoveProfileDialog(context),
+                  ),
                 ],
               ),
             ),
@@ -356,20 +362,50 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   }
 
   Future<void> _bulkDeleteUsers() async {
+    int successCount = 0;
+    int failCount = 0;
+    final totalUsers = _selectedUserIds.length;
+
+    // Show progress dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Deleting $totalUsers users...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     for (final userId in _selectedUserIds) {
       try {
         await ref.read(hotspotUsersProvider.notifier).deleteUser(userId);
+        successCount++;
       } catch (e) {
+        failCount++;
         debugPrint('[BulkActions] Error deleting user $userId: $e');
       }
     }
+
+    // Close progress dialog
+    if (mounted) Navigator.pop(context);
 
     _exitSelectionMode();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_selectedUserIds.length} users deleted'),
+          content: Text('Deleted $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
           behavior: SnackBarBehavior.floating,
+          backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
       );
     }
@@ -380,6 +416,27 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (usersAsync == null) return;
 
     final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    int successCount = 0;
+    int failCount = 0;
+    final totalUsers = _selectedUserIds.length;
+
+    // Show progress dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Disabling $totalUsers users...'),
+            ],
+          ),
+        ),
+      );
+    }
 
     for (final userId in _selectedUserIds) {
       try {
@@ -387,18 +444,24 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         // Only disable if currently active (enabled)
         if (user.active) {
           await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(userId);
+          successCount++;
         }
       } catch (e) {
+        failCount++;
         debugPrint('[BulkActions] Error disabling user $userId: $e');
       }
     }
+
+    // Close progress dialog
+    if (mounted) Navigator.pop(context);
 
     _exitSelectionMode();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_selectedUserIds.length} users processed'),
+          content: Text('Disabled $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
           behavior: SnackBarBehavior.floating,
+          backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
       );
     }
@@ -409,6 +472,27 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (usersAsync == null) return;
 
     final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    int successCount = 0;
+    int failCount = 0;
+    final totalUsers = _selectedUserIds.length;
+
+    // Show progress dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Enabling $totalUsers users...'),
+            ],
+          ),
+        ),
+      );
+    }
 
     for (final userId in _selectedUserIds) {
       try {
@@ -416,18 +500,166 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         // Only enable if currently inactive (disabled)
         if (!user.active) {
           await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(userId);
+          successCount++;
         }
       } catch (e) {
+        failCount++;
         debugPrint('[BulkActions] Error enabling user $userId: $e');
       }
     }
+
+    // Close progress dialog
+    if (mounted) Navigator.pop(context);
 
     _exitSelectionMode();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${_selectedUserIds.length} users processed'),
+          content: Text('Enabled $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
           behavior: SnackBarBehavior.floating,
+          backgroundColor: failCount > 0 ? Colors.orange : null,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showMoveProfileDialog(BuildContext context) async {
+    final profilesAsync = ref.read(userProfileProvider);
+
+    profilesAsync.when(
+      data: (profiles) {
+        final profileNames = profiles.map((p) => p.name).toList();
+
+        if (profileNames.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No profiles available'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+
+        String? selectedProfile;
+
+        showDialog(
+          context: context,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setDialogState) => AlertDialog(
+              title: Text('Move ${_selectedUserIds.length} users to profile'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Select a profile:'),
+                  SizedBox(height: 12),
+                  ...profileNames.map((profile) => RadioListTile<String>(
+                    title: Text(profile.toUpperCase()),
+                    value: profile,
+                    groupValue: selectedProfile,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedProfile = value;
+                      });
+                    },
+                  )),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: selectedProfile == null
+                      ? null
+                      : () {
+                          Navigator.pop(context);
+                          _bulkMoveToProfile(selectedProfile!);
+                        },
+                  child: Text('Move'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Loading profiles...'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      ),
+      error: (_, __) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load profiles'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _bulkMoveToProfile(String targetProfile) async {
+    final usersAsync = ref.read(hotspotUsersProvider).value;
+    if (usersAsync == null) return;
+
+    final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    int successCount = 0;
+    int failCount = 0;
+
+    // Show progress dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Moving users...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final service = ref.read(routerOSServiceProvider);
+    final client = service.client;
+    if (client == null) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
+
+    for (final userId in _selectedUserIds) {
+      try {
+        final user = allUsers.firstWhere((u) => u.id == userId);
+        if (user.profile != targetProfile) {
+          await client.setHotspotUserProfile(
+            id: userId,
+            profile: targetProfile,
+          );
+          successCount++;
+        }
+      } catch (e) {
+        failCount++;
+        debugPrint('[BulkActions] Error moving user $userId: $e');
+      }
+    }
+
+    // Close progress dialog
+    if (mounted) Navigator.pop(context);
+
+    _exitSelectionMode();
+    await ref.read(hotspotUsersProvider.notifier).refresh();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Moved $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
       );
     }

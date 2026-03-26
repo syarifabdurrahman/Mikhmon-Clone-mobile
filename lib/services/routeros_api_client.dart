@@ -469,6 +469,26 @@ class RouterOSClient {
     }
   }
 
+  Future<void> setHotspotUserProfile({
+    required String id,
+    required String profile,
+  }) async {
+    try {
+      _ensureConnected();
+      _writeWord('/ip/hotspot/user/set');
+      _writeWord('=.id=$id');
+      _writeWord('=profile=$profile');
+      _writeWord(''); // Empty word to terminate sentence
+
+      final response = await _readResponse();
+      if (_hasError(response)) {
+        throw Exception('Failed to set user profile: ${response.first}');
+      }
+    } catch (e) {
+      throw Exception('Failed to set hotspot user profile: $e');
+    }
+  }
+
   Future<void> updateHotspotUser({
     required String id,
     required String username,
