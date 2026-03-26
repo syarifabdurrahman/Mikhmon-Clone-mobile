@@ -64,20 +64,14 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
   Widget build(BuildContext context) {
     final hostsAsync = ref.watch(hotspotHostsProvider);
 
-    return PopScope(
-      canPop: true,
-      child: Scaffold(
-        backgroundColor: context.appBackground,
-        appBar: AppBar(
-          backgroundColor: context.appSurface,
-          foregroundColor: context.appOnSurface,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded),
-            onPressed: () => context.go('/dashboard'),
-          ),
-          title: Text('Hotspot Hosts'),
-        ),
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      appBar: AppBar(
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
+        elevation: 0,
+        title: Text('Hotspot Hosts'),
+      ),
       body: Column(
         children: [
           _buildSearchAndFilter(),
@@ -95,7 +89,6 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
             ),
           ),
         ],
-      ),
       ),
     );
   }
@@ -188,7 +181,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
 
   Widget _buildHostCard(HotspotHost host) {
     return InkWell(
-      onTap: () => context.push('/hosts/${host.id}', extra: host),
+      onTap: () => context.push('/main/hosts/${host.id}', extra: host),
       borderRadius: BorderRadius.circular(12),
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),

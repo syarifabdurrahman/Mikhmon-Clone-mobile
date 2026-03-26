@@ -24,7 +24,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Timer? _refreshTimer;
   late final ValueNotifier<SystemResources?> _resourcesNotifier;
   bool _isFetching = false; // Guard against concurrent fetches
-  DateTime? _lastBackPressTime; // Track back button presses for exit confirmation
 
   @override
   void initState() {
@@ -240,59 +239,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-
-        final now = DateTime.now();
-        if (_lastBackPressTime == null ||
-            now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
-          _lastBackPressTime = now;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Press back again to exit'),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        } else {
-          // Double tap confirmed, exit the app
-          context.go('/');
-        }
-      },
-      child: Scaffold(
-        backgroundColor: context.appBackground,
-        appBar: AppBar(
-          backgroundColor: context.appSurface,
-          foregroundColor: context.appOnSurface,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () {
-              context.go('/');
-            },
-          ),
-          title: Text(
-            'Dashboard',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: context.appOnSurface,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings_rounded),
-              onPressed: () => context.push('/settings'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
-            ),
-          ],
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      appBar: AppBar(
+        backgroundColor: context.appSurface,
+        foregroundColor: context.appOnSurface,
+        elevation: 0,
+        title: Text(
+          'Dashboard',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: context.appOnSurface,
+                fontWeight: FontWeight.bold,
+              ),
         ),
-        body: _buildBody(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () => context.push('/main/settings'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
+          ),
+        ],
       ),
+      body: _buildBody(),
     );
   }
 
@@ -550,7 +521,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Add Hotspot User',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  context.push('/users/add');
+                  context.push('/main/users/add');
                 },
               ),
               Divider(
@@ -562,7 +533,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Manage Hotspot',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  context.go('/users');
+                  context.go('/main/users');
                 },
               ),
               Divider(
@@ -574,7 +545,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'User Profiles',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  context.go('/profiles');
+                  context.go('/main/profiles');
                 },
               ),
               Divider(
@@ -586,7 +557,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 'Hotspot Hosts',
                 Icons.arrow_forward_ios_rounded,
                 () {
-                  context.go('/hosts');
+                  context.go('/main/hosts');
+                },
+              ),
+              Divider(
+                height: 1,
+                color: context.appOnSurface.withValues(alpha: 0.1),
+              ),
+              _buildActionButton(
+                Icons.payments_rounded,
+                'Revenue',
+                Icons.arrow_forward_ios_rounded,
+                () {
+                  context.push('/main/revenue');
                 },
               ),
               Divider(

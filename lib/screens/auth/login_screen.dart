@@ -109,7 +109,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (mounted) {
-        context.go('/dashboard');
+        context.go('/main/dashboard');
       }
     } catch (e) {
       debugPrint('=== LOGIN FAILED ===');

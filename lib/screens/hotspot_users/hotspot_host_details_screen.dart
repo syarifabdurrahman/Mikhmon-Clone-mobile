@@ -38,7 +38,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/hosts'),
+          onPressed: () => context.go('/main/hosts'),
         ),
         title: Text('Host Details'),
         actions: [
@@ -49,7 +49,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
               await ref.read(hotspotHostsProvider.notifier).silentRefresh();
               // Navigate back to show refreshed data
               if (context.mounted) {
-                context.go('/hosts');
+                context.go('/main/hosts');
               }
             },
           ),

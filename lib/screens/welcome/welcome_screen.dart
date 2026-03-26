@@ -424,7 +424,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           );
 
       if (mounted) {
-        context.go('/dashboard');
+        context.go('/main/dashboard');
       }
     } catch (e) {
       if (mounted) {

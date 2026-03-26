@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
@@ -72,11 +71,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     final usersAsync = ref.watch(hotspotUsersProvider);
 
-    return PopScope(
-      canPop: true,
-      child: Scaffold(
-        backgroundColor: context.appBackground,
-        appBar: _buildAppBar(),
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      appBar: _buildAppBar(),
       body: Column(
         children: [
           _SearchAndFilterBar(
@@ -179,7 +176,6 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         ],
       ),
       bottomNavigationBar: _isSelectionActive ? _buildBulkActionBar(context) : null,
-      ),
     );
   }
 
@@ -194,10 +190,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               onPressed: _exitSelectionMode,
               tooltip: 'Exit selection',
             )
-          : IconButton(
-              icon: Icon(Icons.arrow_back_rounded),
-              onPressed: () => context.go('/dashboard'),
-            ),
+          : null,
       title: _isSelectionActive
           ? Text('${_selectedUserIds.length} selected')
           : Text(

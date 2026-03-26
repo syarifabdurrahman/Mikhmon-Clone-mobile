@@ -85,7 +85,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/dashboard'),
+          onPressed: () => context.go('/main/users'),
         ),
         title: Text(
           'Active Users',

@@ -21,6 +21,8 @@ import '../screens/hotspot_users/add_hotspot_user_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/voucher_generation_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/revenue/revenue_screen.dart';
+import '../screens/main/main_shell_screen.dart';
 
 // Secure Storage Provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -182,6 +184,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 }
 
+// Navigation state provider for bottom navigation
+final currentTabProvider = StateProvider<int>((ref) => 0);
+
 // GoRouter Provider with refresh support
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -198,63 +203,82 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
-      GoRoute(
-        path: '/dashboard',
-        name: 'dashboard',
-        builder: (context, state) => const DashboardScreen(),
-      ),
-      GoRoute(
-        path: '/users',
-        name: 'users',
-        builder: (context, state) => const HotspotUsersScreen(),
-      ),
-      GoRoute(
-        path: '/users/active',
-        name: 'active_users',
-        builder: (context, state) => const HotspotActiveUsersScreen(),
-      ),
-      GoRoute(
-        path: '/users/add',
-        name: 'add_user',
-        builder: (context, state) => const AddHotspotUserScreen(),
-      ),
-      GoRoute(
-        path: '/users/generate',
-        name: 'generate_vouchers',
-        builder: (context, state) => const VoucherGenerationScreen(),
-      ),
-      GoRoute(
-        path: '/users/:id',
-        name: 'user_details',
-        builder: (context, state) => const HotspotUsersScreen(),
-      ),
-      GoRoute(
-        path: '/profiles',
-        name: 'profiles',
-        builder: (context, state) => const UserProfilesScreen(),
-      ),
-      GoRoute(
-        path: '/hosts',
-        name: 'hosts',
-        builder: (context, state) => const HotspotHostsScreen(),
-      ),
-      GoRoute(
-        path: '/hosts/:id',
-        name: 'host_details',
-        builder: (context, state) {
-          final host = state.extra as HotspotHost?;
-          if (host == null) {
-            return const Scaffold(
-              body: Center(child: Text('Host not found')),
-            );
-          }
-          return HotspotHostDetailsScreen(host: host);
-        },
-      ),
-      GoRoute(
-        path: '/settings',
-        name: 'settings',
-        builder: (context, state) => const SettingsScreen(),
+      ShellRoute(
+        builder: (context, state, child) => MainShellScreen(child: child),
+        routes: [
+          GoRoute(
+            path: '/main',
+            name: 'main',
+            redirect: (context, state) => '/main/dashboard',
+          ),
+          GoRoute(
+            path: '/main/dashboard',
+            name: 'dashboard',
+            builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/main/users',
+            name: 'users',
+            builder: (context, state) => const HotspotUsersScreen(),
+            routes: [
+              GoRoute(
+                path: 'active',
+                name: 'active_users',
+                builder: (context, state) => const HotspotActiveUsersScreen(),
+              ),
+              GoRoute(
+                path: 'add',
+                name: 'add_user',
+                builder: (context, state) => const AddHotspotUserScreen(),
+              ),
+              GoRoute(
+                path: 'generate',
+                name: 'generate_vouchers',
+                builder: (context, state) => const VoucherGenerationScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                name: 'user_details',
+                builder: (context, state) => const HotspotUsersScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/main/profiles',
+            name: 'profiles',
+            builder: (context, state) => const UserProfilesScreen(),
+          ),
+          GoRoute(
+            path: '/main/hosts',
+            name: 'hosts',
+            builder: (context, state) => const HotspotHostsScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                name: 'host_details',
+                builder: (context, state) {
+                  final host = state.extra as HotspotHost?;
+                  if (host == null) {
+                    return const Scaffold(
+                      body: Center(child: Text('Host not found')),
+                    );
+                  }
+                  return HotspotHostDetailsScreen(host: host);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/main/settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/main/revenue',
+            name: 'revenue',
+            builder: (context, state) => const RevenueScreen(),
+          ),
+        ],
       ),
     ],
   );

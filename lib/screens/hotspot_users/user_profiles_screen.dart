@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
@@ -23,11 +22,9 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     final profilesAsync = ref.watch(userProfileProvider);
 
-    return PopScope(
-      canPop: true,
-      child: Scaffold(
-        backgroundColor: context.appBackground,
-        appBar: _buildAppBar(),
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      appBar: _buildAppBar(),
       body: profilesAsync.when(
         data: (profiles) {
           if (profiles.isEmpty) {
@@ -71,7 +68,6 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
         icon: Icon(Icons.add_rounded),
         label: Text('Add Profile'),
       ),
-      ),
     );
   }
 
@@ -80,11 +76,6 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
       backgroundColor: context.appSurface,
       foregroundColor: context.appOnSurface,
       elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_rounded),
-        onPressed: () => context.go('/dashboard'),
-        tooltip: 'Back to Dashboard',
-      ),
       title: Text(
         'User Profiles',
         style: TextStyle(

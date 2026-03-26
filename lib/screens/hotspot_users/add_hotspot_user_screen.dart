@@ -406,7 +406,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.go('/profiles'),
+                        onPressed: () => context.go('/main/profiles'),
                         child: Text('Create Profile'),
                       ),
                     ],
