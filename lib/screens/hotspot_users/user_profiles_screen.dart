@@ -68,12 +68,11 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
           ),
           error: (error, stack) => _buildErrorState(error.toString()),
         ),
-        floatingActionButton: FloatingActionButton.extended(
+        floatingActionButton: FloatingActionButton(
           onPressed: _navigateToAddProfile,
           backgroundColor: context.appPrimary,
           foregroundColor: Colors.white,
-          icon: Icon(Icons.add_rounded),
-          label: Text('Add Profile'),
+          child: Icon(Icons.add_rounded),
         ),
       ),
     );

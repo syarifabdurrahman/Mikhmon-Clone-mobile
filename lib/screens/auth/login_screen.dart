@@ -145,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
               horizontal: isSmallScreen ? 24 : 32,
-              vertical: 32,
+              vertical: 24,
             ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
@@ -301,12 +301,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
-                      height: 56,
+                      height: isSmallScreen ? 48 : 56,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: context.appPrimary,
                           foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 16 : 24,
+                          ),
                         ),
                         child: _isLoading
                             ? const SizedBox(
@@ -318,10 +321,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       Colors.white),
                                 ),
                               )
-                            : const Text(
+                            : Text(
                                 'Login',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
                                   color: Colors.white,

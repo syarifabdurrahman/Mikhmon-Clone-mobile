@@ -4,10 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 enum AppThemeMode {
   purple, // Default purple theme (dark)
-  blue,   // Blue theme (dark)
-  green,  // Green theme (dark)
-  pink,   // Pink theme (dark)
-  light,  // Light theme
+  blue, // Blue theme (dark)
+  green, // Green theme (dark)
+  pink, // Pink theme (dark)
+  light, // Light theme
 }
 
 class AppTheme {
@@ -164,7 +164,8 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,
-          foregroundColor: brightness == Brightness.dark ? Colors.white : Colors.white,
+          foregroundColor:
+              brightness == Brightness.dark ? Colors.white : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -183,7 +184,8 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: colorScheme.primary,
-          foregroundColor: brightness == Brightness.dark ? Colors.white : Colors.white,
+          foregroundColor:
+              brightness == Brightness.dark ? Colors.white : Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -261,7 +263,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Color(0xFFF43F5E), width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         hintStyle: GoogleFonts.poppins(
           color: onBackground.withValues(alpha: 0.5),
           fontSize: 15,
@@ -274,16 +277,15 @@ class AppTheme {
         ),
       ),
 
-      // Floating Action Button Theme
+      // Floating Action Button Theme - Convex style
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.primary,
-        foregroundColor: brightness == Brightness.dark ? Colors.white : Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        foregroundColor:
+            brightness == Brightness.dark ? Colors.white : Colors.white,
+        elevation: 6,
+        shape: const CircleBorder(),
         extendedTextStyle: GoogleFonts.poppins(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
         ),
@@ -368,7 +370,9 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return colorScheme.primary;
           }
-          return brightness == Brightness.dark ? const Color(0xFF64748B) : const Color(0xFFCBD5E1);
+          return brightness == Brightness.dark
+              ? const Color(0xFF64748B)
+              : const Color(0xFFCBD5E1);
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -386,7 +390,8 @@ class AppTheme {
           }
           return card;
         }),
-        checkColor: WidgetStateProperty.all(brightness == Brightness.dark ? Colors.white : Colors.white),
+        checkColor: WidgetStateProperty.all(
+            brightness == Brightness.dark ? Colors.white : Colors.white),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
         ),
@@ -400,7 +405,8 @@ class AppTheme {
 
       // List Tile Theme
       listTileTheme: ListTileThemeData(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -430,17 +436,21 @@ class AppTheme {
     // Apply Google Fonts - Plus Jakarta Sans
     final googleFontsTheme = baseTheme.copyWith(
       textTheme: GoogleFonts.getTextTheme(_fontFamily, baseTheme.textTheme),
-      primaryTextTheme: GoogleFonts.getTextTheme(_fontFamily, baseTheme.primaryTextTheme),
+      primaryTextTheme:
+          GoogleFonts.getTextTheme(_fontFamily, baseTheme.primaryTextTheme),
     );
 
     // Apply modern text styles
     return googleFontsTheme.copyWith(
-      textTheme: _modernTextTheme(googleFontsTheme.textTheme, colorScheme, onSurface, onBackground),
-      primaryTextTheme: _modernTextTheme(googleFontsTheme.primaryTextTheme, colorScheme, onSurface, onBackground),
+      textTheme: _modernTextTheme(
+          googleFontsTheme.textTheme, colorScheme, onSurface, onBackground),
+      primaryTextTheme: _modernTextTheme(googleFontsTheme.primaryTextTheme,
+          colorScheme, onSurface, onBackground),
     );
   }
 
-  static TextTheme _modernTextTheme(TextTheme base, ColorScheme colorScheme, Color onSurface, Color onBackground) {
+  static TextTheme _modernTextTheme(TextTheme base, ColorScheme colorScheme,
+      Color onSurface, Color onBackground) {
     return base.copyWith(
       // Display - Hero text
       displayLarge: base.displayLarge?.copyWith(
@@ -648,7 +658,8 @@ extension AppThemeContext on BuildContext {
   Color get appBackground => Theme.of(this).scaffoldBackgroundColor;
   Color get appSurface => Theme.of(this).colorScheme.surface;
   Color get appCard => Theme.of(this).cardColor;
-  Color get appOnBackground => Theme.of(this).colorScheme.onSurface.withValues(alpha: 0.8);
+  Color get appOnBackground =>
+      Theme.of(this).colorScheme.onSurface.withValues(alpha: 0.8);
   Color get appOnSurface => Theme.of(this).colorScheme.onSurface;
   Color get appPrimary => Theme.of(this).colorScheme.primary;
   Color get appSecondary => Theme.of(this).colorScheme.secondary;

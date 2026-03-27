@@ -39,6 +39,10 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           _buildSavedRoutersCard(context, ref),
           const SizedBox(height: 24),
+          _buildSectionHeader(context, 'Account'),
+          const SizedBox(height: 8),
+          _buildLogoutCard(context, ref),
+          const SizedBox(height: 24),
           _buildSectionHeader(context, 'About'),
           const SizedBox(height: 8),
           _buildAboutCard(context),
@@ -266,15 +270,21 @@ class SettingsScreen extends ConsumerWidget {
                         data: (connections) {
                           return Text(
                             '${connections.length} saved',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.appOnSurface.withValues(alpha: 0.6),
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: context.appOnSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
                           );
                         },
                         loading: () => Text(
                           'Loading...',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: context.appOnSurface.withValues(alpha: 0.6),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color:
+                                    context.appOnSurface.withValues(alpha: 0.6),
                               ),
                         ),
                         error: (_, __) => const SizedBox(),
@@ -300,7 +310,8 @@ class SettingsScreen extends ConsumerWidget {
                         'No saved routers yet.\nLogin to save a connection.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: context.appOnSurface.withValues(alpha: 0.5),
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.5),
                             ),
                       ),
                     ),
@@ -330,7 +341,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildConnectionTile(BuildContext context, WidgetRef ref, RouterConnection connection) {
+  Widget _buildConnectionTile(
+      BuildContext context, WidgetRef ref, RouterConnection connection) {
     return InkWell(
       onTap: () => _showEditRouterDialog(context, ref, connection),
       borderRadius: BorderRadius.circular(12),
@@ -389,7 +401,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, RouterConnection connection) {
+  void _showDeleteDialog(
+      BuildContext context, WidgetRef ref, RouterConnection connection) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -411,12 +424,15 @@ class SettingsScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
+              style:
+                  TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
             ),
           ),
           TextButton(
             onPressed: () {
-              ref.read(savedConnectionsProvider.notifier).deleteConnection(connection.id);
+              ref
+                  .read(savedConnectionsProvider.notifier)
+                  .deleteConnection(connection.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Deleted "${connection.name}"')),
@@ -426,6 +442,105 @@ class SettingsScreen extends ConsumerWidget {
               'Delete',
               style: TextStyle(color: context.appError),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutCard(BuildContext context, WidgetRef ref) {
+    return Card(
+      color: context.appSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _showLogoutDialog(context, ref),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  color: AppTheme.errorColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Logout',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: context.appOnSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Disconnect from router',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.appOnSurface.withValues(alpha: 0.6),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: context.appOnSurface.withValues(alpha: 0.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text(
+          'Logout',
+          style: TextStyle(color: context.appOnSurface),
+        ),
+        content: Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style:
+                  TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(authStateProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/');
+              }
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -632,7 +747,8 @@ class SettingsScreen extends ConsumerWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: context.appPrimary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -707,17 +823,18 @@ class SettingsScreen extends ConsumerWidget {
               hostController.text.trim().isEmpty ||
               usernameController.text.trim().isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please fill in all required fields')),
+              const SnackBar(
+                  content: Text('Please fill in all required fields')),
             );
             return;
           }
 
           ref.read(savedConnectionsProvider.notifier).addConnection(
-            name: nameController.text.trim(),
-            host: hostController.text.trim(),
-            port: portController.text.trim(),
-            username: usernameController.text.trim(),
-          );
+                name: nameController.text.trim(),
+                host: hostController.text.trim(),
+                port: portController.text.trim(),
+                username: usernameController.text.trim(),
+              );
 
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -729,7 +846,8 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   /// Show dialog to edit an existing router connection
-  void _showEditRouterDialog(BuildContext context, WidgetRef ref, RouterConnection connection) {
+  void _showEditRouterDialog(
+      BuildContext context, WidgetRef ref, RouterConnection connection) {
     final nameController = TextEditingController(text: connection.name);
     final hostController = TextEditingController(text: connection.host);
     final portController = TextEditingController(text: connection.port);
@@ -748,7 +866,8 @@ class SettingsScreen extends ConsumerWidget {
               hostController.text.trim().isEmpty ||
               usernameController.text.trim().isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please fill in all required fields')),
+              const SnackBar(
+                  content: Text('Please fill in all required fields')),
             );
             return;
           }
@@ -762,7 +881,9 @@ class SettingsScreen extends ConsumerWidget {
             createdAt: connection.createdAt,
           );
 
-          ref.read(savedConnectionsProvider.notifier).updateConnection(updatedConnection);
+          ref
+              .read(savedConnectionsProvider.notifier)
+              .updateConnection(updatedConnection);
 
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -793,7 +914,8 @@ class _RouterConnectionDialog extends StatefulWidget {
   });
 
   @override
-  State<_RouterConnectionDialog> createState() => _RouterConnectionDialogState();
+  State<_RouterConnectionDialog> createState() =>
+      _RouterConnectionDialogState();
 }
 
 class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
@@ -854,7 +976,10 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                         children: [
                           Text(
                             widget.title,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
                                   color: context.appOnSurface,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -862,9 +987,11 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                           const SizedBox(height: 4),
                           Text(
                             'Enter router connection details',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.appOnSurface.withValues(alpha: 0.6),
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: context.appOnSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
                           ),
                         ],
                       ),
@@ -878,10 +1005,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                   controller: widget.nameController,
                   decoration: InputDecoration(
                     labelText: 'Connection Name *',
-                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    labelStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.7)),
                     hintText: 'e.g., Office Router',
-                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
-                    prefixIcon: Icon(Icons.bookmark_rounded, color: context.appPrimary),
+                    hintStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon:
+                        Icon(Icons.bookmark_rounded, color: context.appPrimary),
                     filled: true,
                     fillColor: context.appBackground.withValues(alpha: 0.5),
                     border: OutlineInputBorder(
@@ -890,11 +1020,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                      borderSide: BorderSide(
+                          color: context.appOnSurface.withValues(alpha: 0.1)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                      borderSide:
+                          BorderSide(color: context.appPrimary, width: 2),
                     ),
                   ),
                   style: TextStyle(color: context.appOnSurface),
@@ -912,10 +1044,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                   controller: widget.hostController,
                   decoration: InputDecoration(
                     labelText: 'Host/IP Address *',
-                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    labelStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.7)),
                     hintText: 'e.g., 192.168.88.1',
-                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
-                    prefixIcon: Icon(Icons.computer_rounded, color: context.appPrimary),
+                    hintStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon:
+                        Icon(Icons.computer_rounded, color: context.appPrimary),
                     filled: true,
                     fillColor: context.appBackground.withValues(alpha: 0.5),
                     border: OutlineInputBorder(
@@ -924,11 +1059,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                      borderSide: BorderSide(
+                          color: context.appOnSurface.withValues(alpha: 0.1)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                      borderSide:
+                          BorderSide(color: context.appPrimary, width: 2),
                     ),
                   ),
                   style: TextStyle(color: context.appOnSurface),
@@ -947,10 +1084,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                   controller: widget.portController,
                   decoration: InputDecoration(
                     labelText: 'Port *',
-                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    labelStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.7)),
                     hintText: 'e.g., 8728',
-                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
-                    prefixIcon: Icon(Icons.settings_ethernet_rounded, color: context.appPrimary),
+                    hintStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon: Icon(Icons.settings_ethernet_rounded,
+                        color: context.appPrimary),
                     filled: true,
                     fillColor: context.appBackground.withValues(alpha: 0.5),
                     border: OutlineInputBorder(
@@ -959,11 +1099,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                      borderSide: BorderSide(
+                          color: context.appOnSurface.withValues(alpha: 0.1)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                      borderSide:
+                          BorderSide(color: context.appPrimary, width: 2),
                     ),
                   ),
                   style: TextStyle(color: context.appOnSurface),
@@ -986,10 +1128,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                   controller: widget.usernameController,
                   decoration: InputDecoration(
                     labelText: 'Username *',
-                    labelStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+                    labelStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.7)),
                     hintText: 'e.g., admin',
-                    hintStyle: TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
-                    prefixIcon: Icon(Icons.person_rounded, color: context.appPrimary),
+                    hintStyle: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.4)),
+                    prefixIcon:
+                        Icon(Icons.person_rounded, color: context.appPrimary),
                     filled: true,
                     fillColor: context.appBackground.withValues(alpha: 0.5),
                     border: OutlineInputBorder(
@@ -998,11 +1143,13 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appOnSurface.withValues(alpha: 0.1)),
+                      borderSide: BorderSide(
+                          color: context.appOnSurface.withValues(alpha: 0.1)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: context.appPrimary, width: 2),
+                      borderSide:
+                          BorderSide(color: context.appPrimary, width: 2),
                     ),
                   ),
                   style: TextStyle(color: context.appOnSurface),
@@ -1033,9 +1180,10 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                       Expanded(
                         child: Text(
                           'Password will be required when connecting',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: context.appOnSurface,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.appOnSurface,
+                                  ),
                         ),
                       ),
                     ],
@@ -1050,7 +1198,8 @@ class _RouterConnectionDialogState extends State<_RouterConnectionDialog> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: context.appOnSurface.withValues(alpha: 0.7),
+                          foregroundColor:
+                              context.appOnSurface.withValues(alpha: 0.7),
                           side: BorderSide(
                             color: context.appOnSurface.withValues(alpha: 0.2),
                           ),

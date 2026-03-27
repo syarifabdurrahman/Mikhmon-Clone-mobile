@@ -49,12 +49,12 @@
 ### 1. RenderFlex Overflow Fixes ✅
 **Fixed overflow errors causing UI clipping**
 
-- **Login Screen** - Changed `CrossAxisAlignment.stretch` to `CrossAxisAlignment.center` to prevent Column children from being stretched beyond container bounds
-- **Bottom Navigation** - Wrapped `ConvexAppBar` in `SafeArea` to fix 1px overflow on bottom navigation bar
-- **Welcome Screen** - Added `SafeArea(bottom: false)` to allow gradient to fill edge-to-edge while protecting from top notch only
+- **Bottom Navigation** - Replaced problematic `ConvexAppBar` with standard `BottomNavigationBar` to eliminate overflow issues
+- **Login Screen** - Changed `CrossAxisAlignment.stretch` to `CrossAxisAlignment.center` and reduced vertical padding
+- **Welcome Screen** - Added `SafeArea(bottom: false)` and reduced vertical padding
 - **Files**:
+  - `lib/screens/main/main_shell_screen.dart` - Standard BottomNavigationBar instead of ConvexAppBar
   - `lib/screens/auth/login_screen.dart` - CrossAxisAlignment fix
-  - `lib/screens/main/main_shell_screen.dart` - SafeArea wrapper
   - `lib/screens/welcome/welcome_screen.dart` - SafeArea with bottom:false
 
 ### 2. Provider Modification During Build Fix ✅

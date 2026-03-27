@@ -174,24 +174,20 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Generate Vouchers Button
-                  FloatingActionButton.extended(
+                  FloatingActionButton.small(
                     heroTag: 'generate_vouchers',
                     onPressed: () => _navigateToGenerateVouchers(),
                     backgroundColor: context.appSecondary,
-                    foregroundColor: Colors.black,
-                    icon: Icon(Icons.confirmation_number_rounded),
-                    label: Text('Generate Vouchers'),
+                    foregroundColor: context.appOnBackground,
+                    child: Icon(Icons.confirmation_number_rounded),
                   ),
                   SizedBox(height: 12),
-                  // Add User Button
-                  FloatingActionButton.extended(
+                  FloatingActionButton(
                     heroTag: 'add_user',
                     onPressed: () => _navigateToAddUser(),
                     backgroundColor: context.appPrimary,
                     foregroundColor: Colors.white,
-                    icon: Icon(Icons.person_add_rounded),
-                    label: Text('Add User'),
+                    child: Icon(Icons.person_add_rounded),
                   ),
                 ],
               ),

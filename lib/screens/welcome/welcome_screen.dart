@@ -62,28 +62,36 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           bottom: false,
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? 24 : 32,
-                vertical: isSmallScreen ? 32 : 48,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(height: isSmallScreen ? 20 : 40),
-                  _buildLogoSection(isSmallScreen),
-                  SizedBox(height: isSmallScreen ? 32 : 48),
-                  _buildTitleSection(),
-                  SizedBox(height: isSmallScreen ? 12 : 16),
-                  _buildDescription(),
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-                  _buildSavedConnectionsSection(),
-                  SizedBox(height: isSmallScreen ? 24 : 40),
-                  _buildButtonsSection(),
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-                  _buildVersionInfo(),
-                ],
-              ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 24 : 32,
+                      vertical: isSmallScreen ? 24 : 32,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(height: isSmallScreen ? 20 : 40),
+                        _buildLogoSection(isSmallScreen),
+                        SizedBox(height: isSmallScreen ? 32 : 48),
+                        _buildTitleSection(),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildDescription(),
+                        SizedBox(height: isSmallScreen ? 24 : 32),
+                        _buildSavedConnectionsSection(),
+                        SizedBox(height: isSmallScreen ? 24 : 40),
+                        _buildButtonsSection(),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(bottom: isSmallScreen ? 16 : 24),
+                  child: _buildVersionInfo(),
+                ),
+              ],
             ),
           ),
         ),
@@ -155,18 +163,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildButtonsSection() {
+    final isSmall = MediaQuery.of(context).size.height < 700;
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
-          height: 52,
+          height: isSmall ? 48 : 52,
           child: ElevatedButton.icon(
             onPressed: _handleLogin,
-            icon: const Icon(Icons.login_rounded, size: 20),
-            label: const Text(
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmall ? 16 : 24,
+              ),
+            ),
+            icon: Icon(Icons.login_rounded, size: isSmall ? 18 : 20),
+            label: Text(
               'Login',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmall ? 14 : 16,
                 fontWeight: FontWeight.w600,
               ),
             ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:go_router/go_router.dart';
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 
@@ -68,29 +68,26 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
       child: Scaffold(
         backgroundColor: context.appBackground,
         body: widget.child,
-        bottomNavigationBar: SafeArea(
-          child: ConvexAppBar(
-            key: ValueKey(currentTab),
-            initialActiveIndex: currentTab,
-            height: 48,
-            curveSize: 50,
-            top: -12,
-            backgroundColor: context.appSurface,
-            activeColor: context.appPrimary,
-            color: context.appOnSurface.withValues(alpha: 0.5),
-            style: TabStyle.reactCircle,
-            items: const [
-              TabItem(icon: Icons.dashboard_rounded, title: 'Dashboard'),
-              TabItem(icon: Icons.people_rounded, title: 'Users'),
-              TabItem(icon: Icons.card_membership_rounded, title: 'Profiles'),
-              TabItem(icon: Icons.router_rounded, title: 'Hosts'),
-              TabItem(icon: Icons.settings_rounded, title: 'Settings'),
-            ],
-            onTap: (index) {
-              ref.read(currentTabProvider.notifier).state = index;
-              _navigateToTab(index);
-            },
-          ),
+        bottomNavigationBar: ConvexAppBar(
+          style: TabStyle.reactCircle,
+          backgroundColor: context.appSurface,
+          activeColor: context.appPrimary,
+          color: context.appOnSurface.withValues(alpha: 0.5),
+          initialActiveIndex: currentTab,
+          height: 65,
+          top: -30,
+          curveSize: 90,
+          onTap: (index) {
+            ref.read(currentTabProvider.notifier).state = index;
+            _navigateToTab(index);
+          },
+          items: [
+            TabItem(icon: Icons.dashboard_rounded, title: 'Dash'),
+            TabItem(icon: Icons.people_rounded, title: 'Users'),
+            TabItem(icon: Icons.add_rounded, title: ''),
+            TabItem(icon: Icons.router_rounded, title: 'Hosts'),
+            TabItem(icon: Icons.settings_rounded, title: 'Settings'),
+          ],
         ),
       ),
     );

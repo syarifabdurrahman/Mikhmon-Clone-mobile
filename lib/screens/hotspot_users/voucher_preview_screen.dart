@@ -94,11 +94,11 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
+        floatingActionButton: FloatingActionButton(
           onPressed: _isSharing ? null : _captureAndShareScreenshot,
           backgroundColor: context.appPrimary,
           foregroundColor: Colors.white,
-          icon: _isSharing
+          child: _isSharing
               ? SizedBox(
                   width: 20,
                   height: 20,
@@ -108,7 +108,6 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
                   ),
                 )
               : Icon(Icons.print_rounded),
-          label: Text(_isSharing ? 'Preparing...' : 'Print/Share'),
         ),
       ),
     );

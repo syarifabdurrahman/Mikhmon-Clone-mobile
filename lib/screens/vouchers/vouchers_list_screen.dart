@@ -181,15 +181,13 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
+        floatingActionButton: FloatingActionButton(
           onPressed: () {
-            // Navigate to voucher generation
             context.push('/main/users/generate');
           },
           backgroundColor: context.appPrimary,
           foregroundColor: Colors.white,
-          icon: Icon(Icons.add_rounded),
-          label: Text('Generate Vouchers'),
+          child: Icon(Icons.add_rounded),
         ),
       ),
     );
