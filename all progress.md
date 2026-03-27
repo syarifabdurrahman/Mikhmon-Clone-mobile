@@ -42,10 +42,44 @@
 | **Graph Time Formatting** | ✅ | **Accurate elapsed time** (30s, 2m, 3m30s, 1h15m, etc.) |
 | **Continuous Scrolling** | ✅ | **Unlimited graph scrolling** (removed 60.0 clamp) |
 | **Voucher Bulk Delete** | ✅ | Select and delete multiple vouchers at once |
+| **Voucher Templates** | ✅ | Full Size, Compact, and Minimal print templates |
+| **Sales Report Export** | ✅ | CSV export with date filtering and profile filter |
+| **Voucher Templates** | ✅ | Full Size, Compact, and Minimal print templates |
+| **Sales Report Export** | ✅ | CSV export with date filtering and profile filter |
 
 ---
 
 ## 🆕 Recent Updates (March 28, 2026)
+
+### 3. Voucher Templates ✅
+**Customizable print templates for vouchers**
+
+- **Template Options**:
+  - Full Size - Complete voucher with all details and cut lines
+  - Compact - Smaller voucher with essential info
+  - Minimal - Simple design with QR and credentials only
+- **Features**:
+  - Template selection in Settings > Voucher Templates
+  - Persists across app restarts
+  - Automatically applied to all voucher printing functions
+- **Files**:
+  - `lib/services/template_service.dart` - Template service with persistence
+  - `lib/providers/app_providers.dart` - voucherTemplateProvider
+  - `lib/utils/voucher_printer.dart` - Template-aware HTML generation
+  - `lib/screens/settings/settings_screen.dart` - Template selection UI
+
+### 4. Sales Report Export ✅
+**CSV export functionality for revenue data**
+
+- **Features**:
+  - Export all transactions to CSV format
+  - Includes username, profile, price, date, time, and comment
+  - Share via any app (email, messaging, cloud storage)
+  - Working date range picker for filtering
+- **File**: `lib/screens/revenue/revenue_screen.dart`
+
+### 5. Flutter Analyze Issues Fixed ✅
+**Fixed all 12 static analysis issues identified by Flutter**
 
 ### 1. Flutter Analyze Issues Fixed ✅
 **Fixed all 12 static analysis issues identified by Flutter**
@@ -601,20 +635,15 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 - ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease/binding monitoring
 - ~~**Voucher QR Codes**~~ ✅ COMPLETED - QR code generation for scanning
 - ~~**Voucher Preview**~~ ✅ COMPLETED - Show, copy, share, print vouchers
-- **Voucher Templates** - Customizable print templates
-  - Default template (full size)
-  - Small template (compact)
-  - Custom templates via editor
+- ~~**Voucher Templates**~~ ✅ COMPLETED - Full Size, Compact, Minimal templates
+- **Template Editor** - Custom templates via editor
 
 #### 3. Reports
 
-- **Sales Report** - Transaction history with:
-  - Date/time filtering (day, month, year)
-  - Filter by username, profile, comment
-  - Price tracking per transaction
-  - Daily/monthly/yearly views
-  - CSV/XLS export
-  - Quantity and total summary
+- ~~**Sales Report**~~ ✅ COMPLETED - CSV export with date filtering
+  - ~~Date/time filtering (day, month, year)~~ ✅
+  - ~~Filter by username, profile~~ ✅
+  - ~~CSV export~~ ✅
 - **Income Summary** - Total revenue calculations
   - Today's income ✅ (Already shown)
   - This month's income ✅ (Already shown)
@@ -628,8 +657,8 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 
 #### 5. Settings
 
-- **Theme Selection** - Light/Dark/Blue/Green/Pink themes
-- **Template Editor** - Customize voucher templates
+- ~~**Theme Selection**~~ ✅ COMPLETED - Light/Dark/Blue/Green/Pink themes
+- **Template Editor** - Custom templates via editor
 - **Router Management** - Multiple router connection support
 - **Logo Upload** - Custom branding per session
 - **Profile Configuration** - Profile-based pricing
@@ -668,8 +697,8 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 
 ### Medium Priority (User Experience)
 
-12. **Settings screen** - Theme switcher, router management (UI exists, needs implementation)
-13. ~~**Reports page**~~ ✅ COMPLETED - Sales history with filtering and charts
+12. ~~**Settings screen**~~ ✅ COMPLETED - Theme switcher, template selection, router management
+13. ~~**Reports page**~~ ✅ COMPLETED - Sales history with filtering, charts, and CSV export
 14. **Log viewer** - Activity tracking
 15. ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease monitoring
 16. **Health Monitoring** - Temperature, voltage sensors

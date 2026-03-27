@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
@@ -14,7 +17,8 @@ class RevenueScreen extends ConsumerStatefulWidget {
   ConsumerState<RevenueScreen> createState() => _RevenueScreenState();
 }
 
-class _RevenueScreenState extends ConsumerState<RevenueScreen> with SingleTickerProviderStateMixin {
+class _RevenueScreenState extends ConsumerState<RevenueScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   TimePeriod _timePeriod = TimePeriod.week;
 
@@ -28,6 +32,58 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen> with SingleTicker
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _exportToCSV(WidgetRef ref) async {
+    final incomeAsync = ref.read(incomeProvider);
+    final income = incomeAsync.valueOrNull;
+
+    if (income == null || income.transactions.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No transactions to export')),
+        );
+      }
+      return;
+    }
+
+    try {
+      // Generate CSV content
+      final buffer = StringBuffer();
+      buffer.writeln('Username,Profile,Price,Date,Time,Comment');
+
+      for (final transaction in income.transactions) {
+        final date = DateFormat('yyyy-MM-dd').format(transaction.timestamp);
+        final time = DateFormat('HH:mm:ss').format(transaction.timestamp);
+        final comment = transaction.comment?.replaceAll(',', ';') ?? '';
+        buffer.writeln(
+            '${transaction.username},${transaction.profile.toUpperCase()},${transaction.price},$date,$time,$comment');
+      }
+
+      // Save to file
+      final directory = await getTemporaryDirectory();
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final file = File('${directory.path}/sales_report_$timestamp.csv');
+      await file.writeAsString(buffer.toString());
+
+      // Share the file
+      if (mounted) {
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text:
+              'Sales Report - ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -57,58 +113,68 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen> with SingleTicker
                 ),
           ),
           actions: [
-          PopupMenuButton<TimePeriod>(
-            icon: Icon(Icons.calendar_today_rounded),
-            initialValue: _timePeriod,
-            onSelected: (period) {
-              setState(() {
-                _timePeriod = period;
-              });
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: TimePeriod.week, child: Text('This Week')),
-              PopupMenuItem(value: TimePeriod.month, child: Text('This Month')),
-              PopupMenuItem(value: TimePeriod.quarter, child: Text('This Quarter')),
-              PopupMenuItem(value: TimePeriod.year, child: Text('This Year')),
-            ],
-          ),
-          IconButton(
-            icon: Icon(Icons.refresh_rounded),
-            onPressed: () => ref.read(incomeProvider.notifier).refresh(),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _SummaryCards(timePeriod: _timePeriod),
-          Container(
-            color: context.appSurface,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: context.appPrimary,
-              unselectedLabelColor: context.appOnSurface.withValues(alpha: 0.6),
-              indicatorColor: context.appPrimary,
-              indicatorWeight: 3,
-              tabs: const [
-                Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Charts'),
-                Tab(icon: Icon(Icons.pie_chart_rounded), text: 'By Profile'),
-                Tab(icon: Icon(Icons.receipt_long_rounded), text: 'Transactions'),
+            PopupMenuButton<TimePeriod>(
+              icon: Icon(Icons.calendar_today_rounded),
+              initialValue: _timePeriod,
+              onSelected: (period) {
+                setState(() {
+                  _timePeriod = period;
+                });
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: TimePeriod.week, child: Text('This Week')),
+                PopupMenuItem(
+                    value: TimePeriod.month, child: Text('This Month')),
+                PopupMenuItem(
+                    value: TimePeriod.quarter, child: Text('This Quarter')),
+                PopupMenuItem(value: TimePeriod.year, child: Text('This Year')),
               ],
             ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                _ChartsTab(),
-                _ByProfileTab(),
-                _TransactionsTab(),
-              ],
+            IconButton(
+              icon: Icon(Icons.file_download_rounded),
+              onPressed: () => _exportToCSV(ref),
+              tooltip: 'Export CSV',
             ),
-          ),
-        ],
+            IconButton(
+              icon: Icon(Icons.refresh_rounded),
+              onPressed: () => ref.read(incomeProvider.notifier).refresh(),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            _SummaryCards(timePeriod: _timePeriod),
+            Container(
+              color: context.appSurface,
+              child: TabBar(
+                controller: _tabController,
+                labelColor: context.appPrimary,
+                unselectedLabelColor:
+                    context.appOnSurface.withValues(alpha: 0.6),
+                indicatorColor: context.appPrimary,
+                indicatorWeight: 3,
+                tabs: const [
+                  Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Charts'),
+                  Tab(icon: Icon(Icons.pie_chart_rounded), text: 'By Profile'),
+                  Tab(
+                      icon: Icon(Icons.receipt_long_rounded),
+                      text: 'Transactions'),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: const [
+                  _ChartsTab(),
+                  _ByProfileTab(),
+                  _TransactionsTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -135,7 +201,8 @@ class _SummaryCards extends ConsumerWidget {
               Expanded(
                 child: _SummaryCard(
                   title: _getPeriodLabel(timePeriod),
-                  value: _formatCurrency(_getValueForPeriod(summary, timePeriod)),
+                  value:
+                      _formatCurrency(_getValueForPeriod(summary, timePeriod)),
                   icon: Icons.payments_rounded,
                   color: context.appPrimary,
                 ),
@@ -144,7 +211,8 @@ class _SummaryCards extends ConsumerWidget {
               Expanded(
                 child: _SummaryCard(
                   title: 'Transactions',
-                  value: _getTransactionCountForPeriod(summary, timePeriod).toString(),
+                  value: _getTransactionCountForPeriod(summary, timePeriod)
+                      .toString(),
                   icon: Icons.receipt_long_rounded,
                   color: context.appSecondary,
                 ),
@@ -425,7 +493,8 @@ class _RevenueChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 30,
                 getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= sortedDates.length || value.toInt() < 0) {
+                  if (value.toInt() >= sortedDates.length ||
+                      value.toInt() < 0) {
                     return Text('');
                   }
                   final date = sortedDates[value.toInt()];
@@ -557,7 +626,8 @@ class _RevenueChart extends StatelessWidget {
     return grouped;
   }
 
-  List<FlSpot> _generateSpots(List<DateTime> dates, Map<DateTime, double> groupedData) {
+  List<FlSpot> _generateSpots(
+      List<DateTime> dates, Map<DateTime, double> groupedData) {
     final spots = <FlSpot>[];
     for (var i = 0; i < dates.length; i++) {
       spots.add(FlSpot(i.toDouble(), groupedData[dates[i]] ?? 0));
@@ -645,7 +715,8 @@ class _DailyBarChart extends StatelessWidget {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: _calculateHorizontalInterval(groupedData, recentDates),
+            horizontalInterval:
+                _calculateHorizontalInterval(groupedData, recentDates),
             getDrawingHorizontalLine: (value) {
               return FlLine(
                 color: context.appOnSurface.withValues(alpha: 0.1),
@@ -660,7 +731,8 @@ class _DailyBarChart extends StatelessWidget {
                 showTitles: true,
                 reservedSize: 30,
                 getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= recentDates.length || value.toInt() < 0) {
+                  if (value.toInt() >= recentDates.length ||
+                      value.toInt() < 0) {
                     return Text('');
                   }
                   final date = recentDates[value.toInt()];
@@ -746,7 +818,8 @@ class _DailyBarChart extends StatelessWidget {
     return grouped;
   }
 
-  double _getMaxYValue(Map<DateTime, double> groupedData, List<DateTime> dates) {
+  double _getMaxYValue(
+      Map<DateTime, double> groupedData, List<DateTime> dates) {
     double max = 0;
     for (final date in dates) {
       if ((groupedData[date] ?? 0) > max) {
@@ -757,7 +830,8 @@ class _DailyBarChart extends StatelessWidget {
     return max * 1.2;
   }
 
-  double _calculateHorizontalInterval(Map<DateTime, double> groupedData, List<DateTime> dates) {
+  double _calculateHorizontalInterval(
+      Map<DateTime, double> groupedData, List<DateTime> dates) {
     double max = 0;
     for (final date in dates) {
       if ((groupedData[date] ?? 0) > max) {
@@ -818,7 +892,8 @@ class _ByProfileTab extends ConsumerWidget {
                   transactionCount: income.transactions
                       .where((t) => t.profile == entry.key)
                       .length,
-                  rank: sortedProfiles.indexWhere((e) => e.key == entry.key) + 1,
+                  rank:
+                      sortedProfiles.indexWhere((e) => e.key == entry.key) + 1,
                 );
               }),
             ],
@@ -855,7 +930,8 @@ class _ByProfileTab extends ConsumerWidget {
   Map<String, double> _groupByProfile(List<SalesTransaction> transactions) {
     final grouped = <String, double>{};
     for (final transaction in transactions) {
-      grouped[transaction.profile] = (grouped[transaction.profile] ?? 0) + transaction.price;
+      grouped[transaction.profile] =
+          (grouped[transaction.profile] ?? 0) + transaction.price;
     }
     return grouped;
   }
@@ -996,15 +1072,16 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
         if (_searchQuery.isNotEmpty) {
           transactions = transactions
               .where((t) =>
-                  t.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                  t.username
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()) ||
                   t.profile.toLowerCase().contains(_searchQuery.toLowerCase()))
               .toList();
         }
 
         if (_selectedProfile != null) {
-          transactions = transactions
-              .where((t) => t.profile == _selectedProfile)
-              .toList();
+          transactions =
+              transactions.where((t) => t.profile == _selectedProfile).toList();
         }
 
         if (_startDate != null) {
@@ -1022,11 +1099,8 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
         // Sort by date (newest first)
         transactions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-        final profiles = income.transactions
-            .map((t) => t.profile)
-            .toSet()
-            .toList()
-          ..sort();
+        final profiles =
+            income.transactions.map((t) => t.profile).toSet().toList()..sort();
 
         return Column(
           children: [
@@ -1159,10 +1233,11 @@ class _FilterBar extends StatelessWidget {
               ),
               SizedBox(width: 12),
               InkWell(
-                onTap: _showDateRangePicker,
+                onTap: () => _showDateRangePicker(context),
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: context.appOnSurface.withValues(alpha: 0.2),
@@ -1241,9 +1316,31 @@ class _FilterBar extends StatelessWidget {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _showDateRangePicker() async {
-    // Implement date range picker
-    // For now, just show a dialog placeholder
+  void _showDateRangePicker(BuildContext context) async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      currentDate: DateTime.now(),
+      saveText: 'Apply',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: const Color(0xFF7C3AED),
+              onPrimary: Colors.white,
+              surface: const Color(0xFF1E293B),
+              onSurface: const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      onDateRangeChanged(picked.start, picked.end);
+    }
   }
 }
 
@@ -1296,7 +1393,8 @@ class _TransactionCard extends StatelessWidget {
                 ),
               ),
               Text(
-                NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(transaction.price),
+                NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0)
+                    .format(transaction.price),
                 style: TextStyle(
                   color: context.appSecondary,
                   fontWeight: FontWeight.bold,
@@ -1331,15 +1429,15 @@ class _TransactionCard extends StatelessWidget {
                 SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                  transaction.comment!,
-                  style: TextStyle(
-                    color: context.appOnSurface.withValues(alpha: 0.6),
-                    fontSize: 12,
+                    transaction.comment!,
+                    style: TextStyle(
+                      color: context.appOnSurface.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
               ],
             ],
           ),
