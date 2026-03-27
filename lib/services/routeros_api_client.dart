@@ -16,7 +16,7 @@ class RouterOSClient {
   Map<String, dynamic>? _currentItem;
   bool _awaitingDone = false;
 
-  static const bool _debug = true;
+  static const bool _debug = false;
 
   void _log(String message) {
     if (_debug) {
@@ -84,7 +84,8 @@ class RouterOSClient {
     _socket?.listen(
       (data) {
         _readBuffer.addAll(data);
-        _log('Received ${data.length} bytes, buffer size: ${_readBuffer.length}');
+        _log(
+            'Received ${data.length} bytes, buffer size: ${_readBuffer.length}');
         _processBuffer();
       },
       onError: (error) {
@@ -116,7 +117,8 @@ class RouterOSClient {
 
       // Check if we have the full word
       if (_readBuffer.length < _encodedLength(length) + length) {
-        _log('Need more data: have ${_readBuffer.length}, need ${_encodedLength(length) + length}');
+        _log(
+            'Need more data: have ${_readBuffer.length}, need ${_encodedLength(length) + length}');
         return;
       }
 
@@ -157,15 +159,23 @@ class RouterOSClient {
     } else if (firstByte < 0xE0) {
       // 3 byte length
       if (_readBuffer.length < 3) return null;
-      return ((_readBuffer[0] & 0x1F) << 16) | (_readBuffer[1] << 8) | _readBuffer[2];
+      return ((_readBuffer[0] & 0x1F) << 16) |
+          (_readBuffer[1] << 8) |
+          _readBuffer[2];
     } else if (firstByte < 0xF0) {
       // 4 byte length
       if (_readBuffer.length < 4) return null;
-      return ((_readBuffer[0] & 0x0F) << 24) | (_readBuffer[1] << 16) | (_readBuffer[2] << 8) | _readBuffer[3];
+      return ((_readBuffer[0] & 0x0F) << 24) |
+          (_readBuffer[1] << 16) |
+          (_readBuffer[2] << 8) |
+          _readBuffer[3];
     } else if (firstByte == 0xF0) {
       // 5 byte length
       if (_readBuffer.length < 5) return null;
-      return (_readBuffer[1] << 24) | (_readBuffer[2] << 16) | (_readBuffer[3] << 8) | _readBuffer[4];
+      return (_readBuffer[1] << 24) |
+          (_readBuffer[2] << 16) |
+          (_readBuffer[3] << 8) |
+          _readBuffer[4];
     }
 
     // Control byte - not supported
@@ -219,10 +229,13 @@ class RouterOSClient {
       _log('Received !done');
       if (_currentItem != null) {
         _currentResponse.add(_currentItem!);
-        _log('Added final record to response (total: ${_currentResponse.length})');
+        _log(
+            'Added final record to response (total: ${_currentResponse.length})');
         _currentItem = null;
       }
-      if (_awaitingDone && _responseCompleter != null && !_responseCompleter!.isCompleted) {
+      if (_awaitingDone &&
+          _responseCompleter != null &&
+          !_responseCompleter!.isCompleted) {
         _log('Completing response with ${_currentResponse.length} items');
         _responseCompleter!.complete(List.from(_currentResponse));
         _currentResponse.clear();
@@ -236,7 +249,9 @@ class RouterOSClient {
         _currentResponse.add(_currentItem!);
         _currentItem = null;
       }
-      if (_awaitingDone && _responseCompleter != null && !_responseCompleter!.isCompleted) {
+      if (_awaitingDone &&
+          _responseCompleter != null &&
+          !_responseCompleter!.isCompleted) {
         _responseCompleter!.complete(List.from(_currentResponse));
         _currentResponse.clear();
         _awaitingDone = false;
@@ -249,7 +264,9 @@ class RouterOSClient {
         _currentResponse.add(_currentItem!);
         _currentItem = null;
       }
-      if (_awaitingDone && _responseCompleter != null && !_responseCompleter!.isCompleted) {
+      if (_awaitingDone &&
+          _responseCompleter != null &&
+          !_responseCompleter!.isCompleted) {
         _responseCompleter!.complete(List.from(_currentResponse));
         _currentResponse.clear();
         _awaitingDone = false;

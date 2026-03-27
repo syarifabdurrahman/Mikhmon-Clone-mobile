@@ -18,7 +18,7 @@ class ThemeService {
         );
       }
     } catch (e) {
-      debugPrint('[ThemeService] Error loading theme mode: $e');
+      // Error loading theme, use default
     }
     return AppThemeMode.purple;
   }
@@ -27,9 +27,8 @@ class ThemeService {
   static Future<void> saveThemeMode(AppThemeMode mode) async {
     try {
       await _storage.write(key: _storageKey, value: mode.toString());
-      debugPrint('[ThemeService] Theme mode saved: ${mode.toString()}');
     } catch (e) {
-      debugPrint('[ThemeService] Error saving theme mode: $e');
+      // Error saving theme
     }
   }
 
@@ -37,9 +36,8 @@ class ThemeService {
   static Future<void> clearThemeMode() async {
     try {
       await _storage.delete(key: _storageKey);
-      debugPrint('[ThemeService] Theme mode cleared');
     } catch (e) {
-      debugPrint('[ThemeService] Error clearing theme mode: $e');
+      // Error clearing theme
     }
   }
 

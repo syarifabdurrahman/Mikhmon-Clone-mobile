@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
+import '../../utils/voucher_printer.dart';
 
 class VoucherDetailScreen extends StatefulWidget {
   final Voucher voucher;
@@ -49,6 +50,11 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
             icon: Icon(Icons.share_rounded),
             onPressed: _shareVoucher,
             tooltip: 'Share',
+          ),
+          IconButton(
+            icon: Icon(Icons.print_rounded),
+            onPressed: _printVoucher,
+            tooltip: 'Print',
           ),
         ],
       ),
@@ -119,7 +125,8 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
 
                   // Status Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
                       color: isExpired
                           ? context.appError.withValues(alpha: 0.1)
@@ -134,7 +141,9 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isExpired ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                          isExpired
+                              ? Icons.cancel_rounded
+                              : Icons.check_circle_rounded,
                           color: isExpired ? context.appError : Colors.green,
                         ),
                         SizedBox(width: 8),
@@ -228,7 +237,6 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
                     ),
                   ),
                   SizedBox(height: 16),
-
                   _DetailRow(
                     icon: Icons.pie_chart_rounded,
                     label: 'Profile',
@@ -246,7 +254,8 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
                       label: 'Data Limit',
                       value: widget.voucher.dataLimit!,
                     ),
-                  if (widget.voucher.comment != null && widget.voucher.comment!.isNotEmpty)
+                  if (widget.voucher.comment != null &&
+                      widget.voucher.comment!.isNotEmpty)
                     _DetailRow(
                       icon: Icons.comment_rounded,
                       label: 'Comment',
@@ -256,12 +265,14 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
                     _DetailRow(
                       icon: Icons.event_rounded,
                       label: 'Expires',
-                      value: '${widget.voucher.expiresAt!.day}/${widget.voucher.expiresAt!.month}/${widget.voucher.expiresAt!.year}',
+                      value:
+                          '${widget.voucher.expiresAt!.day}/${widget.voucher.expiresAt!.month}/${widget.voucher.expiresAt!.year}',
                     ),
                   _DetailRow(
                     icon: Icons.schedule_rounded,
                     label: 'Created',
-                    value: '${widget.voucher.createdAt.day}/${widget.voucher.createdAt.month}/${widget.voucher.createdAt.year}',
+                    value:
+                        '${widget.voucher.createdAt.day}/${widget.voucher.createdAt.month}/${widget.voucher.createdAt.year}',
                   ),
                 ],
               ),
@@ -317,7 +328,8 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
   }
 
   void _copyVoucher() {
-    final text = 'User: ${widget.voucher.username}\nPassword: ${widget.voucher.password}';
+    final text =
+        'User: ${widget.voucher.username}\nPassword: ${widget.voucher.password}';
     Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -331,8 +343,13 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
   }
 
   void _shareVoucher() {
-    final text = 'WiFi Voucher\nUser: ${widget.voucher.username}\nPassword: ${widget.voucher.password}';
+    final text =
+        'WiFi Voucher\nUser: ${widget.voucher.username}\nPassword: ${widget.voucher.password}';
     Share.share(text);
+  }
+
+  void _printVoucher() {
+    VoucherPrinter.printVoucher(context, widget.voucher);
   }
 }
 

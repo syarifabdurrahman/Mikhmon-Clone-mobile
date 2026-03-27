@@ -1,5 +1,4 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter/foundation.dart';
 import 'routeros_api_client.dart';
 
 class RouterOSService {
@@ -50,7 +49,6 @@ class RouterOSService {
   Future<RouterOSClient> connect() async {
     // If we have a client (even if disconnected), try to use it
     if (_client != null) {
-      debugPrint('[RouterOSService] Reusing existing client');
       return _client!;
     }
 
@@ -60,22 +58,18 @@ class RouterOSService {
     String? username = _lastUsername;
     String? password = _lastPassword;
 
-    debugPrint('[RouterOSService] Cached credentials: host=$host, user=$username, password=${password != null ? "***" : "null"}');
-
     // If not available, try to read from storage
     if (host == null || username == null || password == null) {
       host = await _storage.read(key: 'router_ip');
       port = await _storage.read(key: 'port') ?? '8728';
       username = await _storage.read(key: 'username');
       password = await _storage.read(key: 'password');
-      debugPrint('[RouterOSService] Storage credentials: host=$host, user=$username, password=${password != null ? "***" : "null"}');
     }
 
     if (host == null || username == null || password == null) {
       throw Exception('No saved credentials found. Please login again.');
     }
 
-    debugPrint('[RouterOSService] Creating new connection...');
     return await connectWithCredentials(
       host: host,
       port: port ?? '8728',

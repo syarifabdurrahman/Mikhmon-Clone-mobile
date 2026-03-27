@@ -22,16 +22,7 @@ final dioProvider = Provider<Dio>((ref) {
 
   // Add logging interceptor in debug mode
   if (kDebugMode) {
-    dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      requestHeader: true,
-      responseHeader: false,
-      error: true,
-      logPrint: (object) {
-        debugPrint(object.toString());
-      },
-    ));
+    // Log interceptor removed for production
   }
 
   // Add custom interceptor for error handling and auth
@@ -40,11 +31,9 @@ final dioProvider = Provider<Dio>((ref) {
       onRequest: (options, handler) {
         // Add custom headers if needed
         // For example, auth token can be added here
-        debugPrint('REQUEST: ${options.method} ${options.path}');
         handler.next(options);
       },
       onResponse: (response, handler) {
-        debugPrint('RESPONSE: ${response.statusCode} ${response.requestOptions.path}');
         handler.next(response);
       },
       onError: (error, handler) {
@@ -99,9 +88,6 @@ final dioProvider = Provider<Dio>((ref) {
             errorMessage = 'Unknown error: ${error.message}';
             break;
         }
-
-        debugPrint('ERROR: $errorMessage');
-        debugPrint('ERROR DETAILS: ${error.toString()}');
 
         // Pass the error with custom message
         final dioError = DioException(
@@ -222,7 +208,9 @@ class RouterOSDioClient {
           'password': password,
           'profile': profile,
           if (comment != null) 'comment': comment,
-          if (validity != null && validity.isNotEmpty && validity != 'unlimited')
+          if (validity != null &&
+              validity.isNotEmpty &&
+              validity != 'unlimited')
             'limit-uptime': validity,
           if (dataLimit != null && dataLimit.isNotEmpty)
             'limit-bytes-total': dataLimit,

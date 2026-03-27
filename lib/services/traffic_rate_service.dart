@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'models.dart';
 
 /// History data for rate calculation
@@ -38,26 +37,20 @@ class TrafficRateService {
           interface.txBytes != null &&
           interface.rxBytes != null) {
         // Calculate time difference in seconds
-        final timeDiff = now.difference(previous.timestamp).inSeconds.toDouble();
+        final timeDiff =
+            now.difference(previous.timestamp).inSeconds.toDouble();
 
         if (timeDiff > 0) {
           // Calculate bytes per second
-          final txDiff = (interface.txBytes! - previous.txBytes).clamp(0, double.infinity).toInt();
-          final rxDiff = (interface.rxBytes! - previous.rxBytes).clamp(0, double.infinity).toInt();
+          final txDiff = (interface.txBytes! - previous.txBytes)
+              .clamp(0, double.infinity)
+              .toInt();
+          final rxDiff = (interface.rxBytes! - previous.rxBytes)
+              .clamp(0, double.infinity)
+              .toInt();
 
           txRate = (txDiff / timeDiff).round();
           rxRate = (rxDiff / timeDiff).round();
-
-          // Debug log rate calculation
-          debugPrint('[RateService] $key: txDiff=$txDiff, rxDiff=$rxDiff, timeDiff=${timeDiff.toStringAsFixed(1)}s → txRate=$txRate B/s, rxRate=$rxRate B/s');
-        } else {
-          debugPrint('[RateService] $key: No time diff (${now.difference(previous.timestamp).inMilliseconds}ms)');
-        }
-      } else {
-        if (previous == null) {
-          debugPrint('[RateService] $key: No previous data (first call)');
-        } else {
-          debugPrint('[RateService] $key: txBytes=${interface.txBytes}, rxBytes=${interface.rxBytes}');
         }
       }
 

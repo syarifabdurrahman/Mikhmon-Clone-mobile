@@ -16,30 +16,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 600),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutCubic,
+        curve: Curves.easeOut,
       ),
     );
 
@@ -66,47 +55,34 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             colors: [
               context.appBackground,
               context.appSurface,
-              context.appBackground,
             ],
-            stops: const [0.0, 0.5, 1.0],
           ),
         ),
         child: SafeArea(
-          child: Center(
+          bottom: false,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo Section
-                      _buildLogoSection(isSmallScreen),
-                      const SizedBox(height: 48),
-
-                      // Title Section
-                      _buildTitleSection(),
-                      const SizedBox(height: 16),
-
-                      // Description
-                      _buildDescription(),
-                      const SizedBox(height: 32),
-
-                      // Saved Connections Section
-                      _buildSavedConnectionsSection(),
-                      SizedBox(height: isSmallScreen ? 32 : 48),
-
-                      // Buttons Section
-                      _buildButtonsSection(),
-                      const SizedBox(height: 24),
-
-                      // Version Info
-                      _buildVersionInfo(),
-                    ],
-                  ),
-                ),
+              padding: EdgeInsets.symmetric(
+                horizontal: isSmallScreen ? 24 : 32,
+                vertical: isSmallScreen ? 32 : 48,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(height: isSmallScreen ? 20 : 40),
+                  _buildLogoSection(isSmallScreen),
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+                  _buildTitleSection(),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  _buildDescription(),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  _buildSavedConnectionsSection(),
+                  SizedBox(height: isSmallScreen ? 24 : 40),
+                  _buildButtonsSection(),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  _buildVersionInfo(),
+                ],
               ),
             ),
           ),
@@ -117,30 +93,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   Widget _buildLogoSection(bool isSmallScreen) {
     return Container(
-      width: isSmallScreen ? 100 : 120,
-      height: isSmallScreen ? 100 : 120,
+      padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
           colors: [
-            context.appPrimary,
-            const Color(0xFF1976D2),
+            context.appPrimary.withValues(alpha: 0.15),
+            context.appPrimary.withValues(alpha: 0.05),
           ],
         ),
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: context.appPrimary.withValues(alpha: 0.3),
-            blurRadius: 24,
-            spreadRadius: 8,
-          ),
-        ],
       ),
       child: Icon(
         Icons.router_rounded,
-        size: isSmallScreen ? 50 : 60,
-        color: Colors.white,
+        size: isSmallScreen ? 56 : 72,
+        color: context.appPrimary,
       ),
     );
   }
@@ -150,7 +116,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       children: [
         Text(
           'ΩMMON',
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                 color: context.appOnBackground,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.5,
@@ -163,17 +129,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           decoration: BoxDecoration(
             color: context.appPrimary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: context.appPrimary.withValues(alpha: 0.3),
-              width: 1,
-            ),
           ),
           child: Text(
             'Open Mikrotik Monitor',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: context.appPrimary,
                   fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
                 ),
           ),
         ),
@@ -183,13 +144,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   Widget _buildDescription() {
     return Text(
-      'Professional Mikrotik RouterOS management solution. Monitor, control, and manage your hotspot with ease.',
-      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+      'Professional Mikrotik RouterOS management solution.',
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: context.appOnSurface.withValues(alpha: 0.7),
-            height: 1.5,
           ),
       textAlign: TextAlign.center,
-      maxLines: 3,
+      maxLines: 2,
       overflow: TextOverflow.ellipsis,
     );
   }
@@ -199,21 +159,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       children: [
         SizedBox(
           width: double.infinity,
-          height: 56,
+          height: 52,
           child: ElevatedButton.icon(
             onPressed: _handleLogin,
-            icon: const Icon(Icons.login_rounded, size: 22),
+            icon: const Icon(Icons.login_rounded, size: 20),
             label: const Text(
               'Login',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
               ),
-            ),
-            style: ElevatedButton.styleFrom(
-              elevation: 4,
-              shadowColor: context.appPrimary.withValues(alpha: 0.4),
             ),
           ),
         ),
@@ -222,19 +177,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   Widget _buildVersionInfo() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: context.appCard.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Version 1.0.0',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.appOnSurface.withValues(alpha: 0.5),
-              letterSpacing: 1,
-            ),
-      ),
+    return Text(
+      'Version 1.0.0',
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.appOnSurface.withValues(alpha: 0.5),
+          ),
     );
   }
 
@@ -258,20 +205,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               children: [
                 Icon(
                   Icons.history_rounded,
-                  size: 18,
+                  size: 16,
                   color: context.appOnBackground.withValues(alpha: 0.6),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
                   'Quick Login',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: context.appOnBackground.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w500,
                       ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             ...connections.map((conn) => _buildConnectionCard(conn)),
           ],
         );
@@ -304,7 +251,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                 ),
                 child: Icon(
                   Icons.router_rounded,
-                  size: 18,
+                  size: 16,
                   color: context.appPrimary,
                 ),
               ),
@@ -316,25 +263,25 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     Text(
                       connection.name,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: context.appOnBackground,
+                            color: context.appOnSurface,
                             fontWeight: FontWeight.w500,
                           ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
                     Text(
-                      connection.address,
+                      connection.host,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: context.appOnBackground.withValues(alpha: 0.6),
+                            color: context.appOnSurface.withValues(alpha: 0.6),
                           ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              Text(
-                connection.username,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.appOnBackground.withValues(alpha: 0.5),
-                    ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: context.appOnSurface.withValues(alpha: 0.4),
               ),
             ],
           ),
@@ -348,12 +295,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: context.appSurface,
         title: Text(
-          'Connect to ${connection.name}',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          'Connect',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: context.appOnBackground,
+                fontWeight: FontWeight.bold,
               ),
         ),
         content: Column(
@@ -361,13 +310,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Host: ${connection.host}:${connection.port}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.appOnBackground.withValues(alpha: 0.7),
-                  ),
-            ),
-            Text(
-              'Username: ${connection.username}',
+              connection.host,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: context.appOnBackground.withValues(alpha: 0.7),
                   ),
@@ -378,8 +321,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Password',
-                hintText: 'Enter router password',
-                prefixIcon: const Icon(Icons.lock_rounded, size: 20),
+                hintText: 'Enter password',
+                prefixIcon: const Icon(Icons.lock_rounded, size: 18),
               ),
               autofocus: true,
               onSubmitted: (value) {
@@ -392,20 +335,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: context.appOnBackground.withValues(alpha: 0.6)),
-            ),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               _quickLogin(connection, passwordController.text);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.appPrimary,
-              foregroundColor: Colors.white,
-            ),
             child: const Text('Connect'),
           ),
         ],

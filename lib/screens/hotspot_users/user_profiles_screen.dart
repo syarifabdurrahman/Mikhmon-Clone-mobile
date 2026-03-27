@@ -24,53 +24,58 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
     final profilesAsync = ref.watch(userProfileProvider);
 
     return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
       child: Scaffold(
         backgroundColor: context.appBackground,
         appBar: _buildAppBar(),
-      body: profilesAsync.when(
-        data: (profiles) {
-          if (profiles.isEmpty) {
-            return _buildEmptyState();
-          }
-          return RefreshIndicator(
-            onRefresh: () => ref.read(userProfileProvider.notifier).refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: profiles.length,
-              // Performance optimization: estimated item height for better scrolling
-              itemExtent: 190,
-              // Performance optimization: explicit repaint boundaries
-              addRepaintBoundaries: true,
-              // Performance optimization: keep widgets alive for better performance
-              addAutomaticKeepAlives: true,
-              // Performance optimization: cache extent determines how many widgets to render off-screen
-              cacheExtent: 500,
-              itemBuilder: (context, index) {
-                return RepaintBoundary(
-                  key: ValueKey(profiles[index].id),
-                  child: _ProfileCard(
-                    profile: profiles[index],
-                    onTap: () => _showProfileDetails(profiles[index]),
-                    onMoreTap: () => _showProfileOptions(profiles[index]),
-                  ),
-                );
-              },
-            ),
-          );
-        },
-        loading: () => Center(
-          child: CircularProgressIndicator(),
+        body: profilesAsync.when(
+          data: (profiles) {
+            if (profiles.isEmpty) {
+              return _buildEmptyState();
+            }
+            return RefreshIndicator(
+              onRefresh: () => ref.read(userProfileProvider.notifier).refresh(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: profiles.length,
+                // Performance optimization: estimated item height for better scrolling
+                itemExtent: 190,
+                // Performance optimization: explicit repaint boundaries
+                addRepaintBoundaries: true,
+                // Performance optimization: keep widgets alive for better performance
+                addAutomaticKeepAlives: true,
+                // Performance optimization: cache extent determines how many widgets to render off-screen
+                cacheExtent: 500,
+                itemBuilder: (context, index) {
+                  return RepaintBoundary(
+                    key: ValueKey(profiles[index].id),
+                    child: _ProfileCard(
+                      profile: profiles[index],
+                      onTap: () => _showProfileDetails(profiles[index]),
+                      onMoreTap: () => _showProfileOptions(profiles[index]),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+          loading: () => Center(
+            child: CircularProgressIndicator(),
+          ),
+          error: (error, stack) => _buildErrorState(error.toString()),
         ),
-        error: (error, stack) => _buildErrorState(error.toString()),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _navigateToAddProfile,
+          backgroundColor: context.appPrimary,
+          foregroundColor: Colors.white,
+          icon: Icon(Icons.add_rounded),
+          label: Text('Add Profile'),
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToAddProfile,
-        backgroundColor: context.appPrimary,
-        foregroundColor: Colors.white,
-        icon: Icon(Icons.add_rounded),
-        label: Text('Add Profile'),
-      ),
-    ),
     );
   }
 
@@ -208,8 +213,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
               },
             ),
             ListTile(
-              leading:
-                  Icon(Icons.delete_rounded, color: context.appError),
+              leading: Icon(Icons.delete_rounded, color: context.appError),
               title: Text(
                 'Delete Profile',
                 style: TextStyle(color: context.appError),
@@ -254,8 +258,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
         ),
         content: Text(
           'Are you sure you want to delete "${profile.name}" profile? This action cannot be undone.',
-          style:
-              TextStyle(color: context.appOnSurface.withValues(alpha: 0.8)),
+          style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.8)),
         ),
         actions: [
           TextButton(

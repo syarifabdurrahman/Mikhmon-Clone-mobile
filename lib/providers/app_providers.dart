@@ -44,7 +44,8 @@ final cacheServiceProvider = Provider<CacheService>((ref) {
 });
 
 // Theme Provider
-final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, AppThemeMode>((ref) {
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeNotifier, AppThemeMode>((ref) {
   return ThemeModeNotifier();
 });
 
@@ -137,15 +138,12 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       // Pre-fetch system resources during login
       Map<String, dynamic>? resources;
       try {
-        debugPrint('[Auth] Pre-fetching system resources...');
         resources = await client.getSystemResources();
-        debugPrint('[Auth] System resources fetched successfully');
 
         final cache = ref.read(cacheServiceProvider);
         await cache.saveSystemResources(resources);
-        debugPrint('[Auth] System resources cached');
       } catch (e) {
-        debugPrint('[Auth] Warning: Failed to pre-fetch resources: $e');
+        // Silently handle pre-fetch failure - dashboard will load on demand
       }
 
       // Store credentials if remember me is checked
@@ -241,7 +239,24 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: ':id',
                 name: 'user_details',
-                builder: (context, state) => const HotspotUsersScreen(),
+                pageBuilder: (context, state) => CustomTransitionPage(
+                  key: state.pageKey,
+                  child: const HotspotUsersScreen(),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1, 0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeInOut,
+                      )),
+                      child: child,
+                    );
+                  },
+                  transitionDuration: const Duration(milliseconds: 250),
+                ),
               ),
             ],
           ),
@@ -258,14 +273,46 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: ':id',
                 name: 'host_details',
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final host = state.extra as HotspotHost?;
                   if (host == null) {
-                    return const Scaffold(
-                      body: Center(child: Text('Host not found')),
+                    return CustomTransitionPage(
+                      key: state.pageKey,
+                      child: const Scaffold(
+                        body: Center(child: Text('Host not found')),
+                      ),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                        return SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(1, 0),
+                            end: Offset.zero,
+                          ).animate(CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeInOut,
+                          )),
+                          child: child,
+                        );
+                      },
                     );
                   }
-                  return HotspotHostDetailsScreen(host: host);
+                  return CustomTransitionPage(
+                    key: state.pageKey,
+                    child: HotspotHostDetailsScreen(host: host),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      return SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(1, 0),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeInOut,
+                        )),
+                        child: child,
+                      );
+                    },
+                  );
                 },
               ),
             ],
@@ -304,7 +351,8 @@ class _RouterRefreshNotifier extends ChangeNotifier {
 }
 
 // Hotspot Users Provider
-final hotspotUsersProvider = AsyncNotifierProvider<HotspotUsersNotifier, PaginatedUsers>(() {
+final hotspotUsersProvider =
+    AsyncNotifierProvider<HotspotUsersNotifier, PaginatedUsers>(() {
   return HotspotUsersNotifier();
 });
 
@@ -360,7 +408,6 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     final filteredUsers = allUsers.where((user) {
       final userName = user['name'] as String? ?? '';
       if (systemUserNames.contains(userName.toLowerCase())) {
-        debugPrint('[HotspotUsers] Filtering out system user: $userName');
         return false;
       }
       return true;
@@ -434,7 +481,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     // Immediately remove user from current state for instant UI update
     final currentState = state.value;
     if (currentState != null) {
-      final updatedUsers = currentState.users.where((user) => user['.id'] != id).toList();
+      final updatedUsers =
+          currentState.users.where((user) => user['.id'] != id).toList();
       state = AsyncValue.data(PaginatedUsers(
         users: updatedUsers,
         hasMore: currentState.hasMore,
@@ -452,7 +500,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       final newData = await _loadUsers(page: 1);
       state = AsyncValue.data(newData);
     } catch (e) {
-      debugPrint('[HotspotUsers] Silent refresh failed: $e');
+      // Silent refresh failed - will retry on next access
     }
   }
 
@@ -470,7 +518,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
     // Get current user data to preserve disabled status and password
     final allUsers = await client.getHotspotUsersList();
-    final currentUser = allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
+    final currentUser =
+        allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
 
     // Update user using remove and re-add approach
     await client.updateHotspotUser(
@@ -496,8 +545,10 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     // Get current user status from current state
     final currentState = state.value;
     if (currentState != null) {
-      final currentUser = currentState.users.firstWhere((u) => u['.id'] == id, orElse: () => {});
-      final isCurrentlyDisabled = currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
+      final currentUser = currentState.users
+          .firstWhere((u) => u['.id'] == id, orElse: () => {});
+      final isCurrentlyDisabled =
+          currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
 
       // Immediately update UI by toggling the disabled status in current state
       final updatedUsers = currentState.users.map((user) {
@@ -524,7 +575,6 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
           disabled: !isCurrentlyDisabled,
         );
       } catch (e) {
-        debugPrint('[HotspotUsers] Error toggling status: $e');
         // Revert UI change on error
         state = AsyncValue.data(currentState);
         rethrow;
@@ -535,8 +585,10 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     } else {
       // Fallback if no current state
       final allUsers = await client.getHotspotUsersList();
-      final currentUser = allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
-      final isCurrentlyDisabled = currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
+      final currentUser =
+          allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
+      final isCurrentlyDisabled =
+          currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
 
       await client.setHotspotUserStatus(
         id: id,
@@ -551,7 +603,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 }
 
 // System Resources Provider
-final systemResourcesProvider = AsyncNotifierProvider<SystemResourcesNotifier, Map<String, dynamic>>(() {
+final systemResourcesProvider =
+    AsyncNotifierProvider<SystemResourcesNotifier, Map<String, dynamic>>(() {
   return SystemResourcesNotifier();
 });
 
@@ -566,8 +619,6 @@ class SystemResourcesNotifier extends AsyncNotifier<Map<String, dynamic>> {
     // Try cache first
     final cachedResources = cache.getSystemResources();
     if (cachedResources != null) {
-      final lastUpdate = cache.getLastUpdate();
-      debugPrint('[SystemResources] Using cached resources, last update: $lastUpdate');
       return cachedResources;
     }
 
@@ -590,12 +641,14 @@ class SystemResourcesNotifier extends AsyncNotifier<Map<String, dynamic>> {
 }
 
 // Resource History Provider - persists across navigation for seamless charts
-final resourceHistoryProvider = ChangeNotifierProvider<ResourceHistoryNotifier>((ref) {
+final resourceHistoryProvider =
+    ChangeNotifierProvider<ResourceHistoryNotifier>((ref) {
   return ResourceHistoryNotifier();
 });
 
 // Hotspot Active Users Provider
-final hotspotActiveUsersProvider = AsyncNotifierProvider<HotspotActiveUsersNotifier, PaginatedUsers>(() {
+final hotspotActiveUsersProvider =
+    AsyncNotifierProvider<HotspotActiveUsersNotifier, PaginatedUsers>(() {
   return HotspotActiveUsersNotifier();
 });
 
@@ -664,12 +717,14 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 }
 
 // User Profiles Provider
-final userProfileProvider = AsyncNotifierProvider<UserProfileNotifier, List<UserProfile>>(() {
+final userProfileProvider =
+    AsyncNotifierProvider<UserProfileNotifier, List<UserProfile>>(() {
   return UserProfileNotifier();
 });
 
 // Interface Traffic Provider
-final interfaceTrafficProvider = AsyncNotifierProvider<InterfaceTrafficNotifier, List<InterfaceTraffic>>(() {
+final interfaceTrafficProvider =
+    AsyncNotifierProvider<InterfaceTrafficNotifier, List<InterfaceTraffic>>(() {
   return InterfaceTrafficNotifier();
 });
 
@@ -684,10 +739,10 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     // Try to get cached profiles first
     final cachedProfiles = cache.getUserProfiles();
     if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
-      debugPrint('[UserProfiles] Using cached data (${cachedProfiles.length} profiles)');
       // Apply filtering to cached data as well
       return cachedProfiles
-          .where((p) => !_systemProfileNames.contains(p['name']?.toString().toLowerCase()))
+          .where((p) => !_systemProfileNames
+              .contains(p['name']?.toString().toLowerCase()))
           .map((data) => UserProfile.fromJson(data))
           .toList();
     }
@@ -701,27 +756,24 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     final cache = ref.read(cacheServiceProvider);
     final client = service.client;
     if (client == null) {
-      debugPrint('[UserProfiles] No client available');
       return [];
     }
 
     try {
       final profilesData = await client.getUserProfiles();
-      debugPrint('[UserProfiles] Received ${profilesData.length} profiles from RouterOS');
 
       // Filter out system profiles
       final profiles = profilesData
-          .where((p) => !_systemProfileNames.contains(p['name']?.toString().toLowerCase()))
+          .where((p) => !_systemProfileNames
+              .contains(p['name']?.toString().toLowerCase()))
           .map((data) => UserProfile.fromJson(data))
           .toList();
 
       // Cache the profiles (cache original data, filtering is applied on load)
       await cache.saveUserProfiles(profilesData);
 
-      debugPrint('[UserProfiles] Loaded ${profiles.length} profiles');
       return profiles;
     } catch (e) {
-      debugPrint('[UserProfiles] Error loading profiles: $e');
       return [];
     }
   }
@@ -731,12 +783,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
   }
 
   Future<void> silentRefresh() async {
-    debugPrint('[UserProfiles] silentRefresh() called');
     try {
       final newData = await _fetchProfilesAndCache();
       state = AsyncValue.data(newData);
     } catch (e) {
-      debugPrint('[UserProfiles] Silent refresh failed: $e');
+      // Silent refresh failed
     }
   }
 
@@ -748,8 +799,10 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     // Build rate-limit string from upload/download
-    final rateLimit = (profile.rateLimitUpload == null || profile.rateLimitUpload == 'unlimited') &&
-        (profile.rateLimitDownload == null || profile.rateLimitDownload == 'unlimited')
+    final rateLimit = (profile.rateLimitUpload == null ||
+                profile.rateLimitUpload == 'unlimited') &&
+            (profile.rateLimitDownload == null ||
+                profile.rateLimitDownload == 'unlimited')
         ? null
         : '${profile.rateLimitUpload ?? 'unlimited'}/${profile.rateLimitDownload ?? 'unlimited'}';
 
@@ -770,8 +823,10 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     // Build rate-limit string from upload/download
-    final rateLimit = (updatedProfile.rateLimitUpload == null || updatedProfile.rateLimitUpload == 'unlimited') &&
-        (updatedProfile.rateLimitDownload == null || updatedProfile.rateLimitDownload == 'unlimited')
+    final rateLimit = (updatedProfile.rateLimitUpload == null ||
+                updatedProfile.rateLimitUpload == 'unlimited') &&
+            (updatedProfile.rateLimitDownload == null ||
+                updatedProfile.rateLimitDownload == 'unlimited')
         ? null
         : '${updatedProfile.rateLimitUpload ?? 'unlimited'}/${updatedProfile.rateLimitDownload ?? 'unlimited'}';
 
@@ -800,7 +855,8 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 }
 
 // Vouchers Provider
-final vouchersProvider = AsyncNotifierProvider<VouchersNotifier, List<Voucher>>(() {
+final vouchersProvider =
+    AsyncNotifierProvider<VouchersNotifier, List<Voucher>>(() {
   return VouchersNotifier();
 });
 
@@ -812,12 +868,10 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
     // Try to get cached vouchers first
     final cachedVouchers = cache.getVouchers();
     if (cachedVouchers != null && cachedVouchers.isNotEmpty) {
-      debugPrint('[Vouchers] Using cached data (${cachedVouchers.length} vouchers)');
       return cachedVouchers.map((data) => Voucher.fromJson(data)).toList();
     }
 
     // No cache, return empty list
-    debugPrint('[Vouchers] No cached vouchers');
     return [];
   }
 
@@ -851,18 +905,18 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
 
   /// Refresh vouchers from cache
   Future<void> refresh() async {
-    debugPrint('[Vouchers] Refresh() called');
     try {
       final cache = ref.read(cacheServiceProvider);
       final cachedVouchers = cache.getVouchers();
 
       if (cachedVouchers != null) {
-        state = AsyncValue.data(cachedVouchers.map((data) => Voucher.fromJson(data)).toList());
+        state = AsyncValue.data(
+            cachedVouchers.map((data) => Voucher.fromJson(data)).toList());
       } else {
         state = const AsyncValue.data([]);
       }
     } catch (e) {
-      debugPrint('[Vouchers] Refresh failed: $e');
+      // Refresh failed silently
     }
   }
 
@@ -881,7 +935,8 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
         sorted.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         break;
       case VoucherSort.az:
-        sorted.sort((a, b) => a.username.toLowerCase().compareTo(b.username.toLowerCase()));
+        sorted.sort((a, b) =>
+            a.username.toLowerCase().compareTo(b.username.toLowerCase()));
         break;
     }
 
@@ -924,9 +979,10 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
     final cachedSummary = cache.getIncomeSummary();
 
     if (cachedTransactions != null && cachedSummary != null) {
-      debugPrint('[Income] Loaded from cache');
       return IncomeState(
-        transactions: cachedTransactions.map((t) => SalesTransaction.fromJson(t)).toList(),
+        transactions: cachedTransactions
+            .map((t) => SalesTransaction.fromJson(t))
+            .toList(),
         summary: IncomeSummary(
           todayIncome: (cachedSummary['todayIncome'] as num).toDouble(),
           thisMonthIncome: (cachedSummary['thisMonthIncome'] as num).toDouble(),
@@ -979,7 +1035,8 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
 }
 
 // Interface Traffic Provider
-final savedConnectionsProvider = AsyncNotifierProvider<SavedConnectionsNotifier, List<RouterConnection>>(() {
+final savedConnectionsProvider =
+    AsyncNotifierProvider<SavedConnectionsNotifier, List<RouterConnection>>(() {
   return SavedConnectionsNotifier();
 });
 
@@ -990,7 +1047,9 @@ class SavedConnectionsNotifier extends AsyncNotifier<List<RouterConnection>> {
     final cachedConnections = cache.getSavedConnections();
 
     if (cachedConnections != null) {
-      return cachedConnections.map((c) => RouterConnection.fromJson(c)).toList();
+      return cachedConnections
+          .map((c) => RouterConnection.fromJson(c))
+          .toList();
     }
 
     return [];
@@ -1060,9 +1119,10 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
     final cachedTraffic = cache.getInterfaceTraffic();
 
     if (cachedTraffic != null && cachedTraffic.isNotEmpty) {
-      debugPrint('[InterfaceTraffic] Using cached data');
       // Convert cached maps back to InterfaceTraffic objects
-      return cachedTraffic.map((data) => InterfaceTraffic.fromJson(data)).toList();
+      return cachedTraffic
+          .map((data) => InterfaceTraffic.fromJson(data))
+          .toList();
     }
 
     // No cache, fetch from API
@@ -1092,14 +1152,11 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
 
   /// Silent refresh - updates data without showing loading state
   Future<void> silentRefresh() async {
-    debugPrint('[TrafficReal] silentRefresh() called');
     final service = ref.read(routerOSServiceProvider);
 
     try {
-      debugPrint('[TrafficReal] Starting real-time traffic fetch');
       final client = service.client;
       if (client == null) {
-        debugPrint('[TrafficReal] Client is null, aborting refresh');
         return;
       }
 
@@ -1108,37 +1165,24 @@ class InterfaceTrafficNotifier extends AsyncNotifier<List<InterfaceTraffic>> {
         return InterfaceTraffic.fromJson(data);
       }).toList();
 
-      // Log raw data before rate calculation
-      for (final iface in interfaces) {
-        debugPrint('[TrafficReal] ${iface.name}: txBytes=${iface.txBytes}, rxBytes=${iface.rxBytes}, running=${iface.running}');
-      }
-
       // Calculate rates using historical data
-      debugPrint('[TrafficReal] Calculating rates...');
       final newData = _trafficRateService.calculateRates(interfaces);
-
-      // Log results after rate calculation
-      for (final iface in newData) {
-        debugPrint('[TrafficReal] ${iface.name}: txRate=${iface.txBytesPerSecond} B/s, rxRate=${iface.rxBytesPerSecond} B/s');
-      }
 
       // Save to cache
       final cache = ref.read(cacheServiceProvider);
       await cache.saveInterfaceTraffic(newData.map((e) => e.toJson()).toList());
 
       // Update state directly without loading
-      debugPrint('[TrafficReal] Updating provider state with ${newData.length} interfaces');
       state = AsyncValue.data(newData);
-      debugPrint('[TrafficReal] Provider state updated successfully');
     } catch (e) {
       // Silent fail - don't show error on auto-refresh
-      debugPrint('[Traffic] Silent refresh failed: $e');
     }
   }
 }
 
 // Hotspot Hosts Provider
-final hotspotHostsProvider = AsyncNotifierProvider<HotspotHostsNotifier, List<HotspotHost>>(() {
+final hotspotHostsProvider =
+    AsyncNotifierProvider<HotspotHostsNotifier, List<HotspotHost>>(() {
   return HotspotHostsNotifier();
 });
 
@@ -1147,7 +1191,6 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
 
   @override
   Future<List<HotspotHost>> build() async {
-    debugPrint('[Hosts] Loading hotspot hosts...');
     final hosts = await _fetchHosts();
     // Start auto-refresh when data becomes available
     _startAutoRefresh();
@@ -1166,7 +1209,6 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
       final hostsData = await client.getHotspotHosts();
       return hostsData.map((data) => HotspotHost.fromJson(data)).toList();
     } catch (e) {
-      debugPrint('[Hosts] Error fetching hosts: $e');
       return [];
     }
   }
@@ -1174,21 +1216,17 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
   void _startAutoRefresh() {
     if (_timerStarted) return;
     _timerStarted = true;
-    debugPrint('[Hosts] Starting auto-refresh timer (every 5 seconds)');
     Timer.periodic(const Duration(seconds: 5), (timer) {
-      debugPrint('[Hosts] Timer fired, calling silentRefresh()');
       silentRefresh();
     });
   }
 
   Future<void> silentRefresh() async {
-    debugPrint('[Hosts] silentRefresh() called');
     try {
       final hosts = await _fetchHosts();
       state = AsyncValue.data(hosts);
-      debugPrint('[Hosts] Silent refresh completed, ${hosts.length} hosts');
     } catch (e) {
-      debugPrint('[Hosts] Silent refresh failed: $e');
+      // Silent refresh failed
     }
   }
 

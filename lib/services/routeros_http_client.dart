@@ -12,7 +12,7 @@ class RouterOSHttpClient {
   String? _sessionId;
 
   // Enable debug logging
-  static const bool _debug = true;
+  static const bool _debug = false;
 
   void _log(String message) {
     if (_debug) {

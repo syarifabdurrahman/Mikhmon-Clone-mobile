@@ -1,5 +1,4 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter/foundation.dart';
 
 /// Cache service for storing RouterOS data locally using Hive
 /// Provides instant data access and offline support
@@ -36,9 +35,7 @@ class CacheService {
       _cacheBox = await Hive.openBox(_boxName);
 
       _initialized = true;
-      debugPrint('[CacheService] Initialized successfully');
     } catch (e) {
-      debugPrint('[CacheService] Initialization failed: $e');
       rethrow;
     }
   }
@@ -51,13 +48,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_systemResourcesKey);
       if (data != null && data is Map) {
-        debugPrint('[CacheService] System resources cache hit');
         return Map<String, dynamic>.from(data);
       }
-      debugPrint('[CacheService] System resources cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading system resources: $e');
       return null;
     }
   }
@@ -67,9 +61,8 @@ class CacheService {
     try {
       await _cacheBox.put(_systemResourcesKey, data);
       await _cacheBox.put(_lastUpdateKey, DateTime.now().toIso8601String());
-      debugPrint('[CacheService] System resources cached');
     } catch (e) {
-      debugPrint('[CacheService] Error saving system resources: $e');
+      // Error saving
     }
   }
 
@@ -78,13 +71,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_hotspotUsersKey);
       if (data != null && data is List) {
-        debugPrint('[CacheService] Hotspot users cache hit (${data.length} users)');
         return data.map((e) => Map<String, dynamic>.from(e)).toList();
       }
-      debugPrint('[CacheService] Hotspot users cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading hotspot users: $e');
       return null;
     }
   }
@@ -93,9 +83,8 @@ class CacheService {
   Future<void> saveHotspotUsers(List<Map<String, dynamic>> data) async {
     try {
       await _cacheBox.put(_hotspotUsersKey, data);
-      debugPrint('[CacheService] Hotspot users cached (${data.length} users)');
     } catch (e) {
-      debugPrint('[CacheService] Error saving hotspot users: $e');
+      // Error saving
     }
   }
 
@@ -104,13 +93,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_activeUsersKey);
       if (data != null && data is List) {
-        debugPrint('[CacheService] Active users cache hit (${data.length} users)');
         return data.map((e) => Map<String, dynamic>.from(e)).toList();
       }
-      debugPrint('[CacheService] Active users cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading active users: $e');
       return null;
     }
   }
@@ -119,9 +105,8 @@ class CacheService {
   Future<void> saveActiveUsers(List<Map<String, dynamic>> data) async {
     try {
       await _cacheBox.put(_activeUsersKey, data);
-      debugPrint('[CacheService] Active users cached (${data.length} users)');
     } catch (e) {
-      debugPrint('[CacheService] Error saving active users: $e');
+      // Error saving
     }
   }
 
@@ -130,13 +115,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_userProfilesKey);
       if (data != null && data is List) {
-        debugPrint('[CacheService] User profiles cache hit (${data.length} profiles)');
         return data.map((e) => Map<String, dynamic>.from(e)).toList();
       }
-      debugPrint('[CacheService] User profiles cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading user profiles: $e');
       return null;
     }
   }
@@ -145,9 +127,8 @@ class CacheService {
   Future<void> saveUserProfiles(List<Map<String, dynamic>> data) async {
     try {
       await _cacheBox.put(_userProfilesKey, data);
-      debugPrint('[CacheService] User profiles cached (${data.length} profiles)');
     } catch (e) {
-      debugPrint('[CacheService] Error saving user profiles: $e');
+      // Error saving
     }
   }
 
@@ -156,13 +137,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_salesTransactionsKey);
       if (data != null && data is List) {
-        debugPrint('[CacheService] Sales transactions cache hit (${data.length} transactions)');
         return data.map((e) => Map<String, dynamic>.from(e)).toList();
       }
-      debugPrint('[CacheService] Sales transactions cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading sales transactions: $e');
       return null;
     }
   }
@@ -173,19 +151,18 @@ class CacheService {
       final transactions = getSalesTransactions() ?? [];
       transactions.add(transaction);
       await _cacheBox.put(_salesTransactionsKey, transactions);
-      debugPrint('[CacheService] Sales transaction cached');
     } catch (e) {
-      debugPrint('[CacheService] Error saving sales transaction: $e');
+      // Error saving
     }
   }
 
   /// Save multiple sales transactions to cache
-  Future<void> saveSalesTransactions(List<Map<String, dynamic>> transactions) async {
+  Future<void> saveSalesTransactions(
+      List<Map<String, dynamic>> transactions) async {
     try {
       await _cacheBox.put(_salesTransactionsKey, transactions);
-      debugPrint('[CacheService] Sales transactions cached (${transactions.length} transactions)');
     } catch (e) {
-      debugPrint('[CacheService] Error saving sales transactions: $e');
+      // Error saving
     }
   }
 
@@ -194,13 +171,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_incomeSummaryKey);
       if (data != null && data is Map) {
-        debugPrint('[CacheService] Income summary cache hit');
         return Map<String, dynamic>.from(data);
       }
-      debugPrint('[CacheService] Income summary cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading income summary: $e');
       return null;
     }
   }
@@ -209,9 +183,8 @@ class CacheService {
   Future<void> saveIncomeSummary(Map<String, dynamic> summary) async {
     try {
       await _cacheBox.put(_incomeSummaryKey, summary);
-      debugPrint('[CacheService] Income summary cached');
     } catch (e) {
-      debugPrint('[CacheService] Error saving income summary: $e');
+      // Error saving
     }
   }
 
@@ -220,24 +193,21 @@ class CacheService {
     try {
       final data = _cacheBox.get(_savedConnectionsKey);
       if (data != null && data is List) {
-        debugPrint('[CacheService] Saved connections cache hit (${data.length} connections)');
         return data.map((e) => Map<String, dynamic>.from(e)).toList();
       }
-      debugPrint('[CacheService] Saved connections cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading saved connections: $e');
       return null;
     }
   }
 
   /// Save router connections to cache
-  Future<void> saveSavedConnections(List<Map<String, dynamic>> connections) async {
+  Future<void> saveSavedConnections(
+      List<Map<String, dynamic>> connections) async {
     try {
       await _cacheBox.put(_savedConnectionsKey, connections);
-      debugPrint('[CacheService] Saved connections cached (${connections.length} connections)');
     } catch (e) {
-      debugPrint('[CacheService] Error saving saved connections: $e');
+      // Error saving
     }
   }
 
@@ -247,14 +217,14 @@ class CacheService {
       final connections = getSavedConnections() ?? [];
       connections.add(connection);
       await _cacheBox.put(_savedConnectionsKey, connections);
-      debugPrint('[CacheService] Saved connection added');
     } catch (e) {
-      debugPrint('[CacheService] Error adding saved connection: $e');
+      // Error adding
     }
   }
 
   /// Update a router connection in cache
-  Future<void> updateSavedConnection(String id, Map<String, dynamic> updatedConnection) async {
+  Future<void> updateSavedConnection(
+      String id, Map<String, dynamic> updatedConnection) async {
     try {
       final connections = getSavedConnections();
       if (connections == null) return;
@@ -263,10 +233,9 @@ class CacheService {
       if (index != -1) {
         connections[index] = updatedConnection;
         await _cacheBox.put(_savedConnectionsKey, connections);
-        debugPrint('[CacheService] Saved connection updated');
       }
     } catch (e) {
-      debugPrint('[CacheService] Error updating saved connection: $e');
+      // Error updating
     }
   }
 
@@ -278,9 +247,8 @@ class CacheService {
 
       connections.removeWhere((c) => c['id'] == id);
       await _cacheBox.put(_savedConnectionsKey, connections);
-      debugPrint('[CacheService] Saved connection deleted');
     } catch (e) {
-      debugPrint('[CacheService] Error deleting saved connection: $e');
+      // Error deleting
     }
   }
 
@@ -293,7 +261,6 @@ class CacheService {
       }
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading last update: $e');
       return null;
     }
   }
@@ -309,9 +276,8 @@ class CacheService {
   Future<void> clearCache() async {
     try {
       await _cacheBox.clear();
-      debugPrint('[CacheService] Cache cleared');
     } catch (e) {
-      debugPrint('[CacheService] Error clearing cache: $e');
+      // Error clearing
     }
   }
 
@@ -319,9 +285,8 @@ class CacheService {
   Future<void> clearEntry(String key) async {
     try {
       await _cacheBox.delete(key);
-      debugPrint('[CacheService] Cache entry cleared: $key');
     } catch (e) {
-      debugPrint('[CacheService] Error clearing cache entry: $e');
+      // Error clearing
     }
   }
 
@@ -330,9 +295,8 @@ class CacheService {
     try {
       await _cacheBox.close();
       _initialized = false;
-      debugPrint('[CacheService] Cache closed');
     } catch (e) {
-      debugPrint('[CacheService] Error closing cache: $e');
+      // Error closing
     }
   }
 
@@ -341,13 +305,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_interfaceTrafficKey);
       if (data != null && data is List) {
-        debugPrint('[CacheService] Interface traffic cache hit');
         return List<Map<String, dynamic>>.from(data);
       }
-      debugPrint('[CacheService] Interface traffic cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading interface traffic: $e');
       return null;
     }
   }
@@ -356,9 +317,8 @@ class CacheService {
   Future<void> saveInterfaceTraffic(List<Map<String, dynamic>> data) async {
     try {
       await _cacheBox.put(_interfaceTrafficKey, data);
-      debugPrint('[CacheService] Interface traffic cached (${data.length} interfaces)');
     } catch (e) {
-      debugPrint('[CacheService] Error saving interface traffic: $e');
+      // Error saving
     }
   }
 
@@ -372,13 +332,10 @@ class CacheService {
     try {
       final data = _cacheBox.get(_vouchersKey);
       if (data != null && data is List) {
-        debugPrint('[CacheService] Vouchers cache hit (${data.length} vouchers)');
         return data.map((e) => Map<String, dynamic>.from(e)).toList();
       }
-      debugPrint('[CacheService] Vouchers cache miss');
       return null;
     } catch (e) {
-      debugPrint('[CacheService] Error reading vouchers: $e');
       return null;
     }
   }
@@ -387,9 +344,8 @@ class CacheService {
   Future<void> saveVouchers(List<Map<String, dynamic>> vouchers) async {
     try {
       await _cacheBox.put(_vouchersKey, vouchers);
-      debugPrint('[CacheService] Vouchers cached (${vouchers.length} vouchers)');
     } catch (e) {
-      debugPrint('[CacheService] Error saving vouchers: $e');
+      // Error saving
     }
   }
 
@@ -398,16 +354,16 @@ class CacheService {
     try {
       final vouchers = getVouchers() ?? [];
       // Check if voucher with same username already exists
-      final index = vouchers.indexWhere((v) => v['username'] == voucher['username']);
+      final index =
+          vouchers.indexWhere((v) => v['username'] == voucher['username']);
       if (index != -1) {
         vouchers[index] = voucher; // Update existing
       } else {
         vouchers.insert(0, voucher); // Add to beginning
       }
       await _cacheBox.put(_vouchersKey, vouchers);
-      debugPrint('[CacheService] Voucher added/updated: ${voucher['username']}');
     } catch (e) {
-      debugPrint('[CacheService] Error adding voucher: $e');
+      // Error adding
     }
   }
 
@@ -417,7 +373,8 @@ class CacheService {
       final vouchers = getVouchers() ?? [];
       // Add new vouchers to the beginning
       for (final voucher in newVouchers) {
-        final index = vouchers.indexWhere((v) => v['username'] == voucher['username']);
+        final index =
+            vouchers.indexWhere((v) => v['username'] == voucher['username']);
         if (index != -1) {
           vouchers[index] = voucher; // Update existing
         } else {
@@ -425,9 +382,8 @@ class CacheService {
         }
       }
       await _cacheBox.put(_vouchersKey, vouchers);
-      debugPrint('[CacheService] ${newVouchers.length} vouchers added/updated');
     } catch (e) {
-      debugPrint('[CacheService] Error adding vouchers: $e');
+      // Error adding
     }
   }
 
@@ -439,9 +395,8 @@ class CacheService {
 
       vouchers.removeWhere((v) => v['username'] == username);
       await _cacheBox.put(_vouchersKey, vouchers);
-      debugPrint('[CacheService] Voucher deleted: $username');
     } catch (e) {
-      debugPrint('[CacheService] Error deleting voucher: $e');
+      // Error deleting
     }
   }
 

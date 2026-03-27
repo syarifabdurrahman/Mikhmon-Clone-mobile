@@ -51,36 +51,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
       String host, port, username, password;
 
       if (savedConnection != null) {
-        // Use saved connection
         host = savedConnection.host;
         port = savedConnection.port;
         username = savedConnection.username;
-        password = ''; // Password not saved, user needs to enter
+        password = _passwordController.text;
       } else {
-        // Use form fields
         host = _ipController.text;
-        port = _portController.text.trim().isEmpty ? '8728' : _portController.text.trim();
+        port = _portController.text.trim().isEmpty
+            ? '8728'
+            : _portController.text.trim();
         username = _usernameController.text;
         password = _passwordController.text;
       }
 
-      // Log connection attempt
-      debugPrint('=== LOGIN ATTEMPT ===');
-      debugPrint('Host: $host:$port');
-      debugPrint('Username: $username');
-
       await ref.read(authStateProvider.notifier).login(
-        host: host,
-        port: port,
-        username: username,
-        password: password,
-        rememberMe: false,
-      );
+            host: host,
+            port: port,
+            username: username,
+            password: password,
+            rememberMe: false,
+          );
 
-      debugPrint('=== LOGIN SUCCESS ===');
+      // Save connection if requested and not already saved
 
       // Save connection if requested and not already saved
       if (_saveConnection && savedConnection == null) {
@@ -88,23 +88,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final connectionsList = connections.value ?? [];
 
         // Check if this connection already exists
-        final exists = connectionsList.any((c) =>
-          c.host == host &&
-          c.port == port &&
-          c.username == username
-        );
+        final exists = connectionsList.any(
+            (c) => c.host == host && c.port == port && c.username == username);
 
         if (!exists) {
           // Generate a name for the connection
           final name = '$username@${host}_$port';
 
           await ref.read(savedConnectionsProvider.notifier).addConnection(
-            name: name,
-            host: host,
-            port: port,
-            username: username,
-          );
-          debugPrint('Connection saved: $name');
+                name: name,
+                host: host,
+                port: port,
+                username: username,
+              );
         }
       }
 
@@ -112,10 +108,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.go('/main/dashboard');
       }
     } catch (e) {
-      debugPrint('=== LOGIN FAILED ===');
-      debugPrint('Error: $e');
-      debugPrint('Error Type: ${e.runtimeType}');
-
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -163,7 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 key: _formKey,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     _buildLogoSection(isSmallScreen),
                     const SizedBox(height: 32),
@@ -198,108 +190,114 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Connection Form Fields
                     Column(
                       children: [
-                            TextFormField(
-                              controller: _ipController,
-                              keyboardType: TextInputType.url,
-                              textInputAction: TextInputAction.next,
-                              decoration: InputDecoration(
-                                labelText: 'Router IP Address',
-                                hintText: '192.168.88.1',
-                                prefixIcon: const Icon(Icons.router_rounded, size: 20),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                  ),
-                                  onPressed: () {
-                                    _ipController.clear();
-                                  },
-                                ),
+                        TextFormField(
+                          controller: _ipController,
+                          keyboardType: TextInputType.url,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Router IP Address',
+                            hintText: '192.168.88.1',
+                            prefixIcon:
+                                const Icon(Icons.router_rounded, size: 20),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                               ),
-                              validator: Validators.validateIP,
+                              onPressed: () {
+                                _ipController.clear();
+                              },
                             ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _portController,
-                              keyboardType: TextInputType.number,
-                              textInputAction: TextInputAction.next,
-                              decoration: InputDecoration(
-                                labelText: 'Port (Optional - RouterOS API:8728)',
-                                hintText: '8728',
-                                prefixIcon: const Icon(Icons.wifi_rounded, size: 20),
+                          ),
+                          validator: Validators.validateIP,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _portController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Port (Optional - RouterOS API:8728)',
+                            hintText: '8728',
+                            prefixIcon:
+                                const Icon(Icons.wifi_rounded, size: 20),
+                          ),
+                          validator: Validators.validatePort,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _usernameController,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Username',
+                            hintText: 'admin',
+                            prefixIcon:
+                                const Icon(Icons.person_rounded, size: 20),
+                          ),
+                          validator: Validators.validateUsername,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          decoration: InputDecoration(
+                            labelText: 'Password (Optional)',
+                            hintText: 'Leave empty if no password set',
+                            prefixIcon:
+                                const Icon(Icons.lock_rounded, size: 20),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                               ),
-                              validator: Validators.validatePort,
+                              onPressed: _togglePasswordVisibility,
                             ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _usernameController,
-                              textInputAction: TextInputAction.next,
-                              decoration: InputDecoration(
-                                labelText: 'Username',
-                                hintText: 'admin',
-                                prefixIcon: const Icon(Icons.person_rounded, size: 20),
+                          ),
+                          validator: Validators.validateOptionalPassword,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _saveConnection,
+                              onChanged: (value) {
+                                setState(() {
+                                  _saveConnection = value ?? false;
+                                });
+                              },
+                              fillColor:
+                                  WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
+                                  return Colors.green;
+                                }
+                                return context.appOnSurface
+                                    .withValues(alpha: 0.2);
+                              }),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _saveConnection = !_saveConnection;
+                                });
+                              },
+                              child: Text(
+                                'Save connection',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: context.appOnSurface,
+                                    ),
                               ),
-                              validator: Validators.validateUsername,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              textInputAction: TextInputAction.done,
-                              decoration: InputDecoration(
-                                labelText: 'Password (Optional)',
-                                hintText: 'Leave empty if no password set',
-                                prefixIcon: const Icon(Icons.lock_rounded, size: 20),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                  ),
-                                  onPressed: _togglePasswordVisibility,
-                                ),
-                              ),
-                              validator: Validators.validateOptionalPassword,
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: _saveConnection,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _saveConnection = value ?? false;
-                                    });
-                                  },
-                                  fillColor: WidgetStateProperty.resolveWith((states) {
-                                    if (states.contains(WidgetState.selected)) {
-                                      return Colors.green;
-                                    }
-                                    return context.appOnSurface.withValues(alpha: 0.2);
-                                  }),
-                                ),
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _saveConnection = !_saveConnection;
-                                    });
-                                  },
-                                  child: Text(
-                                    'Save connection',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: context.appOnSurface,
-                                        ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),
+                      ],
+                    ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -316,7 +314,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
                             : const Text(
@@ -499,7 +498,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
-              style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
+              style:
+                  TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
             ),
           ),
           ElevatedButton(

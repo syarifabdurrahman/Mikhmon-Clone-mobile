@@ -50,11 +50,12 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
     // Apply search filter
     if (_searchController.text.isNotEmpty) {
       final query = _searchController.text.toLowerCase();
-      filtered = filtered.where((h) =>
-        h.displayName.toLowerCase().contains(query) ||
-        (h.address?.toLowerCase().contains(query) ?? false) ||
-        (h.macAddress?.toLowerCase().contains(query) ?? false)
-      ).toList();
+      filtered = filtered
+          .where((h) =>
+              h.displayName.toLowerCase().contains(query) ||
+              (h.address?.toLowerCase().contains(query) ?? false) ||
+              (h.macAddress?.toLowerCase().contains(query) ?? false))
+          .toList();
     }
 
     return filtered;
@@ -65,6 +66,11 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
     final hostsAsync = ref.watch(hotspotHostsProvider);
 
     return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
       child: Scaffold(
         backgroundColor: context.appBackground,
         appBar: AppBar(
@@ -150,8 +156,11 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                     selectedColor: context.appPrimary.withValues(alpha: 0.2),
                     checkmarkColor: context.appPrimary,
                     labelStyle: TextStyle(
-                      color: isSelected ? context.appPrimary : context.appOnSurface,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? context.appPrimary
+                          : context.appOnSurface,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
                 );
@@ -227,18 +236,21 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
                       children: [
                         Text(
                           host.deviceName,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: context.appOnSurface,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: context.appOnSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         if (host.macAddress != null)
                           Text(
                             host.macAddress!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.appOnSurface.withValues(alpha: 0.7),
-                                  fontFamily: 'monospace',
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: context.appOnSurface
+                                          .withValues(alpha: 0.7),
+                                      fontFamily: 'monospace',
+                                    ),
                           ),
                       ],
                     ),
@@ -321,7 +333,8 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: context.appOnSurface.withValues(alpha: 0.5)),
+        Icon(icon,
+            size: 14, color: context.appOnSurface.withValues(alpha: 0.5)),
         SizedBox(width: 4),
         Text(
           '$label: ',

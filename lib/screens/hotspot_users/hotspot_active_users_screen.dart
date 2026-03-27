@@ -10,10 +10,12 @@ class HotspotActiveUsersScreen extends ConsumerStatefulWidget {
   const HotspotActiveUsersScreen({super.key});
 
   @override
-  ConsumerState<HotspotActiveUsersScreen> createState() => _HotspotActiveUsersScreenState();
+  ConsumerState<HotspotActiveUsersScreen> createState() =>
+      _HotspotActiveUsersScreenState();
 }
 
-class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScreen> {
+class _HotspotActiveUsersScreenState
+    extends ConsumerState<HotspotActiveUsersScreen> {
   String _searchQuery = '';
   String _selectedServer = 'All';
   final ScrollController _scrollController = ScrollController();
@@ -35,7 +37,8 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       _loadMoreUsers();
     }
   }
@@ -65,12 +68,9 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
     // Refresh every 5 seconds to get actual data from router
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted) {
-        debugPrint('[ActiveUsers] Periodic refresh triggered');
         ref.read(hotspotActiveUsersProvider.notifier).refresh();
       }
     });
-
-    debugPrint('[ActiveUsers] Started periodic refresh (every 5 seconds)');
   }
 
   @override
@@ -96,90 +96,96 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                 ),
           ),
           actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded),
-            onPressed: () {
-              ref.read(hotspotActiveUsersProvider.notifier).refresh();
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildSearchAndFilter(),
-          Expanded(
-            child: activeUsersAsync.when(
-              data: (paginatedUsers) {
-                final users = paginatedUsers.users.map((data) => HotspotActiveUser.fromJson(data)).toList();
-                final filteredUsers = _filterUsers(users);
-
-                if (filteredUsers.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => ref.read(hotspotActiveUsersProvider.notifier).refresh(),
-                  color: context.appPrimary,
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredUsers.length + (paginatedUsers.hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == filteredUsers.length) {
-                        return _buildLoadingIndicator();
-                      }
-                      final user = filteredUsers[index];
-                      // Use the new widget card that handles its own dynamic updates
-                      return RepaintBoundary(
-                        key: ValueKey(user.id),
-                        child: _UserCardWidget(
-                          user: user,
-                          onTap: () => _showUserDetails(user),
-                          onDetails: () => _showUserDetails(user),
-                          onLogout: () => _confirmLogout(user),
-                        ),
-                      );
-                    },
-                  ),
-                );
+            IconButton(
+              icon: Icon(Icons.refresh_rounded),
+              onPressed: () {
+                ref.read(hotspotActiveUsersProvider.notifier).refresh();
               },
-              loading: () => Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            _buildSearchAndFilter(),
+            Expanded(
+              child: activeUsersAsync.when(
+                data: (paginatedUsers) {
+                  final users = paginatedUsers.users
+                      .map((data) => HotspotActiveUser.fromJson(data))
+                      .toList();
+                  final filteredUsers = _filterUsers(users);
+
+                  if (filteredUsers.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () =>
+                        ref.read(hotspotActiveUsersProvider.notifier).refresh(),
+                    color: context.appPrimary,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredUsers.length +
+                          (paginatedUsers.hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == filteredUsers.length) {
+                          return _buildLoadingIndicator();
+                        }
+                        final user = filteredUsers[index];
+                        // Use the new widget card that handles its own dynamic updates
+                        return RepaintBoundary(
+                          key: ValueKey(user.id),
+                          child: _UserCardWidget(
+                            user: user,
+                            onTap: () => _showUserDetails(user),
+                            onDetails: () => _showUserDetails(user),
+                            onLogout: () => _confirmLogout(user),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+                loading: () => Center(
+                  child: CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(context.appPrimary),
+                  ),
                 ),
-              ),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 64,
-                      color: context.appError,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Error loading active users',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: context.appOnSurface,
-                          ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: context.appOnSurface.withValues(alpha: 0.7),
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 64,
+                        color: context.appError,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Error loading active users',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: context.appOnSurface,
+                            ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        error.toString(),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.7),
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -289,14 +295,17 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((user) {
-        return user.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        return user.username
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
             user.address.toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
     // Apply server filter
     if (_selectedServer != 'All') {
-      filtered = filtered.where((user) => user.server == _selectedServer).toList();
+      filtered =
+          filtered.where((user) => user.server == _selectedServer).toList();
     }
 
     return filtered;
@@ -397,14 +406,18 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                       children: [
                         Text(
                           user.username,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
                                 color: context.appOnSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
                         SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -423,7 +436,10 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                               SizedBox(width: 4),
                               Text(
                                 'Connected',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: Colors.green,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -442,14 +458,21 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
                 padding: const EdgeInsets.all(16),
                 controller: scrollController,
                 children: [
-                  _buildDetailTile(Icons.badge_rounded, 'Username', user.username),
-                  _buildDetailTile(Icons.computer_rounded, 'IP Address', user.address),
-                  _buildDetailTile(Icons.router_rounded, 'MAC Address', user.macAddress),
-                  _buildDetailTile(Icons.access_time_rounded, 'Login Time', _formatLoginTime(user.loginTime)),
+                  _buildDetailTile(
+                      Icons.badge_rounded, 'Username', user.username),
+                  _buildDetailTile(
+                      Icons.computer_rounded, 'IP Address', user.address),
+                  _buildDetailTile(
+                      Icons.router_rounded, 'MAC Address', user.macAddress),
+                  _buildDetailTile(Icons.access_time_rounded, 'Login Time',
+                      _formatLoginTime(user.loginTime)),
                   _buildDetailTile(Icons.timer_rounded, 'Uptime', user.uptime),
-                  _buildDetailTile(Icons.swap_vert_rounded, 'Data Used', user.dataUsed),
-                  _buildDetailTile(Icons.cloud_rounded, 'Server', user.server ?? 'N/A'),
-                  _buildDetailTile(Icons.card_membership_rounded, 'Profile', user.profile),
+                  _buildDetailTile(
+                      Icons.swap_vert_rounded, 'Data Used', user.dataUsed),
+                  _buildDetailTile(
+                      Icons.cloud_rounded, 'Server', user.server ?? 'N/A'),
+                  _buildDetailTile(
+                      Icons.card_membership_rounded, 'Profile', user.profile),
                   SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () {
@@ -512,7 +535,8 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
       builder: (dialogContext) => AlertDialog(
         backgroundColor: context.appSurface,
         title: Text('Logout User'),
-        content: Text('Are you sure you want to logout "${user.username}" from ${user.address}?'),
+        content: Text(
+            'Are you sure you want to logout "${user.username}" from ${user.address}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -522,11 +546,14 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
-                await ref.read(hotspotActiveUsersProvider.notifier).logoutUser(user.id);
+                await ref
+                    .read(hotspotActiveUsersProvider.notifier)
+                    .logoutUser(user.id);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('User "${user.username}" logged out successfully'),
+                      content: Text(
+                          'User "${user.username}" logged out successfully'),
                       backgroundColor: context.appPrimary,
                     ),
                   );
@@ -656,10 +683,11 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                       children: [
                         Text(
                           widget.user.username,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: context.appOnSurface,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: context.appOnSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                         SizedBox(height: 4),
                         Row(
@@ -667,13 +695,18 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                             Icon(
                               Icons.computer_rounded,
                               size: 14,
-                              color: context.appOnSurface.withValues(alpha: 0.6),
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.6),
                             ),
                             SizedBox(width: 4),
                             Text(
                               widget.user.address,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: context.appOnSurface.withValues(alpha: 0.7),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: context.appOnSurface
+                                        .withValues(alpha: 0.7),
                                     fontFamily: 'monospace',
                                   ),
                             ),
@@ -683,7 +716,8 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -702,10 +736,11 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                         SizedBox(width: 4),
                         Text(
                           'Online',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                       ],
                     ),
@@ -788,7 +823,8 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
     );
   }
 
-  Widget _buildStatItem(IconData icon, String label, String value, Color color) {
+  Widget _buildStatItem(
+      IconData icon, String label, String value, Color color) {
     return Column(
       children: [
         Icon(

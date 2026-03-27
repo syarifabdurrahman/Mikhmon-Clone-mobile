@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
@@ -18,22 +19,28 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isLoading = false;
-  bool _isInitialLoad = true; // Track if this is the first data load
+  bool _isInitialLoad = true;
   String? _errorMessage;
   SystemResources? _resources;
   Timer? _refreshTimer;
-  late final ValueNotifier<SystemResources?> _resourcesNotifier;
-  bool _isFetching = false; // Guard against concurrent fetches
+  bool _isFetching = false;
 
   @override
   void initState() {
     super.initState();
-    _resourcesNotifier = ValueNotifier<SystemResources?>(null);
+    // Use schedulerBinding to defer initialization
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
+    });
+  }
+
+  void _loadInitialData() {
+    if (!mounted) return;
 
     // Check if we have cached data before showing loading state
     final cache = ref.read(cacheServiceProvider);
     final hasCachedData = cache.getSystemResources() != null ||
-                          ref.read(authStateProvider).value?.systemResources != null;
+        ref.read(authStateProvider).value?.systemResources != null;
 
     // Don't show loading if we have cached data (seamless navigation)
     _loadDashboardData(showLoading: !hasCachedData);
@@ -43,41 +50,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _resourcesNotifier.dispose();
     super.dispose();
   }
 
-  /// Start periodic refresh every 3 seconds
-  /// Uses Future.delayed to skip first tick for seamless navigation
   void _startPeriodicRefresh() {
-    debugPrint('[Dashboard] Starting periodic refresh timer (first tick in 3s)');
-
-    // Use Future.delayed to skip first tick, then start periodic timer
-    Future.delayed(const Duration(seconds: 3), () {
+    // Delay periodic refresh to not block initial render
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
-        debugPrint('[Dashboard] First periodic refresh after delay');
         _fetchAndCacheResources();
-        // Then start periodic timer
-        _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+        _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
           if (mounted) {
-            debugPrint('[Dashboard] Periodic refresh triggered (tick ${timer.tick})');
             _fetchAndCacheResources();
           } else {
-            debugPrint('[Dashboard] Timer fired but widget not mounted, cancelling');
             timer.cancel();
           }
         });
-        debugPrint('[Dashboard] Started periodic refresh (every 3 seconds)');
-      } else {
-        debugPrint('[Dashboard] Widget not mounted, cancelling timer start');
       }
     });
   }
 
-  /// Update the resources notifier when resources change
-  void _updateResourcesNotifier() {
-    _resourcesNotifier.value = _resources;
-    // Also add to history for charts
+  void _updateResourceHistory() {
     if (_resources != null) {
       ref.read(resourceHistoryProvider).addFromResources(_resources!);
     }
@@ -92,23 +84,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
 
     try {
-      debugPrint('=== DASHBOARD LOADING ===');
       final service = ref.read(routerOSServiceProvider);
       final cache = ref.read(cacheServiceProvider);
-      debugPrint('Is Connected: ${service.isConnected}');
-      debugPrint('Initial Load: $_isInitialLoad');
 
       // Check if we have pre-fetched data from login (fastest path)
       final authState = ref.read(authStateProvider);
       if (authState.value?.systemResources != null) {
-        debugPrint('Using pre-fetched resources from login');
         if (mounted) {
           setState(() {
-            _resources = SystemResources.fromJson(authState.value!.systemResources!);
+            _resources =
+                SystemResources.fromJson(authState.value!.systemResources!);
             _isLoading = false;
             _isInitialLoad = false;
           });
-          _updateResourcesNotifier();
+          _updateResourceHistory();
         }
         // Clear the pre-fetched data so future refreshes fetch new data
         // Delay to avoid modifying provider during widget lifecycle
@@ -122,14 +111,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       // Check cache for instant data display (second fastest path)
       final cachedResources = cache.getSystemResources();
       if (cachedResources != null) {
-        debugPrint('Using cached resources');
         if (mounted) {
           setState(() {
             _resources = SystemResources.fromJson(cachedResources);
             _isLoading = false;
             _isInitialLoad = false;
           });
-          _updateResourcesNotifier();
+          _updateResourceHistory();
         }
         // Don't fetch fresh data on navigation - use cached data instantly
         // The periodic timer will keep data updated
@@ -140,7 +128,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (service.isConnected) {
         await _fetchAndCacheResources();
       } else {
-        debugPrint('Not connected - waiting for login');
         if (mounted) {
           setState(() {
             _errorMessage = 'Not connected to RouterOS. Please login again.';
@@ -148,9 +135,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         }
       }
     } catch (e) {
-      debugPrint('=== DASHBOARD ERROR ===');
-      debugPrint('Error: $e');
-      debugPrint('Error Type: ${e.runtimeType}');
       if (mounted && showLoading) {
         setState(() {
           _errorMessage = e.toString();
@@ -171,7 +155,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _fetchAndCacheResources() async {
     // Prevent concurrent fetches
     if (_isFetching) {
-      debugPrint('[Refresh] Already fetching, skipping duplicate request');
       return;
     }
 
@@ -182,34 +165,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       final cache = ref.read(cacheServiceProvider);
 
       if (!service.isConnected) {
-        debugPrint('[Refresh] Not connected, skipping fetch');
         return;
       }
 
       final client = service.client;
       if (client == null) {
-        debugPrint('[Refresh] Client is null, skipping fetch');
         return;
       }
 
-      debugPrint('[Refresh] Fetching fresh system resources...');
       final resourcesData = await client.getSystemResources();
-      debugPrint('[Refresh] Resources data received: ${resourcesData.length} fields');
 
       // Validate that we got meaningful data before saving
       // Check if we have at least some expected fields
       if (resourcesData.isEmpty ||
           (!resourcesData.containsKey('platform') &&
-           !resourcesData.containsKey('cpu-load') &&
-           !resourcesData.containsKey('free-memory'))) {
-        debugPrint('[Refresh] Warning: Received invalid/empty resources data');
-        debugPrint('[Refresh] Data keys: ${resourcesData.keys.toList()}');
+              !resourcesData.containsKey('cpu-load') &&
+              !resourcesData.containsKey('free-memory'))) {
         return;
       }
 
       // Save to cache
       await cache.saveSystemResources(resourcesData);
-      debugPrint('[Refresh] Resources cached successfully');
 
       // Update UI if mounted
       if (mounted) {
@@ -219,12 +195,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _errorMessage = null;
           _isInitialLoad = false; // First successful data load
         });
-        _updateResourcesNotifier();
-        debugPrint('[Refresh] Dashboard updated successfully! CPU: ${newResources.cpuLoad}%, RAM: ${(newResources.freeMemory / newResources.totalMemory * 100).toStringAsFixed(1)}%');
+        _updateResourceHistory();
       }
     } catch (e) {
-      debugPrint('[Refresh] Error fetching resources: $e');
-      debugPrint('[Refresh] Error type: ${e.runtimeType}');
       // Don't show error on background refresh failures
       // Only show error if there's no cached data
       if (_resources == null && mounted) {
@@ -259,7 +232,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _isLoading ? null : () => _loadDashboardData(showLoading: true),
+            onPressed:
+                _isLoading ? null : () => _loadDashboardData(showLoading: true),
           ),
         ],
       ),
@@ -329,7 +303,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       _errorMessage!,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: context.appOnBackground.withValues(alpha: 0.7),
+                            color:
+                                context.appOnBackground.withValues(alpha: 0.7),
                           ),
                     ),
                     const SizedBox(height: 24),
@@ -364,22 +339,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return RefreshIndicator(
       onRefresh: () => _loadDashboardData(showLoading: false),
       color: context.appPrimary,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSystemInfoCard(),
-            const SizedBox(height: 16),
-            _buildResourceChart(),
-            const SizedBox(height: 16),
-            const TrafficMonitorCard(),
-            const SizedBox(height: 16),
-            _buildIncomeCards(),
-            const SizedBox(height: 16),
-            _buildQuickActions(),
-          ],
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSmallScreen = constraints.maxWidth < 400;
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSystemInfoCard(),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                _buildResourceChart(),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                const TrafficMonitorCard(),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                _buildIncomeCards(),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                _buildQuickActions(),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -392,14 +372,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: context.appPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -407,26 +387,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Icon(
                     Icons.router_rounded,
                     color: context.appPrimary,
-                    size: 28,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         _resources!.boardName,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: context.appOnSurface,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: context.appOnSurface,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         'RouterOS ${_resources!.version}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: context.appOnSurface.withValues(alpha: 0.7),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.7),
                             ),
                       ),
                     ],
@@ -434,19 +417,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildInfoRow(
               Icons.memory_rounded,
               'Platform',
               _resources!.platform,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _buildInfoRow(
               Icons.speed_rounded,
               'CPU',
               '${_resources!.cpuFrequency} MHz',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _buildInfoRow(
               Icons.access_time_rounded,
               'Uptime',
@@ -475,18 +458,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       children: [
         Text(
           'Income',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: context.appOnBackground,
                 fontWeight: FontWeight.bold,
               ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           children: [
             const Expanded(
               child: DailyIncomeCard(),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 8),
             const Expanded(
               child: MonthlyIncomeCard(),
             ),

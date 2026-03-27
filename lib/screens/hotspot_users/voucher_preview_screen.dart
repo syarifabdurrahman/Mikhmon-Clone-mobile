@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
+import '../../utils/voucher_printer.dart';
 
 class VoucherPreviewScreen extends ConsumerStatefulWidget {
   final List<Voucher> vouchers;
@@ -55,56 +56,61 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
             ),
           ),
           actions: [
-          IconButton(
-            icon: Icon(Icons.select_all_rounded),
-            onPressed: _selectAllVouchers,
-            tooltip: 'Select All',
-          ),
-          IconButton(
-            icon: Icon(Icons.share_rounded),
-            onPressed: _isSharing ? null : _shareAllVouchers,
-            tooltip: 'Share All',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Summary Card
-          _buildSummaryCard(),
-
-          // Vouchers List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: widget.vouchers.length,
-              itemBuilder: (context, index) {
-                return _VoucherCard(
-                  voucher: widget.vouchers[index],
-                  onCopy: () => _copyVoucher(widget.vouchers[index]),
-                  onShare: () => _shareSingleVoucher(widget.vouchers[index]),
-                );
-              },
+            IconButton(
+              icon: Icon(Icons.select_all_rounded),
+              onPressed: _selectAllVouchers,
+              tooltip: 'Select All',
             ),
-          ),
-        ],
+            IconButton(
+              icon: Icon(Icons.share_rounded),
+              onPressed: _isSharing ? null : _shareAllVouchers,
+              tooltip: 'Share All',
+            ),
+            IconButton(
+              icon: Icon(Icons.print_rounded),
+              onPressed: _isSharing ? null : _printAllVouchers,
+              tooltip: 'Print Vouchers',
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Summary Card
+            _buildSummaryCard(),
+
+            // Vouchers List
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: widget.vouchers.length,
+                itemBuilder: (context, index) {
+                  return _VoucherCard(
+                    voucher: widget.vouchers[index],
+                    onCopy: () => _copyVoucher(widget.vouchers[index]),
+                    onShare: () => _shareSingleVoucher(widget.vouchers[index]),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _isSharing ? null : _captureAndShareScreenshot,
+          backgroundColor: context.appPrimary,
+          foregroundColor: Colors.white,
+          icon: _isSharing
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Icon(Icons.print_rounded),
+          label: Text(_isSharing ? 'Preparing...' : 'Print/Share'),
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isSharing ? null : _captureAndShareScreenshot,
-        backgroundColor: context.appPrimary,
-        foregroundColor: Colors.white,
-        icon: _isSharing
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Icon(Icons.print_rounded),
-        label: Text(_isSharing ? 'Preparing...' : 'Print/Share'),
-      ),
-    ),
     );
   }
 
@@ -199,7 +205,8 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${widget.vouchers.length} vouchers copied to clipboard'),
+          content:
+              Text('${widget.vouchers.length} vouchers copied to clipboard'),
           behavior: SnackBarBehavior.floating,
           action: SnackBarAction(
             label: 'DISMISS',
@@ -226,7 +233,8 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
   }
 
   Future<void> _shareSingleVoucher(Voucher voucher) async {
-    final text = 'WiFi Voucher\nUser: ${voucher.username}\nPassword: ${voucher.password}';
+    final text =
+        'WiFi Voucher\nUser: ${voucher.username}\nPassword: ${voucher.password}';
     try {
       await Share.share(text);
     } catch (e) {
@@ -259,6 +267,28 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     }
   }
 
+  Future<void> _printAllVouchers() async {
+    setState(() {
+      _isSharing = true;
+    });
+
+    try {
+      await VoucherPrinter.printBulkVouchers(context, widget.vouchers);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to print vouchers: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSharing = false;
+        });
+      }
+    }
+  }
+
   Future<void> _captureAndShareScreenshot() async {
     setState(() {
       _isSharing = true;
@@ -283,7 +313,8 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.confirmation_number_rounded, color: Colors.white),
+                      Icon(Icons.confirmation_number_rounded,
+                          color: Colors.white),
                       SizedBox(width: 12),
                       Text(
                         'Generated Vouchers',
@@ -346,7 +377,8 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
 
       // Save to temporary file
       final directory = await getTemporaryDirectory();
-      final file = File('${directory.path}/vouchers_${DateTime.now().millisecondsSinceEpoch}.png');
+      final file = File(
+          '${directory.path}/vouchers_${DateTime.now().millisecondsSinceEpoch}.png');
       await file.writeAsBytes(image);
 
       // Share the image
@@ -566,15 +598,19 @@ class _VoucherCard extends StatelessWidget {
                         Row(
                           children: [
                             Icon(
-                              isExpired ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                              isExpired
+                                  ? Icons.cancel_rounded
+                                  : Icons.check_circle_rounded,
                               size: 16,
-                              color: isExpired ? context.appError : Colors.green,
+                              color:
+                                  isExpired ? context.appError : Colors.green,
                             ),
                             SizedBox(width: 6),
                             Text(
                               isExpired ? 'Expired' : 'Active',
                               style: TextStyle(
-                                color: isExpired ? context.appError : Colors.green,
+                                color:
+                                    isExpired ? context.appError : Colors.green,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -582,7 +618,8 @@ class _VoucherCard extends StatelessWidget {
                             Spacer(),
                             Icon(Icons.fullscreen_rounded,
                                 size: 16,
-                                color: context.appOnSurface.withValues(alpha: 0.5)),
+                                color: context.appOnSurface
+                                    .withValues(alpha: 0.5)),
                           ],
                         ),
                       ],
@@ -626,7 +663,8 @@ class _VoucherCard extends StatelessWidget {
               highlightColor: Colors.transparent,
             ),
             child: ExpansionTile(
-              tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              tilePadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               initiallyExpanded: false,
               title: Text(
                 'View Details',
@@ -642,7 +680,8 @@ class _VoucherCard extends StatelessWidget {
               ),
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -663,7 +702,8 @@ class _VoucherCard extends StatelessWidget {
                           label: 'Data Limit',
                           value: voucher.dataLimit!,
                         ),
-                      if (voucher.comment != null && voucher.comment!.isNotEmpty)
+                      if (voucher.comment != null &&
+                          voucher.comment!.isNotEmpty)
                         _DetailRow(
                           icon: Icons.comment_rounded,
                           label: 'Comment',
@@ -673,7 +713,8 @@ class _VoucherCard extends StatelessWidget {
                         _DetailRow(
                           icon: Icons.event_rounded,
                           label: 'Expires',
-                          value: '${voucher.expiresAt!.day}/${voucher.expiresAt!.month}/${voucher.expiresAt!.year}',
+                          value:
+                              '${voucher.expiresAt!.day}/${voucher.expiresAt!.month}/${voucher.expiresAt!.year}',
                         ),
                     ],
                   ),
@@ -720,7 +761,8 @@ class _FullScreenQRView extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.copy_rounded),
             onPressed: () {
-              final text = 'User: ${voucher.username}\nPassword: ${voucher.password}';
+              final text =
+                  'User: ${voucher.username}\nPassword: ${voucher.password}';
               Clipboard.setData(ClipboardData(text: text));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

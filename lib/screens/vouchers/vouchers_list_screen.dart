@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
+import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import 'voucher_detail_screen.dart';
 
@@ -37,6 +38,19 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
     await ref.read(vouchersProvider.notifier).refresh();
   }
 
+  Future<void> _printAllVouchers() async {
+    final vouchersAsync = ref.read(vouchersProvider);
+    final vouchers = vouchersAsync.valueOrNull ?? [];
+    final filtered = _filterVouchers(vouchers);
+    if (filtered.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No vouchers to print')),
+      );
+      return;
+    }
+    await VoucherPrinter.printBulkVouchers(context, filtered);
+  }
+
   @override
   Widget build(BuildContext context) {
     final vouchersAsync = ref.watch(vouchersProvider);
@@ -66,103 +80,118 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
             ),
           ),
           actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded),
-            onPressed: vouchersAsync.isLoading ? null : _refreshVouchers,
-          ),
-          PopupMenuButton<VoucherSort>(
-            icon: Icon(Icons.sort_rounded),
-            onSelected: _applySort,
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: VoucherSort.newest,
-                child: Row(
-                  children: [
-                    if (_currentSort == VoucherSort.newest)
-                      Icon(Icons.check, size: 18, color: context.appPrimary),
-                    SizedBox(width: _currentSort == VoucherSort.newest ? 8 : 24),
-                    Text('Newest First'),
-                  ],
+            IconButton(
+              icon: Icon(Icons.refresh_rounded),
+              onPressed: vouchersAsync.isLoading ? null : _refreshVouchers,
+            ),
+            IconButton(
+              icon: Icon(Icons.print_rounded),
+              onPressed: vouchersAsync.isLoading ? null : _printAllVouchers,
+              tooltip: 'Print All',
+            ),
+            PopupMenuButton<VoucherSort>(
+              icon: Icon(Icons.sort_rounded),
+              onSelected: _applySort,
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: VoucherSort.newest,
+                  child: Row(
+                    children: [
+                      if (_currentSort == VoucherSort.newest)
+                        Icon(Icons.check, size: 18, color: context.appPrimary),
+                      SizedBox(
+                          width: _currentSort == VoucherSort.newest ? 8 : 24),
+                      Text('Newest First'),
+                    ],
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: VoucherSort.oldest,
-                child: Row(
-                  children: [
-                    if (_currentSort == VoucherSort.oldest)
-                      Icon(Icons.check, size: 18, color: context.appPrimary),
-                    SizedBox(width: _currentSort == VoucherSort.oldest ? 8 : 24),
-                    Text('Oldest First'),
-                  ],
+                PopupMenuItem(
+                  value: VoucherSort.oldest,
+                  child: Row(
+                    children: [
+                      if (_currentSort == VoucherSort.oldest)
+                        Icon(Icons.check, size: 18, color: context.appPrimary),
+                      SizedBox(
+                          width: _currentSort == VoucherSort.oldest ? 8 : 24),
+                      Text('Oldest First'),
+                    ],
+                  ),
                 ),
-              ),
-              PopupMenuItem(
-                value: VoucherSort.az,
-                child: Row(
-                  children: [
-                    if (_currentSort == VoucherSort.az)
-                      Icon(Icons.check, size: 18, color: context.appPrimary),
-                    SizedBox(width: _currentSort == VoucherSort.az ? 8 : 24),
-                    Text('A to Z'),
-                  ],
+                PopupMenuItem(
+                  value: VoucherSort.az,
+                  child: Row(
+                    children: [
+                      if (_currentSort == VoucherSort.az)
+                        Icon(Icons.check, size: 18, color: context.appPrimary),
+                      SizedBox(width: _currentSort == VoucherSort.az ? 8 : 24),
+                      Text('A to Z'),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search and Filter Bar
-          _buildSearchAndFilterBar(),
+              ],
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Search and Filter Bar
+            _buildSearchAndFilterBar(),
 
-          // Vouchers Grid
-          Expanded(
-            child: vouchersAsync.when(
-              data: (vouchers) {
-                final filteredVouchers = _filterVouchers(vouchers);
-                if (filteredVouchers.isEmpty) {
-                  return vouchers.isEmpty ? _buildEmptyState() : _buildNoFilterResultsState();
-                }
-                return _buildVouchersGrid(filteredVouchers);
-              },
-              loading: () => Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+            // Vouchers Grid
+            Expanded(
+              child: vouchersAsync.when(
+                data: (vouchers) {
+                  final filteredVouchers = _filterVouchers(vouchers);
+                  if (filteredVouchers.isEmpty) {
+                    return vouchers.isEmpty
+                        ? _buildEmptyState()
+                        : _buildNoFilterResultsState();
+                  }
+                  return _buildVouchersGrid(filteredVouchers);
+                },
+                loading: () => Center(
+                  child: CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(context.appPrimary),
+                  ),
                 ),
-              ),
-              error: (error, _) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 64, color: context.appError),
-                    SizedBox(height: 16),
-                    Text('Error loading vouchers', style: TextStyle(color: context.appOnBackground)),
-                    SizedBox(height: 8),
-                    Text(error.toString(), style: TextStyle(color: context.appOnBackground.withValues(alpha: 0.7))),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _refreshVouchers,
-                      child: Text('Retry'),
-                    ),
-                  ],
+                error: (error, _) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline,
+                          size: 64, color: context.appError),
+                      SizedBox(height: 16),
+                      Text('Error loading vouchers',
+                          style: TextStyle(color: context.appOnBackground)),
+                      SizedBox(height: 8),
+                      Text(error.toString(),
+                          style: TextStyle(
+                              color: context.appOnBackground
+                                  .withValues(alpha: 0.7))),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _refreshVouchers,
+                        child: Text('Retry'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            // Navigate to voucher generation
+            context.push('/main/users/generate');
+          },
+          backgroundColor: context.appPrimary,
+          foregroundColor: Colors.white,
+          icon: Icon(Icons.add_rounded),
+          label: Text('Generate Vouchers'),
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Navigate to voucher generation
-          context.push('/main/users/generate');
-        },
-        backgroundColor: context.appPrimary,
-        foregroundColor: Colors.white,
-        icon: Icon(Icons.add_rounded),
-        label: Text('Generate Vouchers'),
-      ),
-    ),
     );
   }
 
@@ -402,22 +431,22 @@ class _VoucherGridCard extends StatelessWidget {
                     context.appCard,
                     context.appCard.withValues(alpha: 0.8),
                   ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isExpired
-              ? context.appError.withValues(alpha: 0.3)
-              : context.appPrimary.withValues(alpha: 0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: Offset(0, 2),
           ),
-        ],
-      ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isExpired
+                ? context.appError.withValues(alpha: 0.3)
+                : context.appPrimary.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -488,7 +517,9 @@ class _VoucherGridCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        isExpired ? Icons.cancel_rounded : Icons.check_circle_rounded,
+                        isExpired
+                            ? Icons.cancel_rounded
+                            : Icons.check_circle_rounded,
                         size: 12,
                         color: isExpired ? context.appError : Colors.green,
                       ),

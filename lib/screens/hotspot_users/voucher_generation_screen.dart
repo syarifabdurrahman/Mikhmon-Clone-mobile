@@ -155,6 +155,9 @@ class _VoucherGenerationScreenState
 
   // Generate vouchers
   Future<void> _generateVouchers() async {
+    // Guard against duplicate calls
+    if (_isGenerating) return;
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -254,7 +257,8 @@ class _VoucherGenerationScreenState
 
       // Save vouchers to cache
       final cache = ref.read(cacheServiceProvider);
-      await cache.addVouchers(_generatedVouchers.map((v) => v.toJson()).toList());
+      await cache
+          .addVouchers(_generatedVouchers.map((v) => v.toJson()).toList());
 
       // Invalidate vouchers provider to refresh the list
       ref.invalidate(vouchersProvider);
@@ -405,386 +409,390 @@ class _VoucherGenerationScreenState
       child: Scaffold(
         backgroundColor: const Color(0xFF1E1E2E),
         resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2A2A3C),
-        title: Text(
-          'Generate Vouchers',
-          style: TextStyle(color: Colors.white),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _resetForm,
-            tooltip: 'Reset Form',
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF2A2A3C),
+          title: Text(
+            'Generate Vouchers',
+            style: TextStyle(color: Colors.white),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 100 + MediaQuery.of(context).padding.bottom,
+          iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: _resetForm,
+              tooltip: 'Reset Form',
+            ),
+          ],
         ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // General Settings Card
-              _buildSectionCard(
-                title: 'General Settings',
-                icon: Icons.settings,
-                child: Column(
-                  children: [
-                    // Quantity
-                    _buildNumberField(
-                      label: 'Quantity',
-                      controller: _qtyController,
-                      min: 1,
-                      max: 500,
-                      icon: Icons.format_list_numbered,
-                      helperText: 'Number of vouchers to generate (1-500)',
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Server Selection
-                    _buildDropdown<String>(
-                      label: 'Server',
-                      value: _selectedServer,
-                      items: const [
-                        DropdownMenuItem(value: 'all', child: Text('all')),
-                      ],
-                      icon: Icons.router,
-                      onChanged: (value) =>
-                          setState(() => _selectedServer = value ?? 'all'),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // User Mode
-                    _buildDropdown<UserMode>(
-                      label: 'User Mode',
-                      value: _userMode,
-                      items: const [
-                        DropdownMenuItem(
-                          value: UserMode.up,
-                          child: Text('Username & Password (Separate)'),
-                        ),
-                        DropdownMenuItem(
-                          value: UserMode.vc,
-                          child: Text('Username = Password (Voucher)'),
-                        ),
-                      ],
-                      icon: Icons.person,
-                      onChanged: (value) {
-                        setState(() {
-                          _userMode = value ?? UserMode.up;
-                          // Reset char type when mode changes
-                          _charType = _availableCharTypes.first;
-                        });
-                      },
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Name Length
-                    _buildDropdown<int>(
-                      label: 'Name Length',
-                      value: _nameLength,
-                      items: [4, 5, 6, 7, 8].map((length) {
-                        return DropdownMenuItem(
-                          value: length,
-                          child: Text('$length characters'),
-                        );
-                      }).toList(),
-                      icon: Icons.text_fields,
-                      onChanged: (value) =>
-                          setState(() => _nameLength = value ?? 4),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Prefix
-                    _buildTextField(
-                      label: 'Prefix',
-                      controller: _prefixController,
-                      icon: Icons.label,
-                      helperText: 'Optional prefix for usernames',
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Character Type
-                    _buildDropdown<CharType>(
-                      label: 'Character Type',
-                      value: _charType,
-                      items: _availableCharTypes.map((type) {
-                        return DropdownMenuItem(
-                          value: type,
-                          child: Text(type.displayName),
-                        );
-                      }).toList(),
-                      icon: Icons.font_download,
-                      onChanged: (value) =>
-                          setState(() => _charType = value ?? CharType.lower),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Profile
-                    profilesAsync.when(
-                      data: (profiles) {
-                        // Only set value if it exists in the current profiles list
-                        final validValue = profiles.any((p) => p.name == _selectedProfile)
-                            ? _selectedProfile
-                            : null;
-
-                        return _buildDropdown<String>(
-                          label: 'Profile',
-                          value: validValue,
-                          items: profiles.map((profile) {
-                            return DropdownMenuItem(
-                              value: profile.name,
-                              child: Text(profile.name),
-                            );
-                          }).toList(),
-                          icon: Icons.pie_chart,
-                          hint: Text('Select Profile'),
-                          onChanged: (value) =>
-                              setState(() => _selectedProfile = value),
-                          validator: (value) =>
-                              value == null ? 'Please select a profile' : null,
-                        );
-                      },
-                      loading: () => Center(
-                        child: CircularProgressIndicator(),
+        body: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: 100 + MediaQuery.of(context).padding.bottom,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // General Settings Card
+                _buildSectionCard(
+                  title: 'General Settings',
+                  icon: Icons.settings,
+                  child: Column(
+                    children: [
+                      // Quantity
+                      _buildNumberField(
+                        label: 'Quantity',
+                        controller: _qtyController,
+                        min: 1,
+                        max: 500,
+                        icon: Icons.format_list_numbered,
+                        helperText: 'Number of vouchers to generate (1-500)',
                       ),
-                      error: (_, __) => _buildDropdown<String>(
-                        label: 'Profile',
-                        value: _selectedProfile,
+
+                      SizedBox(height: 16),
+
+                      // Server Selection
+                      _buildDropdown<String>(
+                        label: 'Server',
+                        value: _selectedServer,
+                        items: const [
+                          DropdownMenuItem(value: 'all', child: Text('all')),
+                        ],
+                        icon: Icons.router,
+                        onChanged: (value) =>
+                            setState(() => _selectedServer = value ?? 'all'),
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // User Mode
+                      _buildDropdown<UserMode>(
+                        label: 'User Mode',
+                        value: _userMode,
                         items: const [
                           DropdownMenuItem(
-                              value: 'default', child: Text('default')),
-                        ],
-                        icon: Icons.pie_chart,
-                        onChanged: (value) =>
-                            setState(() => _selectedProfile = value),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 16),
-
-              // Limits Card
-              _buildSectionCard(
-                title: 'Limits',
-                icon: Icons.speed,
-                child: Column(
-                  children: [
-                    // Time Limit
-                    _buildTextField(
-                      label: 'Time Limit',
-                      controller: _timeLimitController,
-                      icon: Icons.access_time,
-                      helperText: 'e.g., 5s (sec), 5m (min), 1h (hour), 1d (day), 1mo (month)',
-                      textCapitalization: TextCapitalization.none,
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Data Limit
-                    _buildTextField(
-                      label: 'Data Limit',
-                      controller: _dataLimitController,
-                      icon: Icons.data_usage,
-                      helperText: 'e.g., 5G, 1500M (unlimited if empty)',
-                      textCapitalization: TextCapitalization.characters,
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Comment
-                    _buildTextField(
-                      label: 'Comment',
-                      controller: _commentController,
-                      icon: Icons.comment,
-                      helperText: 'Optional comment/suffix',
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 24),
-
-              // Status Message
-              if (_generationStatus != null)
-                Container(
-                  width: double.infinity,
-                  padding: _generationSuccessful
-                      ? const EdgeInsets.fromLTRB(12, 12, 12, 8)
-                      : const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: _isGenerating
-                        ? Colors.blue.withValues(alpha: 0.1)
-                        : Colors.green.withValues(alpha: 0.1),
-                    border: Border.all(
-                      color: _isGenerating
-                          ? Colors.blue.withValues(alpha: 0.3)
-                          : Colors.green.withValues(alpha: 0.3),
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: _generationSuccessful
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.check_circle,
-                                    color: Colors.green, size: 20),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    _generationStatus!,
-                                    style: TextStyle(
-                                      color: Colors.green.shade200,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  ref.invalidate(hotspotUsersProvider);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: context.appSuccess,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                                child: Text('Show Users'),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            if (_isGenerating)
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            else
-                              Icon(Icons.check_circle,
-                                  color: Colors.green, size: 20),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _generationStatus!,
-                                style: TextStyle(
-                                  color: _isGenerating
-                                      ? Colors.blue.shade200
-                                      : Colors.green.shade200,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-
-              SizedBox(height: 24),
-
-              // Generate Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isGenerating ? null : _generateVouchers,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _isGenerating
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            value: UserMode.up,
+                            child: Text('Username & Password (Separate)'),
                           ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.confirmation_number),
-                            SizedBox(width: 8),
-                            Text(
-                              'Generate Vouchers',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
+                          DropdownMenuItem(
+                            value: UserMode.vc,
+                            child: Text('Username = Password (Voucher)'),
+                          ),
+                        ],
+                        icon: Icons.person,
+                        onChanged: (value) {
+                          setState(() {
+                            _userMode = value ?? UserMode.up;
+                            // Reset char type when mode changes
+                            _charType = _availableCharTypes.first;
+                          });
+                        },
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Name Length
+                      _buildDropdown<int>(
+                        label: 'Name Length',
+                        value: _nameLength,
+                        items: [4, 5, 6, 7, 8].map((length) {
+                          return DropdownMenuItem(
+                            value: length,
+                            child: Text('$length characters'),
+                          );
+                        }).toList(),
+                        icon: Icons.text_fields,
+                        onChanged: (value) =>
+                            setState(() => _nameLength = value ?? 4),
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Prefix
+                      _buildTextField(
+                        label: 'Prefix',
+                        controller: _prefixController,
+                        icon: Icons.label,
+                        helperText: 'Optional prefix for usernames',
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Character Type
+                      _buildDropdown<CharType>(
+                        label: 'Character Type',
+                        value: _charType,
+                        items: _availableCharTypes.map((type) {
+                          return DropdownMenuItem(
+                            value: type,
+                            child: Text(type.displayName),
+                          );
+                        }).toList(),
+                        icon: Icons.font_download,
+                        onChanged: (value) =>
+                            setState(() => _charType = value ?? CharType.lower),
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Profile
+                      profilesAsync.when(
+                        data: (profiles) {
+                          // Only set value if it exists in the current profiles list
+                          final validValue =
+                              profiles.any((p) => p.name == _selectedProfile)
+                                  ? _selectedProfile
+                                  : null;
+
+                          return _buildDropdown<String>(
+                            label: 'Profile',
+                            value: validValue,
+                            items: profiles.map((profile) {
+                              return DropdownMenuItem(
+                                value: profile.name,
+                                child: Text(profile.name),
+                              );
+                            }).toList(),
+                            icon: Icons.pie_chart,
+                            hint: Text('Select Profile'),
+                            onChanged: (value) =>
+                                setState(() => _selectedProfile = value),
+                            validator: (value) => value == null
+                                ? 'Please select a profile'
+                                : null,
+                          );
+                        },
+                        loading: () => Center(
+                          child: CircularProgressIndicator(),
                         ),
-                ),
-              ),
-
-              SizedBox(height: 16),
-
-              // Reset Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: OutlinedButton(
-                  onPressed: _isGenerating ? null : _resetForm,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.grey.shade600),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.refresh),
-                      SizedBox(width: 8),
-                      Text(
-                        'Reset Form',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
+                        error: (_, __) => _buildDropdown<String>(
+                          label: 'Profile',
+                          value: _selectedProfile,
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'default', child: Text('default')),
+                          ],
+                          icon: Icons.pie_chart,
+                          onChanged: (value) =>
+                              setState(() => _selectedProfile = value),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                SizedBox(height: 16),
+
+                // Limits Card
+                _buildSectionCard(
+                  title: 'Limits',
+                  icon: Icons.speed,
+                  child: Column(
+                    children: [
+                      // Time Limit
+                      _buildTextField(
+                        label: 'Time Limit',
+                        controller: _timeLimitController,
+                        icon: Icons.access_time,
+                        helperText:
+                            'e.g., 5s (sec), 5m (min), 1h (hour), 1d (day), 1mo (month)',
+                        textCapitalization: TextCapitalization.none,
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Data Limit
+                      _buildTextField(
+                        label: 'Data Limit',
+                        controller: _dataLimitController,
+                        icon: Icons.data_usage,
+                        helperText: 'e.g., 5G, 1500M (unlimited if empty)',
+                        textCapitalization: TextCapitalization.characters,
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Comment
+                      _buildTextField(
+                        label: 'Comment',
+                        controller: _commentController,
+                        icon: Icons.comment,
+                        helperText: 'Optional comment/suffix',
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 24),
+
+                // Status Message
+                if (_generationStatus != null)
+                  Container(
+                    width: double.infinity,
+                    padding: _generationSuccessful
+                        ? const EdgeInsets.fromLTRB(12, 12, 12, 8)
+                        : const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: _isGenerating
+                          ? Colors.blue.withValues(alpha: 0.1)
+                          : Colors.green.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: _isGenerating
+                            ? Colors.blue.withValues(alpha: 0.3)
+                            : Colors.green.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: _generationSuccessful
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.check_circle,
+                                      color: Colors.green, size: 20),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _generationStatus!,
+                                      style: TextStyle(
+                                        color: Colors.green.shade200,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    ref.invalidate(hotspotUsersProvider);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: context.appSuccess,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                  child: Text('Show Users'),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              if (_isGenerating)
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              else
+                                Icon(Icons.check_circle,
+                                    color: Colors.green, size: 20),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _generationStatus!,
+                                  style: TextStyle(
+                                    color: _isGenerating
+                                        ? Colors.blue.shade200
+                                        : Colors.green.shade200,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+
+                SizedBox(height: 24),
+
+                // Generate Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isGenerating ? null : _generateVouchers,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6C63FF),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: _isGenerating
+                        ? SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.confirmation_number),
+                              SizedBox(width: 8),
+                              Text(
+                                'Generate Vouchers',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+
+                SizedBox(height: 16),
+
+                // Reset Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton(
+                    onPressed: _isGenerating ? null : _resetForm,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.grey.shade600),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.refresh),
+                        SizedBox(width: 8),
+                        Text(
+                          'Reset Form',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }

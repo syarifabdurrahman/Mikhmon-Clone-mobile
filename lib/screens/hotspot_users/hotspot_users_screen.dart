@@ -41,7 +41,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       _loadMoreUsers();
     }
   }
@@ -73,112 +74,130 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.watch(hotspotUsersProvider);
 
     return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
       child: Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          _SearchAndFilterBar(
-            searchQuery: _searchQuery,
-            statusFilter: _statusFilter,
-            onSearchChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
-            onClearSearch: () {
-              setState(() {
-                _searchQuery = '';
-              });
-            },
-            onFilterChanged: (filter) {
-              setState(() {
-                _statusFilter = filter;
-              });
-            },
-          ),
-          Expanded(
-            child: usersAsync.when(
-              data: (paginatedUsers) {
-                // Convert Map data to HotspotUser objects
-                final users = paginatedUsers.users.map((data) => HotspotUser.fromJson(data)).toList();
-                final filteredUsers = _filterUsers(users);
-
-                if (filteredUsers.isEmpty) {
-                  return _buildEmptyState();
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () => ref.read(hotspotUsersProvider.notifier).refresh(),
-                  color: context.appPrimary,
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredUsers.length + (paginatedUsers.hasMore ? 1 : 0),
-                    // Performance optimization: estimated item height
-                    itemExtent: 100,
-                    // Performance optimization: repaint boundaries
-                    addRepaintBoundaries: true,
-                    // Performance optimization: cache extent
-                    cacheExtent: 500,
-                    itemBuilder: (context, index) {
-                      if (index == filteredUsers.length) {
-                        return const _LoadingIndicator();
-                      }
-                      return RepaintBoundary(
-                        key: ValueKey(filteredUsers[index].id),
-                        child: _UserCard(
-                          user: filteredUsers[index],
-                          onTap: () => _navigateToUserDetails(filteredUsers[index]),
-                          onLongPress: () => _toggleSelectionModeAndSelect(filteredUsers[index].id),
-                          onMenuTap: () => _showUserContextMenu(filteredUsers[index]),
-                          isSelectionMode: _isSelectionActive,
-                          isSelected: _selectedUserIds.contains(filteredUsers[index].id),
-                          onToggleSelection: () => _toggleUserSelection(filteredUsers[index].id),
-                        ),
-                      );
-                    },
-                  ),
-                );
+        backgroundColor: context.appBackground,
+        appBar: _buildAppBar(),
+        body: Column(
+          children: [
+            _SearchAndFilterBar(
+              searchQuery: _searchQuery,
+              statusFilter: _statusFilter,
+              onSearchChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
               },
-              loading: () => Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
-                ),
-              ),
-              error: (error, stack) => _buildErrorState(error.toString()),
+              onClearSearch: () {
+                setState(() {
+                  _searchQuery = '';
+                });
+              },
+              onFilterChanged: (filter) {
+                setState(() {
+                  _statusFilter = filter;
+                });
+              },
             ),
-          ),
-        ],
+            Expanded(
+              child: usersAsync.when(
+                data: (paginatedUsers) {
+                  // Convert Map data to HotspotUser objects
+                  final users = paginatedUsers.users
+                      .map((data) => HotspotUser.fromJson(data))
+                      .toList();
+                  final filteredUsers = _filterUsers(users);
+
+                  if (filteredUsers.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () =>
+                        ref.read(hotspotUsersProvider.notifier).refresh(),
+                    color: context.appPrimary,
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredUsers.length +
+                          (paginatedUsers.hasMore ? 1 : 0),
+                      // Performance optimization: estimated item height
+                      itemExtent: 100,
+                      // Performance optimization: repaint boundaries
+                      addRepaintBoundaries: true,
+                      // Performance optimization: cache extent
+                      cacheExtent: 500,
+                      itemBuilder: (context, index) {
+                        if (index == filteredUsers.length) {
+                          return const _LoadingIndicator();
+                        }
+                        return RepaintBoundary(
+                          key: ValueKey(filteredUsers[index].id),
+                          child: _UserCard(
+                            user: filteredUsers[index],
+                            onTap: () =>
+                                _navigateToUserDetails(filteredUsers[index]),
+                            onLongPress: () => _toggleSelectionModeAndSelect(
+                                filteredUsers[index].id),
+                            onMenuTap: () =>
+                                _showUserContextMenu(filteredUsers[index]),
+                            isSelectionMode: _isSelectionActive,
+                            isSelected: _selectedUserIds
+                                .contains(filteredUsers[index].id),
+                            onToggleSelection: () =>
+                                _toggleUserSelection(filteredUsers[index].id),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+                loading: () => Center(
+                  child: CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(context.appPrimary),
+                  ),
+                ),
+                error: (error, stack) => _buildErrorState(error.toString()),
+              ),
+            ),
+          ],
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButton: _isSelectionActive
+            ? null
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Generate Vouchers Button
+                  FloatingActionButton.extended(
+                    heroTag: 'generate_vouchers',
+                    onPressed: () => _navigateToGenerateVouchers(),
+                    backgroundColor: context.appSecondary,
+                    foregroundColor: Colors.black,
+                    icon: Icon(Icons.confirmation_number_rounded),
+                    label: Text('Generate Vouchers'),
+                  ),
+                  SizedBox(height: 12),
+                  // Add User Button
+                  FloatingActionButton.extended(
+                    heroTag: 'add_user',
+                    onPressed: () => _navigateToAddUser(),
+                    backgroundColor: context.appPrimary,
+                    foregroundColor: Colors.white,
+                    icon: Icon(Icons.person_add_rounded),
+                    label: Text('Add User'),
+                  ),
+                ],
+              ),
+        bottomNavigationBar:
+            _isSelectionActive ? _buildBulkActionBar(context) : null,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: _isSelectionActive ? null : Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Generate Vouchers Button
-          FloatingActionButton.extended(
-            heroTag: 'generate_vouchers',
-            onPressed: () => _navigateToGenerateVouchers(),
-            backgroundColor: context.appSecondary,
-            foregroundColor: Colors.black,
-            icon: Icon(Icons.confirmation_number_rounded),
-            label: Text('Generate Vouchers'),
-          ),
-          SizedBox(height: 12),
-          // Add User Button
-          FloatingActionButton.extended(
-            heroTag: 'add_user',
-            onPressed: () => _navigateToAddUser(),
-            backgroundColor: context.appPrimary,
-            foregroundColor: Colors.white,
-            icon: Icon(Icons.person_add_rounded),
-            label: Text('Add User'),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _isSelectionActive ? _buildBulkActionBar(context) : null,
-    ),
     );
   }
 
@@ -279,7 +298,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final users = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final users =
+        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
     final filteredUsers = _filterUsers(users);
 
     setState(() {
@@ -399,7 +419,6 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         successCount++;
       } catch (e) {
         failCount++;
-        debugPrint('[BulkActions] Error deleting user $userId: $e');
       }
     }
 
@@ -410,7 +429,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Deleted $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text('Deleted $successCount users' +
+              (failCount > 0 ? ' ($failCount failed)' : '')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
@@ -422,7 +442,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final allUsers =
+        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
     int successCount = 0;
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
@@ -450,12 +471,13 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         final user = allUsers.firstWhere((u) => u.id == userId);
         // Only disable if currently active (enabled)
         if (user.active) {
-          await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(userId);
+          await ref
+              .read(hotspotUsersProvider.notifier)
+              .toggleUserStatus(userId);
           successCount++;
         }
       } catch (e) {
         failCount++;
-        debugPrint('[BulkActions] Error disabling user $userId: $e');
       }
     }
 
@@ -466,7 +488,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Disabled $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text('Disabled $successCount users' +
+              (failCount > 0 ? ' ($failCount failed)' : '')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
@@ -478,7 +501,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final allUsers =
+        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
     int successCount = 0;
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
@@ -506,12 +530,13 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         final user = allUsers.firstWhere((u) => u.id == userId);
         // Only enable if currently inactive (disabled)
         if (!user.active) {
-          await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(userId);
+          await ref
+              .read(hotspotUsersProvider.notifier)
+              .toggleUserStatus(userId);
           successCount++;
         }
       } catch (e) {
         failCount++;
-        debugPrint('[BulkActions] Error enabling user $userId: $e');
       }
     }
 
@@ -522,7 +547,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Enabled $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text('Enabled $successCount users' +
+              (failCount > 0 ? ' ($failCount failed)' : '')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
@@ -561,15 +587,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                   Text('Select a profile:'),
                   SizedBox(height: 12),
                   ...profileNames.map((profile) => RadioListTile<String>(
-                    title: Text(profile.toUpperCase()),
-                    value: profile,
-                    groupValue: selectedProfile,
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedProfile = value;
-                      });
-                    },
-                  )),
+                        title: Text(profile.toUpperCase()),
+                        value: profile,
+                        groupValue: selectedProfile,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedProfile = value;
+                          });
+                        },
+                      )),
                 ],
               ),
               actions: [
@@ -610,7 +636,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final allUsers = usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final allUsers =
+        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
     int successCount = 0;
     int failCount = 0;
 
@@ -651,7 +678,6 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         }
       } catch (e) {
         failCount++;
-        debugPrint('[BulkActions] Error moving user $userId: $e');
       }
     }
 
@@ -664,7 +690,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Moved $successCount users' + (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text('Moved $successCount users' +
+              (failCount > 0 ? ' ($failCount failed)' : '')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
@@ -700,7 +727,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   }
 
   Widget _buildEmptyState() {
-    final hasFilters = _searchQuery.isNotEmpty || _statusFilter != UserStatusFilter.all;
+    final hasFilters =
+        _searchQuery.isNotEmpty || _statusFilter != UserStatusFilter.all;
 
     return Center(
       child: Column(
@@ -721,7 +749,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
           ),
           SizedBox(height: 8),
           Text(
-            hasFilters ? 'Try adjusting your search or filter' : 'Add your first user to get started',
+            hasFilters
+                ? 'Try adjusting your search or filter'
+                : 'Add your first user to get started',
             style: TextStyle(
               color: context.appOnSurface.withValues(alpha: 0.7),
             ),
@@ -825,11 +855,14 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         },
         onToggleStatus: () async {
           Navigator.pop(sheetContext);
-          await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+          await ref
+              .read(hotspotUsersProvider.notifier)
+              .toggleUserStatus(user.id);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
+                content: Text(
+                    'User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
                 backgroundColor: context.appPrimary,
               ),
             );
@@ -849,7 +882,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       builder: (context) => AlertDialog(
         backgroundColor: context.appSurface,
         title: Text('Delete User'),
-        content: Text('Are you sure you want to delete user "${user.name}"? This action cannot be undone.'),
+        content: Text(
+            'Are you sure you want to delete user "${user.name}"? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -953,7 +987,8 @@ class _SearchAndFilterBar extends StatelessWidget {
               ),
             ],
             selected: {statusFilter},
-            onSelectionChanged: (newSelection) => onFilterChanged(newSelection.first),
+            onSelectionChanged: (newSelection) =>
+                onFilterChanged(newSelection.first),
             style: ButtonStyle(
               backgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
@@ -1004,9 +1039,8 @@ class _UserCard extends ConsumerWidget {
 
     // Check if this user is in the active users by name
     // Active users are stored as Map<String, dynamic> with 'user' key for username
-    return activeUsersValue.users.any((activeUserMap) =>
-      activeUserMap['user'] == user.name
-    );
+    return activeUsersValue.users
+        .any((activeUserMap) => activeUserMap['user'] == user.name);
   }
 
   @override
@@ -1116,7 +1150,9 @@ class _UserAvatar extends StatelessWidget {
           ),
           child: Icon(
             Icons.person_rounded,
-            color: active ? Colors.white : context.appOnSurface.withValues(alpha: 0.5),
+            color: active
+                ? Colors.white
+                : context.appOnSurface.withValues(alpha: 0.5),
           ),
         ),
         if (isConnected)
@@ -1217,7 +1253,9 @@ class _UserTypeBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isVoucher ? Icons.confirmation_number_rounded : Icons.person_rounded,
+            isVoucher
+                ? Icons.confirmation_number_rounded
+                : Icons.person_rounded,
             size: 9,
             color: isVoucher
                 ? context.appSecondary
@@ -1286,13 +1324,17 @@ class _UserStatusBadge extends StatelessWidget {
         Icon(
           isConnected ? Icons.wifi_rounded : Icons.wifi_off_rounded,
           size: 14,
-          color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.4),
+          color: isConnected
+              ? Colors.green
+              : context.appOnSurface.withValues(alpha: 0.4),
         ),
         SizedBox(width: 3),
         Text(
           isConnected ? 'Connected' : 'Active',
           style: TextStyle(
-            color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
+            color: isConnected
+                ? Colors.green
+                : context.appOnSurface.withValues(alpha: 0.5),
             fontSize: 11,
           ),
           maxLines: 1,
@@ -1462,13 +1504,17 @@ class _ConnectionStatusBadge extends StatelessWidget {
           Icon(
             isConnected ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
             size: 12,
-            color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
+            color: isConnected
+                ? Colors.green
+                : context.appOnSurface.withValues(alpha: 0.5),
           ),
           SizedBox(width: 4),
           Text(
             isConnected ? 'Live' : 'Offline',
             style: TextStyle(
-              color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
+              color: isConnected
+                  ? Colors.green
+                  : context.appOnSurface.withValues(alpha: 0.5),
               fontSize: 10,
               fontWeight: FontWeight.w600,
             ),

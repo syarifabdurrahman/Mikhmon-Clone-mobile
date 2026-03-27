@@ -44,6 +44,42 @@
 
 ---
 
+## 🆕 Recent Updates (March 27, 2026)
+
+### 1. RenderFlex Overflow Fixes ✅
+**Fixed overflow errors causing UI clipping**
+
+- **Login Screen** - Changed `CrossAxisAlignment.stretch` to `CrossAxisAlignment.center` to prevent Column children from being stretched beyond container bounds
+- **Bottom Navigation** - Wrapped `ConvexAppBar` in `SafeArea` to fix 1px overflow on bottom navigation bar
+- **Welcome Screen** - Added `SafeArea(bottom: false)` to allow gradient to fill edge-to-edge while protecting from top notch only
+- **Files**:
+  - `lib/screens/auth/login_screen.dart` - CrossAxisAlignment fix
+  - `lib/screens/main/main_shell_screen.dart` - SafeArea wrapper
+  - `lib/screens/welcome/welcome_screen.dart` - SafeArea with bottom:false
+
+### 2. Provider Modification During Build Fix ✅
+**Fixed "Tried to modify a provider while widget tree was building" error**
+
+- **Issue**: `ref.read(currentTabProvider)` was called synchronously in `didChangeDependencies()` during widget build
+- **Fix**: Moved `ref.read()` call inside `Future.microtask()` callback to delay execution until after build phase
+- **File**: `lib/screens/main/main_shell_screen.dart`
+
+### 3. Quick Login Optional Password ✅
+**Made password optional for quick login from saved connections**
+
+- **Change**: Removed password requirement check in `_quickLogin()` method
+- **User Flow**: Users can now connect without entering password if router has no password set
+- **File**: `lib/screens/welcome/welcome_screen.dart`
+
+### 4. Login Screen Password Fix ✅
+**Fixed password field for saved connections**
+
+- **Issue**: Password was hardcoded to empty string when using saved connection
+- **Fix**: Changed to use `_passwordController.text` so users can enter password when connecting via saved connection
+- **File**: `lib/screens/auth/login_screen.dart`
+
+---
+
 ## 🆕 Recent Updates (March 26, 2026)
 
 ### 1. Batch Operations for Hotspot Users ✅
@@ -846,6 +882,32 @@ Choose a feature to implement:
     - Fixed `const _buildLoadingState()` → `_buildLoadingState()`
     - Files: `lib/providers/app_providers.dart`, `lib/screens/hotspot_users/hotspot_hosts_screen.dart`
 
+### Fixed Issues (March 27, 2026)
+
+1. **RenderFlex Overflow on Login Screen** - Fixed overflow by changing CrossAxisAlignment
+   - Changed `CrossAxisAlignment.stretch` to `CrossAxisAlignment.center` in login form
+   - File: `lib/screens/auth/login_screen.dart`
+
+2. **RenderFlex Overflow on Bottom Navigation** - Fixed 1px overflow on ConvexAppBar
+   - Wrapped ConvexAppBar in SafeArea widget
+   - File: `lib/screens/main/main_shell_screen.dart`
+
+3. **Welcome Screen Cutout** - Fixed gradient not filling edge-to-edge
+   - Added `SafeArea(bottom: false)` to allow gradient to extend to bottom while protecting from top notch
+   - File: `lib/screens/welcome/welcome_screen.dart`
+
+4. **Provider Modification During Build** - Fixed error when navigating to tabs
+   - Moved `ref.read()` inside `Future.microtask()` to delay until after build phase
+   - File: `lib/screens/main/main_shell_screen.dart`
+
+5. **Quick Login Password Required** - Made password optional for quick login
+   - Removed password validation check in `_quickLogin()` method
+   - File: `lib/screens/welcome/welcome_screen.dart`
+
+6. **Login Screen Password Empty** - Fixed saved connections not accepting password
+   - Changed from hardcoded empty string to `_passwordController.text`
+   - File: `lib/screens/auth/login_screen.dart`
+
 ### Fixed Issues (March 26, 2026)
 
 1. **Android Back Button Behavior** - Fixed back button exiting app instead of returning to dashboard
@@ -877,4 +939,4 @@ Choose a feature to implement:
 
 ---
 
-_Last Updated: March 26, 2026_
+_Last Updated: March 27, 2026_
