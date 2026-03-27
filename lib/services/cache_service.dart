@@ -22,6 +22,7 @@ class CacheService {
   static const String _savedConnectionsKey = 'saved_connections';
   static const String _lastUpdateKey = 'last_update';
   static const String _interfaceTrafficKey = 'interface_traffic';
+  static const String _vouchersKey = 'generated_vouchers';
 
   /// Initialize Hive cache
   Future<void> init() async {
@@ -364,5 +365,88 @@ class CacheService {
   /// Clear user profiles cache (useful when switching from demo to real mode)
   Future<void> clearUserProfiles() async {
     await clearEntry(_userProfilesKey);
+  }
+
+  /// Get generated vouchers from cache
+  List<Map<String, dynamic>>? getVouchers() {
+    try {
+      final data = _cacheBox.get(_vouchersKey);
+      if (data != null && data is List) {
+        debugPrint('[CacheService] Vouchers cache hit (${data.length} vouchers)');
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      debugPrint('[CacheService] Vouchers cache miss');
+      return null;
+    } catch (e) {
+      debugPrint('[CacheService] Error reading vouchers: $e');
+      return null;
+    }
+  }
+
+  /// Save vouchers to cache
+  Future<void> saveVouchers(List<Map<String, dynamic>> vouchers) async {
+    try {
+      await _cacheBox.put(_vouchersKey, vouchers);
+      debugPrint('[CacheService] Vouchers cached (${vouchers.length} vouchers)');
+    } catch (e) {
+      debugPrint('[CacheService] Error saving vouchers: $e');
+    }
+  }
+
+  /// Add a single voucher to cache
+  Future<void> addVoucher(Map<String, dynamic> voucher) async {
+    try {
+      final vouchers = getVouchers() ?? [];
+      // Check if voucher with same username already exists
+      final index = vouchers.indexWhere((v) => v['username'] == voucher['username']);
+      if (index != -1) {
+        vouchers[index] = voucher; // Update existing
+      } else {
+        vouchers.insert(0, voucher); // Add to beginning
+      }
+      await _cacheBox.put(_vouchersKey, vouchers);
+      debugPrint('[CacheService] Voucher added/updated: ${voucher['username']}');
+    } catch (e) {
+      debugPrint('[CacheService] Error adding voucher: $e');
+    }
+  }
+
+  /// Add multiple vouchers to cache
+  Future<void> addVouchers(List<Map<String, dynamic>> newVouchers) async {
+    try {
+      final vouchers = getVouchers() ?? [];
+      // Add new vouchers to the beginning
+      for (final voucher in newVouchers) {
+        final index = vouchers.indexWhere((v) => v['username'] == voucher['username']);
+        if (index != -1) {
+          vouchers[index] = voucher; // Update existing
+        } else {
+          vouchers.insert(0, voucher);
+        }
+      }
+      await _cacheBox.put(_vouchersKey, vouchers);
+      debugPrint('[CacheService] ${newVouchers.length} vouchers added/updated');
+    } catch (e) {
+      debugPrint('[CacheService] Error adding vouchers: $e');
+    }
+  }
+
+  /// Delete a voucher from cache
+  Future<void> deleteVoucher(String username) async {
+    try {
+      final vouchers = getVouchers();
+      if (vouchers == null) return;
+
+      vouchers.removeWhere((v) => v['username'] == username);
+      await _cacheBox.put(_vouchersKey, vouchers);
+      debugPrint('[CacheService] Voucher deleted: $username');
+    } catch (e) {
+      debugPrint('[CacheService] Error deleting voucher: $e');
+    }
+  }
+
+  /// Clear all vouchers from cache
+  Future<void> clearVouchers() async {
+    await clearEntry(_vouchersKey);
   }
 }

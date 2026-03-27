@@ -77,24 +77,25 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
   Widget build(BuildContext context) {
     final activeUsersAsync = ref.watch(hotspotActiveUsersProvider);
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/main/users'),
-        ),
-        title: Text(
-          'Active Users',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        actions: [
+    return PopScope(
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.go('/main/users'),
+          ),
+          title: Text(
+            'Active Users',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: context.appOnSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          actions: [
           IconButton(
             icon: Icon(Icons.refresh_rounded),
             onPressed: () {
@@ -178,6 +179,7 @@ class _HotspotActiveUsersScreenState extends ConsumerState<HotspotActiveUsersScr
           ),
         ],
       ),
+    ),
     );
   }
 

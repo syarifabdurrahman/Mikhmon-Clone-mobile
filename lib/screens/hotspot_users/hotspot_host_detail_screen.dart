@@ -20,8 +20,14 @@ class HotspotHostDetailScreen extends StatelessWidget {
     final vendorName = vendor?.name ?? 'Unknown Vendor';
     final deviceColor = Color(MacVendorDetector.getDeviceColorHex(host.macAddress));
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
+      child: Scaffold(
+        backgroundColor: context.appBackground,
       appBar: AppBar(
         backgroundColor: context.appSurface,
         foregroundColor: context.appOnSurface,
@@ -66,6 +72,7 @@ class HotspotHostDetailScreen extends StatelessWidget {
             _buildVendorInfoCard(context, vendor, deviceColor),
           ],
         ),
+      ),
       ),
     );
   }

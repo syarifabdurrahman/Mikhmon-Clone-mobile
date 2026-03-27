@@ -577,6 +577,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 color: context.appOnSurface.withValues(alpha: 0.1),
               ),
               _buildActionButton(
+                Icons.confirmation_number_rounded,
+                'Vouchers',
+                Icons.arrow_forward_ios_rounded,
+                () {
+                  context.push('/main/vouchers');
+                },
+              ),
+              Divider(
+                height: 1,
+                color: context.appOnSurface.withValues(alpha: 0.1),
+              ),
+              _buildActionButton(
                 Icons.history_rounded,
                 'Connection Logs',
                 Icons.arrow_forward_ios_rounded,

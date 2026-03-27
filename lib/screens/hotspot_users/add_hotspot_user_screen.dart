@@ -153,32 +153,38 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            'Add Hotspot User',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: context.appOnSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
         ),
-        title: Text(
-          'Add Hotspot User',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 _buildHeader(),
                 SizedBox(height: 24),
                 _buildUsernameField(),
@@ -193,6 +199,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
                 SizedBox(height: 24),
                 _buildSubmitButton(),
               ],
+              ),
             ),
           ),
         ),

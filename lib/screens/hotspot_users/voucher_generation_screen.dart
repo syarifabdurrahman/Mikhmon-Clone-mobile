@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../utils/validity_parser.dart';
+import '../../services/models/voucher.dart';
+import 'voucher_preview_screen.dart';
 
 // Enum for user mode
 enum UserMode { up, vc }
@@ -80,6 +83,9 @@ class _VoucherGenerationScreenState
   bool _isGenerating = false;
   bool _generationSuccessful = false;
   String? _generationStatus;
+
+  // Store generated vouchers
+  final List<Voucher> _generatedVouchers = [];
 
   @override
   void initState() {
@@ -182,6 +188,7 @@ class _VoucherGenerationScreenState
     setState(() {
       _isGenerating = true;
       _generationStatus = 'Generating vouchers on RouterOS...';
+      _generatedVouchers.clear();
     });
 
     try {
@@ -202,6 +209,24 @@ class _VoucherGenerationScreenState
         final validity = _timeLimitController.text.trim();
         final dataLimit = _parseDataLimit(_dataLimitController.text.trim());
 
+        // Calculate expiration date
+        DateTime? expiresAt;
+        if (validity.isNotEmpty) {
+          expiresAt = ValidityParser.parseValidity(validity);
+        }
+
+        // Create voucher object
+        final voucher = Voucher(
+          username: username,
+          password: password,
+          profile: _selectedProfile ?? 'default',
+          validity: validity.isEmpty ? null : validity,
+          dataLimit: dataLimit,
+          comment: comment.isEmpty ? null : comment,
+          createdAt: DateTime.now(),
+          expiresAt: expiresAt,
+        );
+
         // Add user via RouterOS API
         await client.addHotspotUser(
           username: username,
@@ -211,6 +236,9 @@ class _VoucherGenerationScreenState
           validity: validity.isEmpty ? null : validity,
           dataLimit: dataLimit,
         );
+
+        // Store generated voucher
+        _generatedVouchers.add(voucher);
 
         // Small delay between requests to avoid overwhelming the router
         if (i < qty) {
@@ -223,6 +251,26 @@ class _VoucherGenerationScreenState
         _generationSuccessful = true;
         _generationStatus = 'Successfully generated $qty vouchers!';
       });
+
+      // Save vouchers to cache
+      final cache = ref.read(cacheServiceProvider);
+      await cache.addVouchers(_generatedVouchers.map((v) => v.toJson()).toList());
+
+      // Invalidate vouchers provider to refresh the list
+      ref.invalidate(vouchersProvider);
+
+      // Navigate to voucher preview screen
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VoucherPreviewScreen(
+              vouchers: _generatedVouchers,
+              profileName: _selectedProfile ?? 'default',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _isGenerating = false;
@@ -348,9 +396,15 @@ class _VoucherGenerationScreenState
   Widget build(BuildContext context) {
     final profilesAsync = ref.watch(userProfileProvider);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E1E2E),
-      resizeToAvoidBottomInset: true,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1E1E2E),
+        resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: const Color(0xFF2A2A3C),
         title: Text(
@@ -730,6 +784,7 @@ class _VoucherGenerationScreenState
             ],
           ),
         ),
+      ),
       ),
     );
   }

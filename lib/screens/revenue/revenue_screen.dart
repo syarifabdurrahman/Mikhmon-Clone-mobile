@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
@@ -31,20 +32,31 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        title: Text(
-          'Revenue',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        actions: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.go('/main'),
+            tooltip: 'Back',
+          ),
+          title: Text(
+            'Revenue',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: context.appOnSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          actions: [
           PopupMenuButton<TimePeriod>(
             icon: Icon(Icons.calendar_today_rounded),
             initialValue: _timePeriod,
@@ -96,6 +108,7 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen> with SingleTicker
           ),
         ],
       ),
+    ),
     );
   }
 }

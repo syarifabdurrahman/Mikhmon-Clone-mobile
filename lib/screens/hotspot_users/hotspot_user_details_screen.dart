@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../services/routeros_service.dart';
@@ -59,25 +60,31 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'User Details',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        actions: [
-          IconButton(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        context.go('/main');
+      },
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            'User Details',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: context.appOnSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          actions: [
+            IconButton(
             icon: Icon(Icons.refresh_rounded),
             onPressed: _isLoading ? null : _refreshUserData,
           ),
@@ -117,7 +124,8 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                 ],
               ),
             ),
-    );
+          ),
+        );
   }
 
   Widget _buildUserHeader() {

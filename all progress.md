@@ -28,6 +28,12 @@
 | **Add User Screen** | ✅ | Create new hotspot users |
 | **Performance Optimizations** | ✅ | RepaintBoundary, itemExtent, widget extraction |
 | **Voucher Generation** | ✅ | Bulk user creation with custom username format |
+| **Voucher QR Codes** | ✅ | QR code generation with copy, share, and print |
+| **Voucher Preview** | ✅ | Show all generated vouchers with summary and actions |
+| **Batch Operations** | ✅ | Delete, enable, disable, move multiple users |
+| **Long-press Selection** | ✅ | Select multiple users from list |
+| **Convex Bottom Nav** | ✅ | Curved navigation bar with animated center |
+| **Revenue Dashboard** | ✅ | Charts, profile breakdown, transaction history |
 | **Responsive Design** | ✅ | LayoutBuilder for adaptive UI on all screens |
 | **Modern UI Theme** | ✅ | **Poppins font**, Material 3, vibrant colors |
 | **Hotspot Hosts** | ✅ | DHCP lease/binding monitoring with search & filters |
@@ -38,7 +44,137 @@
 
 ---
 
-## 🆕 Recent Updates (March 10, 2026)
+## 🆕 Recent Updates (March 26, 2026)
+
+### 1. Batch Operations for Hotspot Users ✅
+**Implemented bulk actions for managing multiple users at once**
+
+- **Features**:
+  - Bulk delete with confirmation dialog
+  - Bulk enable/disable users
+  - Bulk move users to different profile
+  - Progress dialogs with user count
+  - Success/failure tracking with detailed feedback
+- **UI**:
+  - Long-press to enter selection mode
+  - Select All button for quick selection
+  - Bottom action bar with operation buttons
+  - Color-coded actions (Red: Delete, Orange: Disable, Green: Enable, Primary: Move Profile)
+- **Files**:
+  - `lib/screens/hotspot_users/hotspot_users_screen.dart` - Selection mode and bulk actions
+  - `lib/services/routeros_api_client.dart` - Added `setHotspotUserProfile()` method
+  - `lib/providers/app_providers.dart` - Enhanced `deleteUser()` and `toggleUserStatus()` with immediate UI updates
+
+### 2. QR Code Voucher Generation ✅
+**Complete voucher system with QR codes, copy, share, and print functionality**
+
+- **Features**:
+  - QR code generation for each voucher (WiFi-compatible format)
+  - Copy individual or all vouchers to clipboard
+  - Share vouchers as text via apps
+  - Generate printable screenshot with grid layout
+  - Voucher preview screen with summary card
+  - Expiration date tracking
+- **Voucher Model** (`lib/services/models/voucher.dart`):
+  - Stores username, password, profile, validity, data limit, comment
+  - Provides QR code data in WiFi format
+  - Active/expired status checking
+- **Preview Screen** (`lib/screens/hotspot_users/voucher_preview_screen.dart`):
+  - Summary card (total, active, expired counts)
+  - Expandable voucher cards with QR codes
+  - Copy, share, and print actions
+  - Export as image for printing
+- **Packages Added**:
+  - `qr_flutter: ^4.1.0` - QR code generation
+  - `screenshot: ^3.0.0` - Capture vouchers as image
+  - `share_plus: ^10.1.3` - Share functionality
+  - `path_provider: ^2.1.5` - File saving
+  - `permission_handler: ^11.3.1` - Storage permissions
+- **Files**:
+  - `lib/services/models/voucher.dart` - Voucher data model
+  - `lib/screens/hotspot_users/voucher_preview_screen.dart` - New voucher preview screen
+  - `lib/screens/hotspot_users/voucher_generation_screen.dart` - Updated to store and show vouchers
+
+### 3. Convex Bottom Navigation with Animation ✅
+**Modern curved bottom bar with animated center circle**
+
+- **Features**:
+  - Convex (curved) middle tab for Profiles
+  - Pulse animation every 2 seconds when on Profiles tab
+  - Bounce animation when center circle is tapped
+  - Active icon scales with animation (1.0 → 1.2x)
+  - Fixed tabs: Dashboard, Users, Profiles (curved), Hosts, Settings
+- **Implementation**:
+  - `convex_bottom_bar: ^3.2.0` package
+  - ShellRoute navigation with `/main` prefix
+  - Custom style hook for icon sizing
+  - AnimationController with scale animation
+- **Files**:
+  - `lib/screens/main/main_shell_screen.dart` - New main shell with convex bar
+  - `lib/providers/app_providers.dart` - Restructured router with ShellRoute
+  - `pubspec.yaml` - Added convex_bottom_bar package
+
+### 4. Router Restructuring with ShellRoute ✅
+**Fixed navigation issues and reorganized routing structure**
+
+- **Changes**:
+  - Implemented ShellRoute for nested navigation
+  - All main routes now under `/main` prefix
+  - Bottom navigation persists across tab changes
+  - Fixed route not found errors for `/dashboard`
+- **Routes Structure**:
+  - `/main/dashboard` - Dashboard
+  - `/main/users` - Hotspot Users
+  - `/main/users/active` - Active Users
+  - `/main/users/add` - Add User
+  - `/main/users/generate` - Generate Vouchers
+  - `/main/profiles` - User Profiles
+  - `/main/hosts` - Hotspot Hosts
+  - `/main/settings` - Settings
+- **Files**:
+  - `lib/providers/app_providers.dart` - Router restructure
+  - `lib/screens/auth/login_screen.dart` - Updated navigation paths
+  - `lib/screens/welcome/welcome_screen.dart` - Updated navigation paths
+  - `lib/screens/hotspot_users/hotspot_active_users_screen.dart` - Updated navigation paths
+
+### 5. Revenue/Income Dashboard ✅
+**Comprehensive revenue tracking with charts and transaction history**
+
+- **Features**:
+  - Summary cards showing revenue and transaction counts
+  - Line chart for revenue trend over time
+  - Bar chart for daily breakdown
+  - Revenue breakdown by profile with ranking (gold/silver/bronze badges)
+  - Filterable transaction history (search, profile, date range)
+  - Time period selector (week, month, quarter, year)
+  - TabController with 3 tabs: Charts, By Profile, Transactions
+- **Implementation**:
+  - `fl_chart` for line and bar charts
+  - Group transactions by date and profile
+  - Transaction cards with detailed information
+  - Relative timestamp formatting (Just now, 5m ago, 2h ago, etc.)
+- **Files**:
+  - `lib/screens/revenue/revenue_screen.dart` - New revenue dashboard
+  - `lib/providers/app_providers.dart` - Income provider with transaction tracking
+  - `pubspec.yaml` - Added `intl: ^0.19.0` for number formatting
+
+### 6. Android Back Button Fix ✅
+**Fixed back button behavior on sub-screens**
+
+- **Issue**: Back button was exiting app instead of returning to dashboard
+- **Fix**: Added `PopScope(canPop: true)` to affected screens
+- **Screens Fixed**:
+  - Manage Hotspot (Hotspot Users)
+  - User Profiles
+  - Hotspot Hosts
+- **Files**:
+  - `lib/screens/hotspot_users/hotspot_users_screen.dart`
+  - `lib/screens/hotspot_users/user_profiles_screen.dart`
+  - `lib/screens/hotspot_users/hotspot_hosts_screen.dart`
+
+---
+
+## 🆕 Previous Updates (March 10, 2026)
 
 ### 1. Navigation Hiccups Fix ✅
 **Fixed interface traffic "connect/disconnect" flashes and graph hiccups when navigating**
@@ -385,7 +521,9 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 #### 2. Hotspot Features
 
 - ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease/binding monitoring
-- **Voucher Printing** - Print with customizable templates
+- ~~**Voucher QR Codes**~~ ✅ COMPLETED - QR code generation for scanning
+- ~~**Voucher Preview**~~ ✅ COMPLETED - Show, copy, share, print vouchers
+- **Voucher Templates** - Customizable print templates
   - Default template (full size)
   - Small template (compact)
   - Custom templates via editor
@@ -453,17 +591,17 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 ### Medium Priority (User Experience)
 
 12. **Settings screen** - Theme switcher, router management (UI exists, needs implementation)
-13. **Reports page** - Sales history with filtering
+13. ~~**Reports page**~~ ✅ COMPLETED - Sales history with filtering and charts
 14. **Log viewer** - Activity tracking
 15. ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease monitoring
 16. **Health Monitoring** - Temperature, voltage sensors
+17. **User Search Enhancement** - Profile filter, date range, CSV export
 
 ### Low Priority (Nice to Have)
 
-17. **Template editor** - Custom voucher printing
+17. **Template editor** - Custom voucher printing templates
 18. **Multi-session support** - Multiple routers
 19. **Real-time clock widget** - Dashboard enhancement
-20. **Voucher printing** - PDF/Print templates
 
 ---
 
@@ -472,11 +610,16 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 ### Current Architecture
 
 - **State Management**: Riverpod 2.6.1
-- **Navigation**: go_router 14.6.2
+- **Navigation**: go_router 14.6.2 with ShellRoute
+- **Bottom Navigation**: convex_bottom_bar 3.2.0
 - **Charts**: fl_chart 0.70.1
+- **QR Codes**: qr_flutter 4.1.0
 - **Fonts**: google_fonts 6.2.1 (Poppins)
 - **Secure Storage**: flutter_secure_storage
 - **Local Database**: Hive 2.2.3
+- **Screenshot**: screenshot 3.0.0
+- **Sharing**: share_plus 10.1.3
+- **Number Formatting**: intl 0.19.0
 - **Demo Mode**: In-memory cache (module-level variables)
 
 ### Theme Configuration
@@ -574,22 +717,29 @@ lib/
 │   ├── settings/
 │   │   └── settings_screen.dart          # Settings with ΩMMON branding
 │   └── hotspot_users/
-│       ├── hotspot_users_screen.dart     # User list with filters
+│       ├── hotspot_users_screen.dart     # User list + batch operations + long-press selection
 │       ├── hotspot_active_users_screen.dart # Active users (real-time)
-│       ├── hotspot_hosts_screen.dart     # DHCP hosts monitoring (NEW)
+│       ├── hotspot_hosts_screen.dart     # DHCP hosts monitoring
 │       ├── hotspot_user_details_screen.dart
 │       ├── add_hotspot_user_screen.dart
 │       ├── edit_hotspot_user_screen.dart
-│       ├── user_profiles_screen.dart     # Profile management (fixed multi-record parsing)
-│       ├── add_edit_profile_screen.dart  # Add/edit profiles (fixed circular dependency)
-│       └── voucher_generation_screen.dart
+│       ├── user_profiles_screen.dart     # Profile management
+│       ├── add_edit_profile_screen.dart  # Add/edit profiles
+│       ├── voucher_generation_screen.dart # Voucher generation
+│       └── voucher_preview_screen.dart   # NEW - QR codes, copy, share, print
+│   ├── revenue/
+│   │   └── revenue_screen.dart          # NEW - Revenue dashboard with charts
+│   └── main/
+│       └── main_shell_screen.dart       # NEW - Shell route with convex bottom bar
 ├── services/
-│   ├── models.dart                       # Data models (enhanced parsing) + HotspotHost
-│   ├── routeros_api_client.dart          # RouterOS API protocol (fixed multi-record) + getHotspotHosts()
+│   ├── models.dart                       # Data models + HotspotHost + Voucher
+│   ├── routeros_api_client.dart          # RouterOS API + setHotspotUserProfile()
 │   ├── routeros_service.dart             # Uses RouterOSClient
 │   ├── cache_service.dart                # Hive caching service
 │   ├── resource_history.dart             # Resource history tracking
-│   └── traffic_rate_service.dart         # Real-time traffic rate calculation
+│   ├── traffic_rate_service.dart         # Real-time traffic rate calculation
+│   └── models/
+│       └── voucher.dart                  # NEW - Voucher data model
 ├── theme/
 │   └── app_theme.dart                    # Modern Material 3 theme with Poppins
 ├── navigation/
@@ -629,10 +779,13 @@ Choose a feature to implement:
 11. ~~**Graph Time Labels Fix**~~ ✅ DONE - Accurate elapsed time display
 12. ~~**Initial Load Indicator**~~ ✅ DONE - Loading indicator for first-time fetch
 13. **Settings Implementation** - Make settings screen functional
-14. **Reports Page** - Sales history with filtering
+14. ~~**Reports Page**~~ ✅ DONE - Sales history with filtering and charts
 15. ~~**Hotspot Hosts**~~ ✅ DONE - DHCP lease monitoring
-16. **Log Viewer** - Activity tracking
-17. **Health Monitoring** - Temperature, voltage sensors
+16. ~~**Batch Operations**~~ ✅ DONE - Delete, enable, disable, move multiple users
+17. ~~**QR Code Vouchers**~~ ✅ DONE - Generate, copy, share, print vouchers with QR codes
+18. ~~**Convex Bottom Nav**~~ ✅ DONE - Modern curved navigation with animation
+19. **Log Viewer** - Activity tracking
+20. **Health Monitoring** - Temperature, voltage sensors
 
 ---
 
@@ -693,6 +846,21 @@ Choose a feature to implement:
     - Fixed `const _buildLoadingState()` → `_buildLoadingState()`
     - Files: `lib/providers/app_providers.dart`, `lib/screens/hotspot_users/hotspot_hosts_screen.dart`
 
+### Fixed Issues (March 26, 2026)
+
+1. **Android Back Button Behavior** - Fixed back button exiting app instead of returning to dashboard
+   - Added `PopScope(canPop: true)` to Hotspot Users, User Profiles, and Hotspot Hosts screens
+   - Files: `lib/screens/hotspot_users/hotspot_users_screen.dart`, `user_profiles_screen.dart`, `hotspot_hosts_screen.dart`
+
+2. **Route Not Found Errors** - Fixed navigation issues after implementing ShellRoute
+   - Updated all route references to use `/main` prefix
+   - Updated login and welcome screens to navigate to `/main/dashboard`
+   - Files: `lib/providers/app_providers.dart`, `lib/screens/auth/login_screen.dart`, `lib/screens/welcome/welcome_screen.dart`
+
+3. **Provider Modification During Build** - Fixed "modifying provider while widget tree is building" error
+   - Wrapped provider updates in `Future.microtask()` to delay until after build cycle
+   - File: `lib/screens/main/main_shell_screen.dart`
+
 ### Fixed Issues (March 8, 2026)
 
 1. **User Profile Creation** - Fixed "provider cannot depend on itself" error
@@ -709,4 +877,4 @@ Choose a feature to implement:
 
 ---
 
-_Last Updated: March 10, 2026_
+_Last Updated: March 26, 2026_

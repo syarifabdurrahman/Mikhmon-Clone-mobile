@@ -344,6 +344,7 @@ class HotspotUser {
   final int? bytesOut;
   final int? limitBytesIn;
   final int? limitBytesOut;
+  final String? comment;
 
   HotspotUser({
     required this.id,
@@ -355,6 +356,7 @@ class HotspotUser {
     this.bytesOut,
     this.limitBytesIn,
     this.limitBytesOut,
+    this.comment,
   });
 
   factory HotspotUser.fromJson(Map<String, dynamic> json) {
@@ -373,7 +375,16 @@ class HotspotUser {
       bytesOut: int.tryParse(json['bytes-out'] ?? '0'),
       limitBytesIn: int.tryParse(json['limit-bytes-in'] ?? '0'),
       limitBytesOut: int.tryParse(json['limit-bytes-out'] ?? '0'),
+      comment: json['comment'],
     );
+  }
+
+  /// Check if this user was created via voucher generation
+  /// Vouchers have comments like "mode:up" or "mode:vc"
+  bool get isVoucher {
+    if (comment == null) return false;
+    final commentLower = comment!.toLowerCase();
+    return commentLower.contains('mode:up') || commentLower.contains('mode:vc');
   }
 
   String get dataUsed => '${((bytesIn ?? 0) + (bytesOut ?? 0)) / 1024 / 1024} MB';
@@ -392,6 +403,7 @@ class HotspotUser {
       'limit-bytes-in': (limitBytesIn ?? 0).toString(),
       'limit-bytes-out': (limitBytesOut ?? 0).toString(),
       'disabled': disabledValue,
+      'comment': comment,
     };
   }
 }

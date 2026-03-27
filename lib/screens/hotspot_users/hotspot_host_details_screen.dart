@@ -30,8 +30,9 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      backgroundColor: context.appBackground,
+    return PopScope(
+      child: Scaffold(
+        backgroundColor: context.appBackground,
       appBar: AppBar(
         backgroundColor: context.appSurface,
         foregroundColor: context.appOnSurface,
@@ -73,6 +74,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
             _buildActionsCard(context),
           ],
         ),
+      ),
       ),
     );
   }

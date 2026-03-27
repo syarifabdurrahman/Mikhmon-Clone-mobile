@@ -64,31 +64,38 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
   Widget build(BuildContext context) {
     final hostsAsync = ref.watch(hotspotHostsProvider);
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        title: Text('Hotspot Hosts'),
-      ),
-      body: Column(
-        children: [
-          _buildSearchAndFilter(),
-          Expanded(
-            child: hostsAsync.when(
-              data: (hosts) {
-                final filteredHosts = _filterHosts(hosts);
-                if (filteredHosts.isEmpty) {
-                  return _buildEmptyState();
-                }
-                return _buildHostsList(filteredHosts);
-              },
-              loading: () => _buildLoadingState(),
-              error: (error, _) => _buildErrorState(error),
-            ),
+    return PopScope(
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.go('/main'),
+            tooltip: 'Back',
           ),
-        ],
+          title: Text('Hotspot Hosts'),
+        ),
+        body: Column(
+          children: [
+            _buildSearchAndFilter(),
+            Expanded(
+              child: hostsAsync.when(
+                data: (hosts) {
+                  final filteredHosts = _filterHosts(hosts);
+                  if (filteredHosts.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  return _buildHostsList(filteredHosts);
+                },
+                loading: () => _buildLoadingState(),
+                error: (error, _) => _buildErrorState(error),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

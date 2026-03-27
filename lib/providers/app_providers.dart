@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/routeros_service.dart';
 import '../services/models.dart';
+import '../services/models/voucher.dart';
 import '../services/cache_service.dart';
 import '../services/traffic_rate_service.dart';
 import '../services/resource_history.dart';
@@ -22,6 +23,7 @@ import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/voucher_generation_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/revenue/revenue_screen.dart';
+import '../screens/vouchers/vouchers_list_screen.dart';
 import '../screens/main/main_shell_screen.dart';
 
 // Secure Storage Provider
@@ -277,6 +279,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/main/revenue',
             name: 'revenue',
             builder: (context, state) => const RevenueScreen(),
+          ),
+          GoRoute(
+            path: '/main/vouchers',
+            name: 'vouchers',
+            builder: (context, state) => const VouchersListScreen(),
           ),
         ],
       ),
@@ -667,6 +674,9 @@ final interfaceTrafficProvider = AsyncNotifierProvider<InterfaceTrafficNotifier,
 });
 
 class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
+  // System profiles to filter out
+  static const Set<String> _systemProfileNames = {'trial', 'default'};
+
   @override
   Future<List<UserProfile>> build() async {
     final cache = ref.read(cacheServiceProvider);
@@ -675,7 +685,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     final cachedProfiles = cache.getUserProfiles();
     if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
       debugPrint('[UserProfiles] Using cached data (${cachedProfiles.length} profiles)');
-      return cachedProfiles.map((data) => UserProfile.fromJson(data)).toList();
+      // Apply filtering to cached data as well
+      return cachedProfiles
+          .where((p) => !_systemProfileNames.contains(p['name']?.toString().toLowerCase()))
+          .map((data) => UserProfile.fromJson(data))
+          .toList();
     }
 
     // No cache, fetch from API
@@ -696,13 +710,12 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       debugPrint('[UserProfiles] Received ${profilesData.length} profiles from RouterOS');
 
       // Filter out system profiles
-      final systemProfileNames = {'trial', 'default'};
       final profiles = profilesData
-          .where((p) => !systemProfileNames.contains(p['name']?.toString().toLowerCase()))
+          .where((p) => !_systemProfileNames.contains(p['name']?.toString().toLowerCase()))
           .map((data) => UserProfile.fromJson(data))
           .toList();
 
-      // Cache the profiles
+      // Cache the profiles (cache original data, filtering is applied on load)
       await cache.saveUserProfiles(profilesData);
 
       debugPrint('[UserProfiles] Loaded ${profiles.length} profiles');
@@ -783,6 +796,96 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
     // Refresh using silent method (no loading state)
     await silentRefresh();
+  }
+}
+
+// Vouchers Provider
+final vouchersProvider = AsyncNotifierProvider<VouchersNotifier, List<Voucher>>(() {
+  return VouchersNotifier();
+});
+
+class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
+  @override
+  Future<List<Voucher>> build() async {
+    final cache = ref.read(cacheServiceProvider);
+
+    // Try to get cached vouchers first
+    final cachedVouchers = cache.getVouchers();
+    if (cachedVouchers != null && cachedVouchers.isNotEmpty) {
+      debugPrint('[Vouchers] Using cached data (${cachedVouchers.length} vouchers)');
+      return cachedVouchers.map((data) => Voucher.fromJson(data)).toList();
+    }
+
+    // No cache, return empty list
+    debugPrint('[Vouchers] No cached vouchers');
+    return [];
+  }
+
+  /// Add new vouchers to cache and update state
+  Future<void> addVouchers(List<Voucher> newVouchers) async {
+    final cache = ref.read(cacheServiceProvider);
+    final vouchersJson = newVouchers.map((v) => v.toJson()).toList();
+    await cache.addVouchers(vouchersJson);
+
+    // Refresh state from cache
+    await refresh();
+  }
+
+  /// Delete a voucher by username
+  Future<void> deleteVoucher(String username) async {
+    final cache = ref.read(cacheServiceProvider);
+    await cache.deleteVoucher(username);
+
+    // Refresh state from cache
+    await refresh();
+  }
+
+  /// Clear all vouchers
+  Future<void> clearVouchers() async {
+    final cache = ref.read(cacheServiceProvider);
+    await cache.clearVouchers();
+
+    // Update state to empty list
+    state = const AsyncValue.data([]);
+  }
+
+  /// Refresh vouchers from cache
+  Future<void> refresh() async {
+    debugPrint('[Vouchers] Refresh() called');
+    try {
+      final cache = ref.read(cacheServiceProvider);
+      final cachedVouchers = cache.getVouchers();
+
+      if (cachedVouchers != null) {
+        state = AsyncValue.data(cachedVouchers.map((data) => Voucher.fromJson(data)).toList());
+      } else {
+        state = const AsyncValue.data([]);
+      }
+    } catch (e) {
+      debugPrint('[Vouchers] Refresh failed: $e');
+    }
+  }
+
+  /// Sort vouchers by specified criteria
+  void sortVouchers(VoucherSort sort) {
+    final currentVouchers = state.valueOrNull ?? [];
+    if (currentVouchers.isEmpty) return;
+
+    List<Voucher> sorted = List.from(currentVouchers);
+
+    switch (sort) {
+      case VoucherSort.newest:
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case VoucherSort.oldest:
+        sorted.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case VoucherSort.az:
+        sorted.sort((a, b) => a.username.toLowerCase().compareTo(b.username.toLowerCase()));
+        break;
+    }
+
+    state = AsyncValue.data(sorted);
   }
 }
 

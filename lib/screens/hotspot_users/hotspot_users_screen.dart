@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
@@ -71,7 +72,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     final usersAsync = ref.watch(hotspotUsersProvider);
 
-    return Scaffold(
+    return PopScope(
+      child: Scaffold(
       backgroundColor: context.appBackground,
       appBar: _buildAppBar(),
       body: Column(
@@ -176,6 +178,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         ],
       ),
       bottomNavigationBar: _isSelectionActive ? _buildBulkActionBar(context) : null,
+    ),
     );
   }
 
@@ -190,7 +193,11 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               onPressed: _exitSelectionMode,
               tooltip: 'Exit selection',
             )
-          : null,
+          : IconButton(
+              icon: Icon(Icons.arrow_back_rounded),
+              onPressed: () => context.go('/main'),
+              tooltip: 'Back',
+            ),
       title: _isSelectionActive
           ? Text('${_selectedUserIds.length} selected')
           : Text(
@@ -371,7 +378,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => StatefulBuilder(
+        builder: (dialogContext) => StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -396,8 +403,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       }
     }
 
-    // Close progress dialog
-    if (mounted) Navigator.pop(context);
+    // Close progress dialog using Navigator.of(context).pop() to target the top route
+    if (mounted) Navigator.of(context).pop();
 
     _exitSelectionMode();
     if (mounted) {
@@ -425,7 +432,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -453,7 +460,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     }
 
     // Close progress dialog
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.of(context).pop();
 
     _exitSelectionMode();
     if (mounted) {
@@ -481,7 +488,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -509,7 +516,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     }
 
     // Close progress dialog
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.of(context).pop();
 
     _exitSelectionMode();
     if (mounted) {
@@ -612,7 +619,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -628,7 +635,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final service = ref.read(routerOSServiceProvider);
     final client = service.client;
     if (client == null) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.of(context).pop();
       return;
     }
 
@@ -649,7 +656,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     }
 
     // Close progress dialog
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.of(context).pop();
 
     _exitSelectionMode();
     await ref.read(hotspotUsersProvider.notifier).refresh();
@@ -1153,26 +1160,83 @@ class _UserInfo extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              user.name,
-              style: TextStyle(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.bold,
+            Flexible(
+              child: Text(
+                user.name,
+                style: TextStyle(
+                  color: context.appOnSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isConnected) ...[
-              SizedBox(width: 6),
+              SizedBox(width: 4),
               Icon(
                 Icons.wifi_rounded,
                 size: 14,
                 color: Colors.green,
               ),
             ],
+            SizedBox(width: 6),
+            _UserTypeBadge(user: user),
           ],
         ),
         SizedBox(height: 4),
         _UserStatusBadge(user: user, isConnected: isConnected),
       ],
+    );
+  }
+}
+
+// Extracted user type badge (Voucher vs Manual)
+class _UserTypeBadge extends StatelessWidget {
+  final HotspotUser user;
+
+  const _UserTypeBadge({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final isVoucher = user.isVoucher;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: isVoucher
+            ? context.appSecondary.withValues(alpha: 0.15)
+            : context.appOnSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isVoucher
+              ? context.appSecondary.withValues(alpha: 0.4)
+              : context.appOnSurface.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isVoucher ? Icons.confirmation_number_rounded : Icons.person_rounded,
+            size: 9,
+            color: isVoucher
+                ? context.appSecondary
+                : context.appOnSurface.withValues(alpha: 0.6),
+          ),
+          SizedBox(width: 2),
+          Text(
+            isVoucher ? 'VC' : 'MAN',
+            style: TextStyle(
+              color: isVoucher
+                  ? context.appSecondary
+                  : context.appOnSurface.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w600,
+              fontSize: 8,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1187,45 +1251,52 @@ class _UserStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: user.active
-                ? context.appPrimary.withValues(alpha: 0.1)
-                : context.appOnSurface.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
               color: user.active
-                  ? context.appPrimary.withValues(alpha: 0.3)
-                  : context.appOnSurface.withValues(alpha: 0.2),
-              width: 1,
+                  ? context.appPrimary.withValues(alpha: 0.1)
+                  : context.appOnSurface.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: user.active
+                    ? context.appPrimary.withValues(alpha: 0.3)
+                    : context.appOnSurface.withValues(alpha: 0.2),
+                width: 1,
+              ),
             ),
-          ),
-          child: Text(
-            user.profile.toUpperCase(),
-            style: TextStyle(
-              color: user.active
-                  ? context.appPrimary
-                  : context.appOnSurface.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w600,
-              fontSize: 10,
+            child: Text(
+              user.profile.toUpperCase(),
+              style: TextStyle(
+                color: user.active
+                    ? context.appPrimary
+                    : context.appOnSurface.withValues(alpha: 0.6),
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
-        SizedBox(width: 8),
+        SizedBox(width: 6),
         Icon(
           isConnected ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-          size: 16,
+          size: 14,
           color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.4),
         ),
-        SizedBox(width: 4),
+        SizedBox(width: 3),
         Text(
           isConnected ? 'Connected' : 'Active',
           style: TextStyle(
             color: isConnected ? Colors.green : context.appOnSurface.withValues(alpha: 0.5),
-            fontSize: 12,
+            fontSize: 11,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
