@@ -476,10 +476,31 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       throw Exception('Not connected to RouterOS');
     }
 
+    // Get username before deleting
+    final currentState = state.value;
+    String? usernameToDelete;
+    if (currentState != null) {
+      final userToDelete = currentState.users.firstWhere(
+        (user) => user['.id'] == id,
+        orElse: () => <String, dynamic>{},
+      );
+      usernameToDelete = userToDelete['name'] as String?;
+    }
+
     await client.removeHotspotUser(id);
 
+    // Delete associated voucher if exists
+    if (usernameToDelete != null) {
+      try {
+        await ref
+            .read(vouchersProvider.notifier)
+            .expireVoucher(usernameToDelete);
+      } catch (_) {
+        // Ignore if voucher deletion fails
+      }
+    }
+
     // Immediately remove user from current state for instant UI update
-    final currentState = state.value;
     if (currentState != null) {
       final updatedUsers =
           currentState.users.where((user) => user['.id'] != id).toList();
@@ -892,6 +913,28 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
 
     // Refresh state from cache
     await refresh();
+  }
+
+  /// Delete multiple vouchers by usernames (for bulk delete)
+  Future<void> deleteVouchers(List<String> usernames) async {
+    final cache = ref.read(cacheServiceProvider);
+    for (final username in usernames) {
+      await cache.deleteVoucher(username);
+    }
+
+    // Refresh state from cache
+    await refresh();
+  }
+
+  /// Expire vouchers when hotspot user is deleted
+  Future<void> expireVoucher(String username) async {
+    // Delete the voucher when the user is deleted
+    await deleteVoucher(username);
+  }
+
+  /// Expire multiple vouchers when hotspot users are deleted
+  Future<void> expireVouchers(List<String> usernames) async {
+    await deleteVouchers(usernames);
   }
 
   /// Clear all vouchers

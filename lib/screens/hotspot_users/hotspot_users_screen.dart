@@ -362,18 +362,29 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   Future<void> _confirmBulkDelete(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete ${_selectedUserIds.length} users?'),
-        content: Text('This action cannot be undone.'),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text(
+          'Delete ${_selectedUserIds.length} users?',
+          style: TextStyle(color: context.appOnSurface),
+        ),
+        content: Text(
+          'This action cannot be undone.',
+          style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'Cancel',
+              style:
+                  TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+            ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text('Delete'),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -389,21 +400,28 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
 
+    // Store navigator key to close dialog later
+    final navigator = Navigator.of(context);
+
     // Show progress dialog
     if (mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Deleting $totalUsers users...'),
-              ],
-            ),
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: context.appSurface,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Deleting $totalUsers users...',
+                style: TextStyle(color: context.appOnSurface),
+              ),
+            ],
           ),
         ),
       );
@@ -418,10 +436,17 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       }
     }
 
-    // Close progress dialog using Navigator.of(context).pop() to target the top route
-    if (mounted) Navigator.of(context).pop();
-
+    // Exit selection mode first
     _exitSelectionMode();
+
+    // Close progress dialog
+    if (mounted) {
+      navigator.pop();
+    }
+
+    // Show snackbar after dialog is closed
+    await Future.delayed(const Duration(milliseconds: 200));
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -444,18 +469,27 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
 
+    // Store navigator
+    final navigator = Navigator.of(context);
+
     // Show progress dialog
     if (mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
+          backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Disabling $totalUsers users...'),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Disabling $totalUsers users...',
+                style: TextStyle(color: context.appOnSurface),
+              ),
             ],
           ),
         ),
@@ -477,10 +511,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       }
     }
 
-    // Close progress dialog
-    if (mounted) Navigator.of(context).pop();
-
+    // Exit selection mode first
     _exitSelectionMode();
+
+    // Close progress dialog
+    if (mounted) navigator.pop();
+
+    // Show snackbar after dialog is closed
+    await Future.delayed(const Duration(milliseconds: 200));
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -503,18 +542,27 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
 
+    // Store navigator
+    final navigator = Navigator.of(context);
+
     // Show progress dialog
     if (mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
+          backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Enabling $totalUsers users...'),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Enabling $totalUsers users...',
+                style: TextStyle(color: context.appOnSurface),
+              ),
             ],
           ),
         ),
@@ -536,10 +584,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       }
     }
 
-    // Close progress dialog
-    if (mounted) Navigator.of(context).pop();
-
+    // Exit selection mode first
     _exitSelectionMode();
+
+    // Close progress dialog
+    if (mounted) navigator.pop();
+
+    // Show snackbar after dialog is closed
+    await Future.delayed(const Duration(milliseconds: 200));
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -573,19 +626,31 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
 
         showDialog(
           context: context,
-          builder: (context) => StatefulBuilder(
-            builder: (context, setDialogState) => AlertDialog(
-              title: Text('Move ${_selectedUserIds.length} users to profile'),
+          builder: (dialogContext) => StatefulBuilder(
+            builder: (dialogContext, setDialogState) => AlertDialog(
+              backgroundColor: context.appSurface,
+              title: Text(
+                'Move ${_selectedUserIds.length} users to profile',
+                style: TextStyle(color: context.appOnSurface),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Select a profile:'),
-                  SizedBox(height: 12),
+                  Text(
+                    'Select a profile:',
+                    style: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.7)),
+                  ),
+                  const SizedBox(height: 12),
                   ...profileNames.map((profile) => RadioListTile<String>(
-                        title: Text(profile.toUpperCase()),
+                        title: Text(
+                          profile.toUpperCase(),
+                          style: TextStyle(color: context.appOnSurface),
+                        ),
                         value: profile,
                         groupValue: selectedProfile,
+                        activeColor: context.appPrimary,
                         onChanged: (value) {
                           setDialogState(() {
                             selectedProfile = value;
@@ -596,17 +661,24 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                        color: context.appOnSurface.withValues(alpha: 0.7)),
+                  ),
                 ),
                 TextButton(
                   onPressed: selectedProfile == null
                       ? null
                       : () {
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext);
                           _bulkMoveToProfile(selectedProfile!);
                         },
-                  child: Text('Move'),
+                  child: Text(
+                    'Move',
+                    style: TextStyle(color: context.appPrimary),
+                  ),
                 ),
               ],
             ),
@@ -637,18 +709,27 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int successCount = 0;
     int failCount = 0;
 
+    // Store navigator
+    final navigator = Navigator.of(context);
+
     // Show progress dialog
     if (mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
+          backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Moving users...'),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Moving users...',
+                style: TextStyle(color: context.appOnSurface),
+              ),
             ],
           ),
         ),
@@ -658,7 +739,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final service = ref.read(routerOSServiceProvider);
     final client = service.client;
     if (client == null) {
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) navigator.pop();
       return;
     }
 
@@ -677,11 +758,17 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       }
     }
 
-    // Close progress dialog
-    if (mounted) Navigator.of(context).pop();
-
+    // Exit selection mode first
     _exitSelectionMode();
+
+    // Refresh the user list
     await ref.read(hotspotUsersProvider.notifier).refresh();
+
+    // Close progress dialog
+    if (mounted) navigator.pop();
+
+    // Show snackbar after dialog is closed
+    await Future.delayed(const Duration(milliseconds: 200));
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

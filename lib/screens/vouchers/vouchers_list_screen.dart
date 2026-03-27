@@ -298,11 +298,51 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
           ),
           itemCount: vouchers.length,
           itemBuilder: (context, index) {
-            return _VoucherGridCard(voucher: vouchers[index]);
+            final voucher = vouchers[index];
+            return GestureDetector(
+              onLongPress: () => _showDeleteDialog(voucher),
+              child: _VoucherGridCard(voucher: voucher),
+            );
           },
         );
       },
     );
+  }
+
+  Future<void> _showDeleteDialog(Voucher voucher) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text('Delete Voucher',
+            style: TextStyle(color: context.appOnSurface)),
+        content: Text('Delete voucher "${voucher.username}"?',
+            style:
+                TextStyle(color: context.appOnSurface.withValues(alpha: 0.7))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel',
+                style: TextStyle(
+                    color: context.appOnSurface.withValues(alpha: 0.7))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(vouchersProvider.notifier).deleteVoucher(voucher.username);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Voucher deleted'),
+            behavior: SnackBarBehavior.floating));
+      }
+    }
   }
 
   Widget _buildEmptyState() {
