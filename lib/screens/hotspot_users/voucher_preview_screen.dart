@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
+import '../../providers/app_providers.dart';
 
 class VoucherPreviewScreen extends ConsumerStatefulWidget {
   final List<Voucher> vouchers;
@@ -272,7 +273,9 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     });
 
     try {
-      await VoucherPrinter.printBulkVouchers(context, widget.vouchers);
+      final template = ref.read(voucherTemplateProvider);
+      await VoucherPrinter.printBulkVouchers(context, widget.vouchers,
+          template: template);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -53,46 +53,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.appSurface,
-        title: Text(
-          'Logout',
-          style: TextStyle(color: context.appOnSurface),
-        ),
-        content: Text(
-          'Are you sure you want to logout?',
-          style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cancel',
-              style:
-                  TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref.read(authStateProvider.notifier).logout();
-              if (mounted) {
-                context.go('/');
-              }
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _startPeriodicRefresh() {
     // Delay periodic refresh to not block initial render
     Future.delayed(const Duration(seconds: 5), () {

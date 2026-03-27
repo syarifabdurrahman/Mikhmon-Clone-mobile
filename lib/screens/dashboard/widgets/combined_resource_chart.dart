@@ -171,8 +171,9 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                   reservedSize: 26,
                   interval: 25,
                   getTitlesWidget: (value, meta) {
-                    if (value < 0 || value > 100)
+                    if (value < 0 || value > 100) {
                       return const SizedBox.shrink();
+                    }
                     return Text('${value.toInt()}',
                         style: TextStyle(
                             color: context.appOnSurface.withValues(alpha: 0.5),

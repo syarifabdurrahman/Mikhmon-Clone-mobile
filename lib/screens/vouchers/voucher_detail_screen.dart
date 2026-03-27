@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
+import '../../providers/app_providers.dart';
 
-class VoucherDetailScreen extends StatefulWidget {
+class VoucherDetailScreen extends ConsumerStatefulWidget {
   final Voucher voucher;
 
   const VoucherDetailScreen({
@@ -15,10 +17,11 @@ class VoucherDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<VoucherDetailScreen> createState() => _VoucherDetailScreenState();
+  ConsumerState<VoucherDetailScreen> createState() =>
+      _VoucherDetailScreenState();
 }
 
-class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
+class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final isExpired = widget.voucher.isExpired;
@@ -349,7 +352,8 @@ class _VoucherDetailScreenState extends State<VoucherDetailScreen> {
   }
 
   void _printVoucher() {
-    VoucherPrinter.printVoucher(context, widget.voucher);
+    final template = ref.read(voucherTemplateProvider);
+    VoucherPrinter.printVoucher(context, widget.voucher, template: template);
   }
 }
 

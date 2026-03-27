@@ -450,8 +450,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Deleted $successCount users' +
-              (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text(
+              'Deleted $successCount users${failCount > 0 ? ' ($failCount failed)' : ''}'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
@@ -523,8 +523,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Disabled $successCount users' +
-              (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text(
+              'Disabled $successCount users${failCount > 0 ? ' ($failCount failed)' : ''}'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
@@ -596,8 +596,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Enabled $successCount users' +
-              (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text(
+              'Enabled $successCount users${failCount > 0 ? ' ($failCount failed)' : ''}'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),
@@ -643,20 +643,26 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                         color: context.appOnSurface.withValues(alpha: 0.7)),
                   ),
                   const SizedBox(height: 12),
-                  ...profileNames.map((profile) => RadioListTile<String>(
-                        title: Text(
-                          profile.toUpperCase(),
-                          style: TextStyle(color: context.appOnSurface),
-                        ),
-                        value: profile,
-                        groupValue: selectedProfile,
-                        activeColor: context.appPrimary,
-                        onChanged: (value) {
-                          setDialogState(() {
-                            selectedProfile = value;
-                          });
-                        },
-                      )),
+                  RadioGroup<String>(
+                    groupValue: selectedProfile,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedProfile = value;
+                      });
+                    },
+                    child: Column(
+                      children: profileNames
+                          .map((profile) => RadioListTile<String>(
+                                title: Text(
+                                  profile.toUpperCase(),
+                                  style: TextStyle(color: context.appOnSurface),
+                                ),
+                                value: profile,
+                                activeColor: context.appPrimary,
+                              ))
+                          .toList(),
+                    ),
+                  ),
                 ],
               ),
               actions: [
@@ -773,8 +779,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Moved $successCount users' +
-              (failCount > 0 ? ' ($failCount failed)' : '')),
+          content: Text(
+              'Moved $successCount users${failCount > 0 ? ' ($failCount failed)' : ''}'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: failCount > 0 ? Colors.orange : null,
         ),

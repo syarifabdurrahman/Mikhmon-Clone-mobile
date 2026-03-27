@@ -41,6 +41,48 @@
 | **Data Validation** | ✅ | **_safeString()** helper handles null/empty strings |
 | **Graph Time Formatting** | ✅ | **Accurate elapsed time** (30s, 2m, 3m30s, 1h15m, etc.) |
 | **Continuous Scrolling** | ✅ | **Unlimited graph scrolling** (removed 60.0 clamp) |
+| **Voucher Bulk Delete** | ✅ | Select and delete multiple vouchers at once |
+
+---
+
+## 🆕 Recent Updates (March 28, 2026)
+
+### 1. Flutter Analyze Issues Fixed ✅
+**Fixed all 12 static analysis issues identified by Flutter**
+
+- **Unused Element** - Removed unused `_showLogoutDialog()` function from dashboard
+- **Curly Braces** - Added curly braces to if statement in combined_resource_chart.dart
+- **String Interpolation** - Replaced string concatenation with interpolation (4 places in hotspot_users_screen.dart)
+- **Deprecated Radio Widgets** - Updated `RadioListTile` to use new `RadioGroup` widget pattern
+- **BuildContext Async Gaps** - Added `context.mounted` checks before using BuildContext after async operations (4 places in voucher_printer.dart)
+- **Files**:
+  - `lib/screens/dashboard/dashboard_screen.dart` - Removed unused function
+  - `lib/screens/dashboard/widgets/combined_resource_chart.dart` - Added curly braces
+  - `lib/screens/hotspot_users/hotspot_users_screen.dart` - String interpolation + RadioGroup
+  - `lib/utils/voucher_printer.dart` - BuildContext mounted checks
+
+### 2. Voucher Bulk Delete ✅
+**Implemented batch delete functionality for voucher list screen**
+
+- **Selection Mode**:
+  - Enter via checklist icon in app bar
+  - Exit via close button
+  - Selection count displayed in title
+- **Selection Actions**:
+  - Tap vouchers to select/deselect
+  - "Select All" button for all visible vouchers
+  - Visual feedback with highlighted cards and checkmarks
+- **Bulk Operations**:
+  - Delete selected vouchers with confirmation dialog
+  - Progress dialog during deletion
+  - Success/failure count in snackbar feedback
+- **UI Features**:
+  - Color-coded selection border (primary color when selected)
+  - Gradient background change for selected cards
+  - Position-fixed checkmark overlay
+  - Disabled tap navigation in selection mode
+- **Files**:
+  - `lib/screens/vouchers/vouchers_list_screen.dart` - Complete implementation
 
 ---
 
@@ -939,4 +981,4 @@ Choose a feature to implement:
 
 ---
 
-_Last Updated: March 27, 2026_
+_Last Updated: March 28, 2026_

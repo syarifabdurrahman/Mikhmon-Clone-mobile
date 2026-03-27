@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../services/template_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -34,6 +35,10 @@ class SettingsScreen extends ConsumerWidget {
           _buildSectionHeader(context, 'Appearance'),
           const SizedBox(height: 8),
           _buildThemeCard(context, ref),
+          const SizedBox(height: 24),
+          _buildSectionHeader(context, 'Voucher Templates'),
+          const SizedBox(height: 8),
+          _buildTemplateCard(context, ref),
           const SizedBox(height: 24),
           _buildSectionHeader(context, 'Connections'),
           const SizedBox(height: 8),
@@ -212,6 +217,138 @@ class SettingsScreen extends ConsumerWidget {
               Icon(
                 Icons.check_circle_rounded,
                 color: iconColor ?? color,
+                size: 24,
+              )
+            else
+              Icon(
+                Icons.chevron_right_rounded,
+                color: context.appOnSurface.withValues(alpha: 0.4),
+                size: 20,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemplateCard(BuildContext context, WidgetRef ref) {
+    final currentTemplate = ref.watch(voucherTemplateProvider);
+
+    return Card(
+      color: context.appSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _buildTemplateOption(
+            context,
+            ref,
+            icon: Icons.description_rounded,
+            title: 'Full Size',
+            subtitle: 'Complete voucher with all details and cut lines',
+            color: const Color(0xFF7C3AED),
+            template: VoucherTemplate.full,
+            currentTemplate: currentTemplate,
+          ),
+          Divider(
+            height: 1,
+            color: context.appOnSurface.withValues(alpha: 0.1),
+          ),
+          _buildTemplateOption(
+            context,
+            ref,
+            icon: Icons.notes_rounded,
+            title: 'Compact',
+            subtitle: 'Smaller voucher with essential info',
+            color: const Color(0xFF06B6D4),
+            template: VoucherTemplate.compact,
+            currentTemplate: currentTemplate,
+          ),
+          Divider(
+            height: 1,
+            color: context.appOnSurface.withValues(alpha: 0.1),
+          ),
+          _buildTemplateOption(
+            context,
+            ref,
+            icon: Icons.receipt_rounded,
+            title: 'Minimal',
+            subtitle: 'Simple design with QR and credentials only',
+            color: const Color(0xFF10B981),
+            template: VoucherTemplate.minimal,
+            currentTemplate: currentTemplate,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTemplateOption(
+    BuildContext context,
+    WidgetRef ref, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoucherTemplate template,
+    required VoucherTemplate currentTemplate,
+  }) {
+    final isSelected = template == currentTemplate;
+
+    return InkWell(
+      onTap: () =>
+          ref.read(voucherTemplateProvider.notifier).setTemplate(template),
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: isSelected
+                    ? Border.all(
+                        color: color,
+                        width: 2,
+                      )
+                    : null,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: context.appOnSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.appOnSurface.withValues(alpha: 0.6),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle_rounded,
+                color: color,
                 size: 24,
               )
             else

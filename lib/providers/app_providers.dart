@@ -10,6 +10,7 @@ import '../services/cache_service.dart';
 import '../services/traffic_rate_service.dart';
 import '../services/resource_history.dart';
 import '../services/theme_service.dart';
+import '../services/template_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -73,6 +74,28 @@ class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
   /// Get theme data for current mode
   ThemeData getThemeData() {
     return ThemeService.getThemeData(state);
+  }
+}
+
+// Voucher Template Provider
+final voucherTemplateProvider =
+    StateNotifierProvider<TemplateNotifier, VoucherTemplate>((ref) {
+  return TemplateNotifier();
+});
+
+class TemplateNotifier extends StateNotifier<VoucherTemplate> {
+  TemplateNotifier() : super(VoucherTemplate.full) {
+    _loadTemplate();
+  }
+
+  Future<void> _loadTemplate() async {
+    final template = await TemplateService.loadTemplate();
+    state = template;
+  }
+
+  Future<void> setTemplate(VoucherTemplate template) async {
+    state = template;
+    await TemplateService.saveTemplate(template);
   }
 }
 

@@ -19,6 +19,8 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
   String _searchQuery = '';
   VoucherFilter _filter = VoucherFilter.all;
   VoucherSort? _currentSort;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedVoucherIds = {};
 
   @override
   void initState() {
@@ -48,7 +50,143 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
       );
       return;
     }
-    await VoucherPrinter.printBulkVouchers(context, filtered);
+    final template = ref.read(voucherTemplateProvider);
+    await VoucherPrinter.printBulkVouchers(context, filtered,
+        template: template);
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedVoucherIds.clear();
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedVoucherIds.clear();
+    });
+  }
+
+  void _toggleVoucherSelection(String voucherId) {
+    setState(() {
+      if (_selectedVoucherIds.contains(voucherId)) {
+        _selectedVoucherIds.remove(voucherId);
+        if (_selectedVoucherIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedVoucherIds.add(voucherId);
+      }
+    });
+  }
+
+  void _selectAllVisible(List<String> voucherIds) {
+    setState(() {
+      _selectedVoucherIds.clear();
+      _selectedVoucherIds.addAll(voucherIds);
+    });
+  }
+
+  Future<void> _confirmBulkDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text(
+          'Delete ${_selectedVoucherIds.length} vouchers?',
+          style: TextStyle(color: context.appOnSurface),
+        ),
+        content: Text(
+          'This action cannot be undone.',
+          style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'Cancel',
+              style:
+                  TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _bulkDeleteVouchers();
+    }
+  }
+
+  Future<void> _bulkDeleteVouchers() async {
+    int successCount = 0;
+    int failCount = 0;
+    final totalVouchers = _selectedVoucherIds.length;
+
+    // Store navigator key to close dialog later
+    final navigator = Navigator.of(context);
+
+    // Show progress dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: context.appSurface,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Deleting $totalVouchers vouchers...',
+                style: TextStyle(color: context.appOnSurface),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    for (final voucherId in _selectedVoucherIds) {
+      try {
+        await ref.read(vouchersProvider.notifier).deleteVoucher(voucherId);
+        successCount++;
+      } catch (e) {
+        failCount++;
+      }
+    }
+
+    // Exit selection mode first
+    _exitSelectionMode();
+
+    // Close progress dialog
+    if (mounted) {
+      navigator.pop();
+    }
+
+    // Show snackbar after dialog is closed
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Deleted $successCount vouchers${failCount > 0 ? ' ($failCount failed)' : ''}'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: failCount > 0 ? Colors.orange : null,
+        ),
+      );
+    }
   }
 
   @override
@@ -67,70 +205,114 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
           backgroundColor: context.appSurface,
           foregroundColor: context.appOnSurface,
           elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded),
-            onPressed: () => context.go('/main'),
-            tooltip: 'Back',
-          ),
-          title: Text(
-            'Vouchers',
-            style: TextStyle(
-              color: context.appOnSurface,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.refresh_rounded),
-              onPressed: vouchersAsync.isLoading ? null : _refreshVouchers,
-            ),
-            IconButton(
-              icon: Icon(Icons.print_rounded),
-              onPressed: vouchersAsync.isLoading ? null : _printAllVouchers,
-              tooltip: 'Print All',
-            ),
-            PopupMenuButton<VoucherSort>(
-              icon: Icon(Icons.sort_rounded),
-              onSelected: _applySort,
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: VoucherSort.newest,
-                  child: Row(
-                    children: [
-                      if (_currentSort == VoucherSort.newest)
-                        Icon(Icons.check, size: 18, color: context.appPrimary),
-                      SizedBox(
-                          width: _currentSort == VoucherSort.newest ? 8 : 24),
-                      Text('Newest First'),
-                    ],
+          leading: _isSelectionMode
+              ? IconButton(
+                  icon: Icon(Icons.close_rounded),
+                  onPressed: _exitSelectionMode,
+                  tooltip: 'Exit selection',
+                )
+              : IconButton(
+                  icon: Icon(Icons.arrow_back_rounded),
+                  onPressed: () => context.go('/main'),
+                  tooltip: 'Back',
+                ),
+          title: _isSelectionMode
+              ? Text('${_selectedVoucherIds.length} selected')
+              : Text(
+                  'Vouchers',
+                  style: TextStyle(
+                    color: context.appOnSurface,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                PopupMenuItem(
-                  value: VoucherSort.oldest,
-                  child: Row(
-                    children: [
-                      if (_currentSort == VoucherSort.oldest)
-                        Icon(Icons.check, size: 18, color: context.appPrimary),
-                      SizedBox(
-                          width: _currentSort == VoucherSort.oldest ? 8 : 24),
-                      Text('Oldest First'),
+          actions: _isSelectionMode
+              ? [
+                  if (vouchersAsync.valueOrNull != null)
+                    IconButton(
+                      icon: Icon(Icons.select_all_rounded),
+                      onPressed: () {
+                        final filtered =
+                            _filterVouchers(vouchersAsync.valueOrNull!);
+                        _selectAllVisible(
+                            filtered.map((v) => v.username).toList());
+                      },
+                      tooltip: 'Select all',
+                    ),
+                  IconButton(
+                    icon: Icon(Icons.delete_rounded),
+                    onPressed:
+                        _selectedVoucherIds.isEmpty ? null : _confirmBulkDelete,
+                    tooltip: 'Delete selected',
+                    color: Colors.red,
+                  ),
+                ]
+              : [
+                  IconButton(
+                    icon: Icon(Icons.refresh_rounded),
+                    onPressed:
+                        vouchersAsync.isLoading ? null : _refreshVouchers,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.print_rounded),
+                    onPressed:
+                        vouchersAsync.isLoading ? null : _printAllVouchers,
+                    tooltip: 'Print All',
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.checklist_rounded),
+                    onPressed: _toggleSelectionMode,
+                    tooltip: 'Select multiple',
+                  ),
+                  PopupMenuButton<VoucherSort>(
+                    icon: Icon(Icons.sort_rounded),
+                    onSelected: _applySort,
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: VoucherSort.newest,
+                        child: Row(
+                          children: [
+                            if (_currentSort == VoucherSort.newest)
+                              Icon(Icons.check,
+                                  size: 18, color: context.appPrimary),
+                            SizedBox(
+                                width: _currentSort == VoucherSort.newest
+                                    ? 8
+                                    : 24),
+                            Text('Newest First'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: VoucherSort.oldest,
+                        child: Row(
+                          children: [
+                            if (_currentSort == VoucherSort.oldest)
+                              Icon(Icons.check,
+                                  size: 18, color: context.appPrimary),
+                            SizedBox(
+                                width: _currentSort == VoucherSort.oldest
+                                    ? 8
+                                    : 24),
+                            Text('Oldest First'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: VoucherSort.az,
+                        child: Row(
+                          children: [
+                            if (_currentSort == VoucherSort.az)
+                              Icon(Icons.check,
+                                  size: 18, color: context.appPrimary),
+                            SizedBox(
+                                width: _currentSort == VoucherSort.az ? 8 : 24),
+                            Text('A to Z'),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                PopupMenuItem(
-                  value: VoucherSort.az,
-                  child: Row(
-                    children: [
-                      if (_currentSort == VoucherSort.az)
-                        Icon(Icons.check, size: 18, color: context.appPrimary),
-                      SizedBox(width: _currentSort == VoucherSort.az ? 8 : 24),
-                      Text('A to Z'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
         ),
         body: Column(
           children: [
@@ -299,9 +481,47 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
           itemCount: vouchers.length,
           itemBuilder: (context, index) {
             final voucher = vouchers[index];
+            final isSelected = _selectedVoucherIds.contains(voucher.username);
+
             return GestureDetector(
-              onLongPress: () => _showDeleteDialog(voucher),
-              child: _VoucherGridCard(voucher: voucher),
+              onTap: _isSelectionMode
+                  ? () => _toggleVoucherSelection(voucher.username)
+                  : null,
+              onLongPress:
+                  _isSelectionMode ? null : () => _showDeleteDialog(voucher),
+              child: Stack(
+                children: [
+                  _VoucherGridCard(
+                    voucher: voucher,
+                    isSelected: isSelected,
+                    isSelectionMode: _isSelectionMode,
+                  ),
+                  if (_isSelectionMode)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? context.appPrimary
+                              : context.appSurface,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? context.appPrimary
+                                : context.appOnSurface.withValues(alpha: 0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.check,
+                          size: 16,
+                          color: isSelected ? Colors.white : Colors.transparent,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         );
@@ -438,44 +658,63 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
 
 class _VoucherGridCard extends StatelessWidget {
   final Voucher voucher;
+  final bool isSelected;
+  final bool isSelectionMode;
 
-  const _VoucherGridCard({required this.voucher});
+  const _VoucherGridCard({
+    required this.voucher,
+    this.isSelected = false,
+    this.isSelectionMode = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isExpired = voucher.isExpired;
 
     return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => VoucherDetailScreen(voucher: voucher),
-          ),
-        );
-      },
+      onTap: isSelectionMode
+          ? null
+          : () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VoucherDetailScreen(voucher: voucher),
+                ),
+              );
+            },
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isExpired
-                ? [
-                    context.appCard.withValues(alpha: 0.5),
-                    context.appCard,
-                  ]
-                : [
-                    context.appCard,
-                    context.appCard.withValues(alpha: 0.8),
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    context.appPrimary.withValues(alpha: 0.2),
+                    context.appPrimary.withValues(alpha: 0.1),
                   ],
-          ),
+                )
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isExpired
+                      ? [
+                          context.appCard.withValues(alpha: 0.5),
+                          context.appCard,
+                        ]
+                      : [
+                          context.appCard,
+                          context.appCard.withValues(alpha: 0.8),
+                        ],
+                ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isExpired
-                ? context.appError.withValues(alpha: 0.3)
-                : context.appPrimary.withValues(alpha: 0.3),
-            width: 1,
+            color: isSelected
+                ? context.appPrimary
+                : isExpired
+                    ? context.appError.withValues(alpha: 0.3)
+                    : context.appPrimary.withValues(alpha: 0.3),
+            width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
