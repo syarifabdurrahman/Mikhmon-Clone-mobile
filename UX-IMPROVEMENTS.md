@@ -127,17 +127,18 @@
 
 ## 10. Quick Actions & Shortcuts
 
-### Current Issues
-- No shortcuts for frequent tasks
-- Multi-step processes for simple actions
-- No quick search from anywhere
+### Completed
+- [x] **Search anywhere** - Swipe down to open global search
+- [x] **Quick actions widget** - "Create Vouchers" added to quick actions
+- [x] **Recent searches** - Stores last 5 searches in local storage
 
-### Improvements
-- [ ] **Search anywhere** - Cmd+K / swipe-down gesture to open search
-- [ ] **Quick actions widget** - Home screen widget: "Create 10 vouchers"
-- [ ] **Recent searches** - Remember last 5 searches
-- [ ] **Frequent actions** - "You usually extend time by 1hr" smart suggestion
+### Remaining
+- [ ] **Frequent actions** - Smart suggestions based on usage
 - [ ] **Voice command support** - "Show online users" via voice
+
+### Notes
+- Global search accessible via swipe-down gesture from top of any screen
+- Search shows all app destinations with icons
 
 ---
 

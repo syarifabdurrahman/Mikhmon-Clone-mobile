@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
+import '../../widgets/global_search.dart';
 
 class MainShellScreen extends ConsumerStatefulWidget {
   final Widget child;
@@ -67,7 +68,22 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
       },
       child: Scaffold(
         backgroundColor: context.appBackground,
-        body: widget.child,
+        body: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            // Detect swipe down to open search
+            if (notification is ScrollUpdateNotification) {
+              if (notification.scrollDelta != null &&
+                  notification.scrollDelta! > 0 &&
+                  notification.metrics.pixels == 0) {
+                // User swiped down from top
+                showGlobalSearch(context);
+                return true;
+              }
+            }
+            return false;
+          },
+          child: widget.child,
+        ),
         bottomNavigationBar: ConvexAppBar(
           style: TabStyle.reactCircle,
           backgroundColor: context.appSurface,

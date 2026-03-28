@@ -57,6 +57,12 @@ class QuickActionsGrid extends StatelessWidget {
   List<QuickActionItem> _getActions(BuildContext context) {
     return [
       QuickActionItem(
+        icon: Icons.add_card_rounded,
+        label: 'Create Vouchers',
+        color: const Color(0xFF8B5CF6), // Purple
+        onTap: () => context.push('/main/vouchers/generate'),
+      ),
+      QuickActionItem(
         icon: Icons.person_add_rounded,
         label: 'Add User',
         color: const Color(0xFF6366F1), // Indigo
@@ -85,12 +91,6 @@ class QuickActionsGrid extends StatelessWidget {
         label: 'Hosts',
         color: const Color(0xFFF59E0B), // Amber
         onTap: () => context.go('/main/hosts'),
-      ),
-      QuickActionItem(
-        icon: Icons.payments_rounded,
-        label: 'Revenue',
-        color: const Color(0xFFEC4899), // Pink
-        onTap: () => context.push('/main/revenue'),
       ),
     ];
   }
