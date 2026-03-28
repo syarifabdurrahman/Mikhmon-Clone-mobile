@@ -1,3 +1,6 @@
+// Export activity log model
+export 'models/activity_log.dart';
+
 class InterfaceTraffic {
   final String name;
   final String type; // ether, bridge, wireless, etc.
@@ -25,10 +28,18 @@ class InterfaceTraffic {
     return InterfaceTraffic(
       name: json['name'] ?? 'unknown',
       type: json['type'] ?? 'unknown',
-      txBytes: json['tx-byte'] != null ? int.tryParse(json['tx-byte'].toString()) : null,
-      rxBytes: json['rx-byte'] != null ? int.tryParse(json['rx-byte'].toString()) : null,
-      txBytesPerSecond: json['tx-byte-per-second'] != null ? int.tryParse(json['tx-byte-per-second'].toString()) : null,
-      rxBytesPerSecond: json['rx-byte-per-second'] != null ? int.tryParse(json['rx-byte-per-second'].toString()) : null,
+      txBytes: json['tx-byte'] != null
+          ? int.tryParse(json['tx-byte'].toString())
+          : null,
+      rxBytes: json['rx-byte'] != null
+          ? int.tryParse(json['rx-byte'].toString())
+          : null,
+      txBytesPerSecond: json['tx-byte-per-second'] != null
+          ? int.tryParse(json['tx-byte-per-second'].toString())
+          : null,
+      rxBytesPerSecond: json['rx-byte-per-second'] != null
+          ? int.tryParse(json['rx-byte-per-second'].toString())
+          : null,
       mtu: json['mtu']?.toString(),
       running: json['running'] == 'true' || json['running'] == true,
       enabled: json['disabled'] == 'false' || json['disabled'] == false,
@@ -44,16 +55,21 @@ class InterfaceTraffic {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    if (bytes < 1024 * 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
     return '${(bytes / (1024 * 1024 * 1024 * 1024)).toStringAsFixed(2)} TB';
   }
 
   String _formatBytesPerSecond(int bytesPerSecond) {
     if (bytesPerSecond < 1024) return '$bytesPerSecond B/s';
-    if (bytesPerSecond < 1024 * 1024) return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
-    if (bytesPerSecond < 1024 * 1024 * 1024) return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
-    if (bytesPerSecond < 1024 * 1024 * 1024 * 1024) return '${(bytesPerSecond / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB/s';
+    if (bytesPerSecond < 1024 * 1024)
+      return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    if (bytesPerSecond < 1024 * 1024 * 1024)
+      return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+    if (bytesPerSecond < 1024 * 1024 * 1024 * 1024)
+      return '${(bytesPerSecond / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB/s';
     return '${(bytesPerSecond / (1024 * 1024 * 1024 * 1024)).toStringAsFixed(2)} TB/s';
   }
 
@@ -116,8 +132,12 @@ class UserProfile {
       rateLimitUpload: json['rate-limit-upload'],
       rateLimitDownload: json['rate-limit-download'],
       validity: json['validity'],
-      price: json['price'] != null ? double.tryParse(json['price'].toString()) : null,
-      sharedUsers: json['shared-users'] != null ? int.tryParse(json['shared-users'].toString()) : null,
+      price: json['price'] != null
+          ? double.tryParse(json['price'].toString())
+          : null,
+      sharedUsers: json['shared-users'] != null
+          ? int.tryParse(json['shared-users'].toString())
+          : null,
       autologout: json['autologout'] == 'true',
       expiresAt: json['expires-at'] != null
           ? DateTime.tryParse(json['expires-at'])
@@ -153,14 +173,16 @@ class UserProfile {
 
   // Display getters
   String get rateLimitDisplay {
-    if (rateLimitUpload == null && rateLimitDownload == null) return 'Unlimited';
+    if (rateLimitUpload == null && rateLimitDownload == null)
+      return 'Unlimited';
     final upload = rateLimitUpload ?? 'unlimited';
     final download = rateLimitDownload ?? 'unlimited';
     return '$upload/$download';
   }
 
   String get validityDisplay {
-    if (validity == null || validity == 'unlimited' || validity == '0') return 'Unlimited';
+    if (validity == null || validity == 'unlimited' || validity == '0')
+      return 'Unlimited';
     return validity!;
   }
 
@@ -229,12 +251,19 @@ class SystemResources {
       platform: _safeString(json['platform'] ?? json['platform-text']),
       boardName: _safeString(json['board-name'] ?? json['board-name-text']),
       version: _safeString(json['version'] ?? json['version-text']),
-      cpuFrequency: _parseSizeToInt(json['cpu-frequency'] ?? json['cpu-frequency-text'] ?? '0'),
-      cpuLoad: int.tryParse(json['cpu-load']?.toString().replaceAll('%', '') ?? '0') ?? 0,
-      freeMemory: _parseSizeToInt(json['free-memory'] ?? json['free-memory-text'] ?? '0'),
-      totalMemory: _parseSizeToInt(json['total-memory'] ?? json['total-memory-text'] ?? '0'),
-      freeHddSpace: _parseSizeToInt(json['free-hdd-space'] ?? json['free-hdd-space-text'] ?? '0'),
-      totalHddSpace: _parseSizeToInt(json['total-hdd-space'] ?? json['total-hdd-space-text'] ?? '0'),
+      cpuFrequency: _parseSizeToInt(
+          json['cpu-frequency'] ?? json['cpu-frequency-text'] ?? '0'),
+      cpuLoad: int.tryParse(
+              json['cpu-load']?.toString().replaceAll('%', '') ?? '0') ??
+          0,
+      freeMemory: _parseSizeToInt(
+          json['free-memory'] ?? json['free-memory-text'] ?? '0'),
+      totalMemory: _parseSizeToInt(
+          json['total-memory'] ?? json['total-memory-text'] ?? '0'),
+      freeHddSpace: _parseSizeToInt(
+          json['free-hdd-space'] ?? json['free-hdd-space-text'] ?? '0'),
+      totalHddSpace: _parseSizeToInt(
+          json['total-hdd-space'] ?? json['total-hdd-space-text'] ?? '0'),
       uptimeSeconds: _parseUptime(json['uptime'] ?? json['uptime-text'] ?? '0'),
     );
   }
@@ -254,7 +283,8 @@ class SystemResources {
     if (asInt != null) return asInt;
 
     // Parse format like "1048576KiB" or "1GiB" or "512MiB"
-    final regex = RegExp(r'(\d+(?:\.\d+)?)\s*([KMGT]?i?B?)', caseSensitive: false);
+    final regex =
+        RegExp(r'(\d+(?:\.\d+)?)\s*([KMGT]?i?B?)', caseSensitive: false);
     final match = regex.firstMatch(value);
 
     if (match != null) {
@@ -330,8 +360,9 @@ class SystemResources {
   double get memoryUsagePercent =>
       totalMemory > 0 ? ((totalMemory - freeMemory) / totalMemory * 100) : 0;
 
-  double get hddUsagePercent =>
-      totalHddSpace > 0 ? ((totalHddSpace - freeHddSpace) / totalHddSpace * 100) : 0;
+  double get hddUsagePercent => totalHddSpace > 0
+      ? ((totalHddSpace - freeHddSpace) / totalHddSpace * 100)
+      : 0;
 }
 
 class HotspotUser {
@@ -387,7 +418,8 @@ class HotspotUser {
     return commentLower.contains('mode:up') || commentLower.contains('mode:vc');
   }
 
-  String get dataUsed => '${((bytesIn ?? 0) + (bytesOut ?? 0)) / 1024 / 1024} MB';
+  String get dataUsed =>
+      '${((bytesIn ?? 0) + (bytesOut ?? 0)) / 1024 / 1024} MB';
 
   Map<String, dynamic> toMap() {
     // Keep disabled in sync with active
@@ -485,7 +517,8 @@ class HotspotActiveUser {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
     return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 }
@@ -515,7 +548,9 @@ class SalesTransaction {
       profile: json['profile'] ?? 'default',
       price: (json['price'] != null)
           ? (double.tryParse(json['price'].toString()) ?? 0.0)
-          : (json['amount'] != null ? double.tryParse(json['amount'].toString()) ?? 0.0 : 0.0),
+          : (json['amount'] != null
+              ? double.tryParse(json['amount'].toString()) ?? 0.0
+              : 0.0),
       timestamp: json['timestamp'] != null
           ? (json['timestamp'] is int
               ? DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int)
@@ -552,8 +587,18 @@ class SalesTransaction {
 
   String _monthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return months[month - 1];
   }
@@ -601,7 +646,8 @@ class IncomeSummary {
       todayIncome: todayIncome ?? this.todayIncome,
       thisMonthIncome: thisMonthIncome ?? this.thisMonthIncome,
       transactionsToday: transactionsToday ?? this.transactionsToday,
-      transactionsThisMonth: transactionsThisMonth ?? this.transactionsThisMonth,
+      transactionsThisMonth:
+          transactionsThisMonth ?? this.transactionsThisMonth,
     );
   }
 }
@@ -781,7 +827,8 @@ class HotspotHost {
   }
 
   /// Check if host is active (has IP and is authorized or bypassed)
-  bool get isActive => address != null && address!.isNotEmpty && (authorized || bypassed);
+  bool get isActive =>
+      address != null && address!.isNotEmpty && (authorized || bypassed);
 
   HotspotHost copyWith({
     String? id,

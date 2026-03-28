@@ -11,6 +11,7 @@ import '../services/traffic_rate_service.dart';
 import '../services/resource_history.dart';
 import '../services/theme_service.dart';
 import '../services/template_service.dart';
+import '../services/log_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -25,6 +26,7 @@ import '../screens/hotspot_users/voucher_generation_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/revenue/revenue_screen.dart';
 import '../screens/vouchers/vouchers_list_screen.dart';
+import '../screens/activity_logs/activity_logs_screen.dart';
 import '../screens/main/main_shell_screen.dart';
 
 // Secure Storage Provider
@@ -169,6 +171,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         // Silently handle pre-fetch failure - dashboard will load on demand
       }
 
+      // Log successful login
+      await LogService.logLogin(username, '$host:$port');
+
       // Store credentials if remember me is checked
       if (rememberMe) {
         final storage = ref.read(secureStorageProvider);
@@ -193,6 +198,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       // Clear credentials
       await service.clearCredentials();
+
+      // Log logout
+      await LogService.logLogout('User');
 
       return const AuthState(isAuthenticated: false);
     });
@@ -354,6 +362,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/main/vouchers',
             name: 'vouchers',
             builder: (context, state) => const VouchersListScreen(),
+          ),
+          GoRoute(
+            path: '/main/logs',
+            name: 'activity_logs',
+            builder: (context, state) => const ActivityLogsScreen(),
           ),
         ],
       ),

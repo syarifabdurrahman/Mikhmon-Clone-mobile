@@ -305,62 +305,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   }
 
   void _showQuickLoginDialog(RouterConnection connection) {
-    final passwordController = TextEditingController();
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: context.appSurface,
-        title: Text(
-          'Connect',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: context.appOnBackground,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              connection.host,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.appOnBackground.withValues(alpha: 0.7),
-                  ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                hintText: 'Enter password',
-                prefixIcon: const Icon(Icons.lock_rounded, size: 18),
-              ),
-              autofocus: true,
-              onSubmitted: (value) {
-                Navigator.pop(dialogContext);
-                _quickLogin(connection, value);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _quickLogin(connection, passwordController.text);
-            },
-            child: const Text('Connect'),
-          ),
-        ],
+      builder: (dialogContext) => _QuickLoginDialog(
+        connection: connection,
+        onLogin: (password) => _quickLogin(connection, password),
       ),
-    ).then((_) => passwordController.dispose());
+    );
   }
 
   Future<void> _quickLogin(RouterConnection connection, String password) async {
@@ -378,13 +330,145 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login failed: $e'),
-            backgroundColor: AppTheme.errorColor,
+        // Show error dialog instead of snackbar so user can read it
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: context.appSurface,
+            title: Row(
+              children: [
+                Icon(Icons.error_outline_rounded, color: context.appError),
+                const SizedBox(width: 12),
+                Text(
+                  'Login Failed',
+                  style: TextStyle(color: context.appOnSurface),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Text(
+                e.toString().replaceAll('Exception: ', ''),
+                style: TextStyle(
+                  color: context.appOnSurface.withValues(alpha: 0.8),
+                ),
+              ),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.appPrimary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('OK'),
+              ),
+            ],
           ),
         );
       }
     }
+  }
+}
+
+class _QuickLoginDialog extends StatefulWidget {
+  final RouterConnection connection;
+  final Future<void> Function(String password) onLogin;
+
+  const _QuickLoginDialog({
+    required this.connection,
+    required this.onLogin,
+  });
+
+  @override
+  State<_QuickLoginDialog> createState() => _QuickLoginDialogState();
+}
+
+class _QuickLoginDialogState extends State<_QuickLoginDialog> {
+  late final TextEditingController _passwordController;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    if (_isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
+
+    final password = _passwordController.text;
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
+
+    await widget.onLogin(password);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final surfaceColor = theme.colorScheme.surface;
+    final onSurfaceColor = theme.colorScheme.onSurface;
+
+    return AlertDialog(
+      backgroundColor: surfaceColor,
+      title: Text(
+        'Connect',
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: onSurfaceColor,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.connection.host,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: onSurfaceColor.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              hintText: 'Enter password',
+              prefixIcon: Icon(Icons.lock_rounded, size: 18),
+            ),
+            autofocus: true,
+            enabled: !_isSubmitting,
+            onSubmitted: (_) => _handleLogin(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isSubmitting ? null : _handleLogin,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Connect'),
+        ),
+      ],
+    );
   }
 }

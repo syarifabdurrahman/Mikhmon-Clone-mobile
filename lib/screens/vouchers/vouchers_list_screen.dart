@@ -7,6 +7,10 @@ import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import '../../utils/filter_utils.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/back_to_top_fab.dart';
 import 'voucher_detail_screen.dart';
 
 class VouchersListScreen extends ConsumerStatefulWidget {
@@ -22,12 +26,19 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
   VoucherSort? _currentSort;
   bool _isSelectionMode = false;
   final Set<String> _selectedVoucherIds = {};
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     // Load vouchers on init
     Future.microtask(() => ref.read(vouchersProvider.notifier).refresh());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _applySort(VoucherSort sort) {
@@ -332,11 +343,9 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                   }
                   return _buildVouchersGrid(filteredVouchers);
                 },
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(context.appPrimary),
-                  ),
+                loading: () => SkeletonLoaders.grid(
+                  crossAxisCount: 2,
+                  itemCount: 6,
                 ),
                 error: (error, _) => Center(
                   child: Column(
@@ -364,14 +373,25 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            context.push('/main/users/generate');
-          },
-          backgroundColor: context.appPrimary,
-          foregroundColor: Colors.white,
-          child: Icon(Icons.add_rounded),
-        ),
+        floatingActionButton: _isSelectionMode
+            ? null
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  BackToTopFAB(scrollController: _scrollController),
+                  const SizedBox(height: 12),
+                  FloatingActionButton(
+                    heroTag: 'generate_voucher',
+                    onPressed: () {
+                      context.push('/main/users/generate');
+                    },
+                    backgroundColor: context.appPrimary,
+                    foregroundColor: Colors.white,
+                    child: const Icon(Icons.add_rounded),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -472,6 +492,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
         final childAspectRatio = itemWidth / (itemWidth + 100);
 
         return GridView.builder(
+          controller: _scrollController,
           padding: const EdgeInsets.all(16),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
@@ -567,65 +588,13 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.confirmation_number_rounded,
-            size: 64,
-            color: context.appOnSurface.withValues(alpha: 0.3),
-          ),
-          SizedBox(height: 16),
-          Text(
-            'No vouchers yet',
-            style: TextStyle(
-              color: context.appOnSurface,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Generate your first vouchers to get started',
-            style: TextStyle(
-              color: context.appOnSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
-    );
+    return EmptyStates.noVouchers(() {
+      context.push('/main/users/generate');
+    });
   }
 
   Widget _buildNoFilterResultsState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off_rounded,
-            size: 64,
-            color: context.appOnSurface.withValues(alpha: 0.3),
-          ),
-          SizedBox(height: 16),
-          Text(
-            'No vouchers found',
-            style: TextStyle(
-              color: context.appOnSurface,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Try adjusting your search or filter',
-            style: TextStyle(
-              color: context.appOnSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
-    );
+    return EmptyStates.noSearchResults(_searchQuery);
   }
 
   List<Voucher> _filterVouchers(List<Voucher> vouchers) {
@@ -789,23 +758,16 @@ class _VoucherGridCard extends StatelessWidget {
                   // Status Badge
                   Row(
                     children: [
-                      Icon(
-                        isExpired
-                            ? Icons.cancel_rounded
-                            : Icons.check_circle_rounded,
-                        size: 12,
-                        color: isExpired ? context.appError : Colors.green,
+                      StatusBadge(
+                        status: isExpired
+                            ? VoucherStatus.expired
+                            : VoucherStatus.active,
+                        showLabel: true,
+                        fontSize: 10,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        isExpired ? 'Expired' : 'Active',
-                        style: TextStyle(
-                          color: isExpired ? context.appError : Colors.green,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Spacer(),
+                      const Spacer(),
                       Icon(Icons.arrow_forward_ios_rounded,
                           size: 12,
                           color: context.appOnSurface.withValues(alpha: 0.3)),

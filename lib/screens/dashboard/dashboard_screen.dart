@@ -227,6 +227,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search_rounded),
+            tooltip: 'Search users',
+            onPressed: () => _openUserSearch(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_rounded),
             onPressed: () => context.push('/main/settings'),
           ),
@@ -666,5 +671,157 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } else {
       return '${minutes}m';
     }
+  }
+
+  void _openUserSearch(BuildContext context) {
+    showSearch(
+      context: context,
+      delegate: _UserSearchDelegate(ref),
+    );
+  }
+}
+
+class _UserSearchDelegate extends SearchDelegate<String> {
+  final WidgetRef ref;
+
+  _UserSearchDelegate(this.ref);
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear_rounded),
+        onPressed: () {
+          query = '';
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back_rounded),
+      onPressed: () {
+        close(context, '');
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildSearchResults(context);
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildSearchResults(context);
+  }
+
+  Widget _buildSearchResults(BuildContext context) {
+    if (query.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: 64,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Search for hotspot users',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final usersAsync = ref.read(hotspotUsersProvider);
+    return usersAsync.when(
+      data: (paginatedUsers) {
+        final users = paginatedUsers.users
+            .map((data) => HotspotUser.fromJson(data))
+            .where((user) =>
+                user.name.toLowerCase().contains(query.toLowerCase()) ||
+                user.id.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+
+        if (users.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.person_search_rounded,
+                  size: 64,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No users found for "$query"',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final user = users[index];
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                child: Text(
+                  user.name.substring(0, 1).toUpperCase(),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary),
+                ),
+              ),
+              title: Text(user.name),
+              subtitle: Text(user.id),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.4),
+              ),
+              onTap: () {
+                close(context, '');
+                context.push('/main/users/${user.id}');
+              },
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(
+        child: Text('Error: $error'),
+      ),
+    );
   }
 }

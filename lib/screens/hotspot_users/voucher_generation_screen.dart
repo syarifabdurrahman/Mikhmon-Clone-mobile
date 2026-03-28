@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../utils/validity_parser.dart';
 import '../../services/models/voucher.dart';
+import '../../services/log_service.dart';
 import 'voucher_preview_screen.dart';
 
 // Enum for user mode
@@ -262,6 +263,13 @@ class _VoucherGenerationScreenState
 
       // Invalidate vouchers provider to refresh the list
       ref.invalidate(vouchersProvider);
+
+      // Log voucher creation
+      await LogService.logVoucherCreated(
+        _selectedProfile ?? 'default',
+        qty,
+        'User',
+      );
 
       // Navigate to voucher preview screen
       if (mounted) {

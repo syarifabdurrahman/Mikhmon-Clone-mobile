@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../../widgets/back_to_top_fab.dart';
 import 'hotspot_user_details_screen.dart';
 import 'add_hotspot_user_screen.dart';
 import 'edit_hotspot_user_screen.dart';
@@ -156,11 +159,11 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                     ),
                   );
                 },
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(context.appPrimary),
-                  ),
+                loading: () => ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: 5,
+                  itemBuilder: (context, index) =>
+                      SkeletonLoaders.userListItem(),
                 ),
                 error: (error, stack) => _buildErrorState(error.toString()),
               ),
@@ -174,20 +177,22 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  BackToTopFAB(scrollController: _scrollController),
+                  const SizedBox(height: 12),
                   FloatingActionButton.small(
                     heroTag: 'generate_vouchers',
                     onPressed: () => _navigateToGenerateVouchers(),
                     backgroundColor: context.appSecondary,
                     foregroundColor: context.appOnBackground,
-                    child: Icon(Icons.confirmation_number_rounded),
+                    child: const Icon(Icons.confirmation_number_rounded),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   FloatingActionButton(
                     heroTag: 'add_user',
                     onPressed: () => _navigateToAddUser(),
                     backgroundColor: context.appPrimary,
                     foregroundColor: Colors.white,
-                    child: Icon(Icons.person_add_rounded),
+                    child: const Icon(Icons.person_add_rounded),
                   ),
                 ],
               ),
@@ -819,35 +824,19 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final hasFilters =
         _searchQuery.isNotEmpty || _statusFilter != UserStatusFilter.all;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.person_off_rounded,
-            size: 64,
-            color: context.appOnSurface.withValues(alpha: 0.3),
-          ),
-          SizedBox(height: 16),
-          Text(
-            'No hotspot users found',
-            style: TextStyle(
-              color: context.appOnSurface,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            hasFilters
-                ? 'Try adjusting your search or filter'
-                : 'Add your first user to get started',
-            style: TextStyle(
-              color: context.appOnSurface.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ),
-    );
+    if (hasFilters) {
+      return EmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'No users found',
+        description:
+            'No hotspot users match your current filters. Try adjusting your search or filter criteria.',
+        iconColor: Colors.orange,
+      );
+    }
+
+    return EmptyStates.noUsers(() {
+      context.push('/main/users/add');
+    });
   }
 
   Widget _buildErrorState(String error) {

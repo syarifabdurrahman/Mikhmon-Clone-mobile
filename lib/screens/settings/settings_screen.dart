@@ -40,6 +40,10 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           _buildTemplateCard(context, ref),
           const SizedBox(height: 24),
+          _buildSectionHeader(context, 'Logs'),
+          const SizedBox(height: 8),
+          _buildLogsCard(context),
+          const SizedBox(height: 24),
           _buildSectionHeader(context, 'Connections'),
           const SizedBox(height: 8),
           _buildSavedRoutersCard(context, ref),
@@ -358,6 +362,66 @@ class SettingsScreen extends ConsumerWidget {
                 size: 20,
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogsCard(BuildContext context) {
+    return Card(
+      color: context.appSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () => context.push('/main/logs'),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.history_rounded,
+                  color: Color(0xFF6366F1),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Activity Logs',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: context.appOnSurface,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'View user actions, connections, and transactions',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.appOnSurface.withValues(alpha: 0.6),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: context.appOnSurface.withValues(alpha: 0.4),
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );
