@@ -16,17 +16,15 @@
 
 ## 2. Dashboard (Most Used Screen)
 
-### Current Issues
-- Information overload on first load
-- Charts don't explain what "normal" looks like
-- Quick actions menu is hidden behind a tap
+### Completed
+- [x] **"At a glance" summary** - Implemented `AtAGlanceCard` showing online users, total users, today's revenue
+- [x] **Expandable charts** - Tap chart opens full-screen with time range picker (1/5/15 min)
+- [x] **Traffic spike alerts** - `SystemAlertsCard` shows warnings when CPU>75%, Memory>85%, Disk>85% (critical at 90/95/95%)
+- [x] **Visible quick actions** - Horizontal scrolling `QuickActionsGrid` with colorful action buttons
+- [x] **Pull-to-refresh everywhere** - Verified on dashboard, users, vouchers screens
 
-### Improvements
-- [ ] **Personalized card ordering** - Let users rearrange dashboard cards
-- [ ] **Traffic spike alerts** - Visual indicator when usage exceeds threshold
-- [ ] **Expandable charts** - Tap chart to see full-screen with time range picker
-- [ ] **"At a glance" summary** - One-line: "12 users online, 2 pending, revenue Rp 450k today"
-- [ ] **Pull-to-refresh everywhere** - Not just some lists
+### Remaining
+- [ ] **Personalized card ordering** - Let users rearrange dashboard cards (requires drag-and-drop)
 
 ---
 

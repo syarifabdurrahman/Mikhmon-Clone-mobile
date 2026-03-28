@@ -7,8 +7,11 @@ import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../providers/app_providers.dart';
 import 'widgets/resource_card_widgets.dart';
-import 'widgets/combined_resource_chart.dart';
+import 'widgets/expandable_chart.dart';
 import 'widgets/traffic_monitor_widgets.dart';
+import 'widgets/at_a_glance_card.dart';
+import 'widgets/system_alerts_card.dart';
+import 'widgets/quick_actions_grid.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -352,15 +355,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // At a Glance summary
+                const AtAGlanceCard(),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                // System alerts (shown only when there are issues)
+                _buildAlertsSection(),
+                // System info card
                 _buildSystemInfoCard(),
                 SizedBox(height: isSmallScreen ? 12 : 16),
+                // Expandable resource chart
                 _buildResourceChart(),
                 SizedBox(height: isSmallScreen ? 12 : 16),
+                // Traffic monitor
                 const TrafficMonitorCard(),
                 SizedBox(height: isSmallScreen ? 12 : 16),
+                // Income cards
                 _buildIncomeCards(),
-                SizedBox(height: isSmallScreen ? 12 : 16),
-                _buildQuickActions(),
+                SizedBox(height: isSmallScreen ? 16 : 20),
+                // Quick actions grid
+                const QuickActionsGrid(),
               ],
             ),
           );
@@ -450,7 +463,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return ListenableBuilder(
       listenable: ref.read(resourceHistoryProvider),
       builder: (context, child) {
-        return CombinedResourceChart(
+        return ExpandableResourceChart(
+          resourceHistory: ref.read(resourceHistoryProvider),
+        );
+      },
+    );
+  }
+
+  Widget _buildAlertsSection() {
+    return ListenableBuilder(
+      listenable: ref.read(resourceHistoryProvider),
+      builder: (context, child) {
+        return SystemAlertsCard(
           resourceHistory: ref.read(resourceHistoryProvider),
         );
       },
@@ -481,154 +505,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: context.appOnBackground,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          color: context.appSurface,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              _buildActionButton(
-                Icons.person_add_rounded,
-                'Add Hotspot User',
-                Icons.arrow_forward_ios_rounded,
-                () {
-                  context.push('/main/users/add');
-                },
-              ),
-              Divider(
-                height: 1,
-                color: context.appOnSurface.withValues(alpha: 0.1),
-              ),
-              _buildActionButton(
-                Icons.wifi_rounded,
-                'Manage Hotspot',
-                Icons.arrow_forward_ios_rounded,
-                () {
-                  context.go('/main/users');
-                },
-              ),
-              Divider(
-                height: 1,
-                color: context.appOnSurface.withValues(alpha: 0.1),
-              ),
-              _buildActionButton(
-                Icons.card_membership_rounded,
-                'User Profiles',
-                Icons.arrow_forward_ios_rounded,
-                () {
-                  context.go('/main/profiles');
-                },
-              ),
-              Divider(
-                height: 1,
-                color: context.appOnSurface.withValues(alpha: 0.1),
-              ),
-              _buildActionButton(
-                Icons.lan_rounded,
-                'Hotspot Hosts',
-                Icons.arrow_forward_ios_rounded,
-                () {
-                  context.go('/main/hosts');
-                },
-              ),
-              Divider(
-                height: 1,
-                color: context.appOnSurface.withValues(alpha: 0.1),
-              ),
-              _buildActionButton(
-                Icons.payments_rounded,
-                'Revenue',
-                Icons.arrow_forward_ios_rounded,
-                () {
-                  context.push('/main/revenue');
-                },
-              ),
-              Divider(
-                height: 1,
-                color: context.appOnSurface.withValues(alpha: 0.1),
-              ),
-              _buildActionButton(
-                Icons.confirmation_number_rounded,
-                'Vouchers',
-                Icons.arrow_forward_ios_rounded,
-                () {
-                  context.push('/main/vouchers');
-                },
-              ),
-              Divider(
-                height: 1,
-                color: context.appOnSurface.withValues(alpha: 0.1),
-              ),
-              _buildActionButton(
-                Icons.history_rounded,
-                'Connection Logs',
-                Icons.arrow_forward_ios_rounded,
-                () {
-                  // Navigate to logs screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Logs feature coming soon')),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    IconData leadingIcon,
-    String title,
-    IconData trailingIcon,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Icon(
-              leadingIcon,
-              color: context.appPrimary,
-              size: 24,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: context.appOnSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-              ),
-            ),
-            Icon(
-              trailingIcon,
-              color: context.appOnSurface.withValues(alpha: 0.5),
-              size: 16,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
