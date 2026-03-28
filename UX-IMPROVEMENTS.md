@@ -68,17 +68,15 @@
 
 ## 6. Visual Feedback & Polish
 
-### Current Issues
-- No haptic feedback on important actions
-- Loading states are good but transitions are abrupt
-- Success/error toasts disappear too quickly
+### Completed
+- [x] **Haptic feedback** - Created `HapticUtils` with light/medium/heavy/selection/success/warning/error methods
+- [x] **Toast notifications persist longer** - Created `ToastUtils` with 3s default, dismiss option, colored icons by type
+- [x] **Success animation** - Created `SuccessAnimation` widget with animated checkmark
+- [x] **Confetti on milestone** - Created `ConfettiOverlay` and `ConfettiCelebration` widgets
 
 ### Improvements
-- [ ] **Haptic feedback** - Vibrate on: bulk delete confirmation, successful login, payment recorded
 - [ ] **Animated transitions** - Smooth screen transitions (Fade/slide)
-- [ ] **Toast notifications persist longer** - 3 seconds minimum, with dismiss option
-- [ ] **Success animation** - Checkmark animation on successful operations
-- [ ] **Confetti on milestone** - "100 vouchers created!" (fun but memorable)
+- Integrate haptic feedback into login, bulk delete, voucher generation
 
 ---
 
