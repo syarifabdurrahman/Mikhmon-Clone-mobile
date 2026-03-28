@@ -83,6 +83,11 @@ class RouterOSService {
     _client = null;
   }
 
+  Future<void> reconnect() async {
+    _client = null;
+    await connect();
+  }
+
   Future<void> clearCredentials() async {
     await _storage.delete(key: 'router_ip');
     await _storage.delete(key: 'port');

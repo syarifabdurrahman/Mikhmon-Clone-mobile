@@ -435,8 +435,19 @@ class HotspotUser {
     return commentLower.contains('mode:up') || commentLower.contains('mode:vc');
   }
 
-  String get dataUsed =>
-      '${((bytesIn ?? 0) + (bytesOut ?? 0)) / 1024 / 1024} MB';
+  String get dataUsed {
+    final bytes = (bytesIn ?? 0) + (bytesOut ?? 0);
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
+  }
 
   Map<String, dynamic> toMap() {
     // Keep disabled in sync with active

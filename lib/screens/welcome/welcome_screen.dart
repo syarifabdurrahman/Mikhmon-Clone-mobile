@@ -315,7 +315,41 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     );
   }
 
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (loadingContext) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              'Connecting...',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _hideLoadingDialog() {
+    Navigator.of(context).pop();
+  }
+
   Future<void> _quickLogin(RouterConnection connection, String password) async {
+    _showLoadingDialog();
+
     try {
       await ref.read(authStateProvider.notifier).login(
             host: connection.host,
@@ -326,10 +360,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           );
 
       if (mounted) {
+        _hideLoadingDialog();
         context.go('/main/dashboard');
       }
     } catch (e) {
       if (mounted) {
+        _hideLoadingDialog();
         // Show error dialog instead of snackbar so user can read it
         showDialog(
           context: context,

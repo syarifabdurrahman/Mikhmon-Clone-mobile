@@ -48,7 +48,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     // Don't show loading if we have cached data (seamless navigation)
     _loadDashboardData(showLoading: !hasCachedData);
+
+    // Also refresh hotspot users data for AtAGlance card
+    _refreshHotspotUsers();
+
     _startPeriodicRefresh();
+  }
+
+  void _refreshHotspotUsers() {
+    // Refresh hotspot users for AtAGlance widget
+    Future.microtask(() {
+      ref.invalidate(hotspotUsersProvider);
+    });
   }
 
   @override
@@ -268,15 +279,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           // Traffic monitor skeleton
           SkeletonLoaders.card(height: 150),
           const SizedBox(height: 16),
-          // Income cards skeleton
-          Row(
-            children: [
-              Expanded(child: SkeletonLoaders.card(height: 100)),
-              const SizedBox(width: 8),
-              Expanded(child: SkeletonLoaders.card(height: 100)),
-            ],
-          ),
-          const SizedBox(height: 16),
           // Quick actions skeleton
           SkeletonLoaders.card(height: 200),
         ],
@@ -381,9 +383,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 SizedBox(height: isSmallScreen ? 12 : 16),
                 // Traffic monitor
                 const TrafficMonitorCard(),
-                SizedBox(height: isSmallScreen ? 12 : 16),
-                // Income cards
-                _buildIncomeCards(),
                 SizedBox(height: isSmallScreen ? 16 : 20),
                 // Quick actions grid
                 const QuickActionsGrid(),
@@ -491,33 +490,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           resourceHistory: ref.read(resourceHistoryProvider),
         );
       },
-    );
-  }
-
-  Widget _buildIncomeCards() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Income',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: context.appOnBackground,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Expanded(
-              child: DailyIncomeCard(),
-            ),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: MonthlyIncomeCard(),
-            ),
-          ],
-        ),
-      ],
     );
   }
 

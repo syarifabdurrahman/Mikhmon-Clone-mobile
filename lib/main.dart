@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'providers/app_providers.dart';
 import 'services/cache_service.dart';
+import 'services/log_service.dart';
 import 'services/theme_service.dart';
 
 void main() async {
@@ -14,6 +15,9 @@ void main() async {
 
   // Initialize cache service
   await CacheService().init();
+
+  // Initialize log service for activity logging
+  await LogService.init();
 
   // Pre-load theme for instant display (no flash)
   final preloadedTheme = await ThemeService.loadThemeMode();

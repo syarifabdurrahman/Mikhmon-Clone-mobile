@@ -426,21 +426,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   int _currentPage = 1;
   final int _pageSize = 20;
 
-  @override
-  Future<PaginatedUsers> build() async {
-    _currentPage = 1;
-    return await _loadUsers(page: 1);
-  }
-
-  Future<PaginatedUsers> _loadUsers({required int page}) async {
-    final service = ref.read(routerOSServiceProvider);
-    final client = service.client;
-    if (client == null) {
-      throw Exception('Not connected to RouterOS');
-    }
-
-    final allUsers = await client.getHotspotUsersList();
-
+  PaginatedUsers _paginateUsers(List<Map<String, dynamic>> allUsers,
+      {required int page}) {
     // Filter out system/default users like "trial"
     final systemUserNames = {'trial'};
     final filteredUsers = allUsers.where((user) {
@@ -462,6 +449,51 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       currentPage: page,
       pageSize: _pageSize,
     );
+  }
+
+  PaginatedUsers _emptyPaginatedUsers() {
+    return PaginatedUsers(
+      users: [],
+      hasMore: false,
+      currentPage: 1,
+      pageSize: _pageSize,
+    );
+  }
+
+  @override
+  Future<PaginatedUsers> build() async {
+    _currentPage = 1;
+    // Try cache first
+    final cache = ref.read(cacheServiceProvider);
+    final cachedUsers = cache.getHotspotUsers();
+    if (cachedUsers != null && cachedUsers.isNotEmpty) {
+      return _paginateUsers(cachedUsers, page: 1);
+    }
+    // No cache, fetch from API
+    return await _loadUsers(page: 1);
+  }
+
+  Future<PaginatedUsers> _loadUsers({required int page}) async {
+    final service = ref.read(routerOSServiceProvider);
+    final client = service.client;
+
+    // Return cached data if not connected
+    if (client == null) {
+      final cache = ref.read(cacheServiceProvider);
+      final cachedUsers = cache.getHotspotUsers();
+      if (cachedUsers != null) {
+        return _paginateUsers(cachedUsers, page: page);
+      }
+      return _emptyPaginatedUsers();
+    }
+
+    final allUsers = await client.getHotspotUsersList();
+
+    // Cache the users
+    final cache = ref.read(cacheServiceProvider);
+    await cache.saveHotspotUsers(allUsers);
+
+    return _paginateUsers(allUsers, page: page);
   }
 
   Future<void> loadMore() async {

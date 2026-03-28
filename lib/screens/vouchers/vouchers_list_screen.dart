@@ -145,15 +145,15 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
     int failCount = 0;
     final totalVouchers = _selectedVoucherIds.length;
 
-    // Store navigator key to close dialog later
-    final navigator = Navigator.of(context);
+    if (!mounted) return;
 
-    // Show progress dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
+    late BuildContext dialogContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
           backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -168,9 +168,9 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
               ),
             ],
           ),
-        ),
-      );
-    }
+        );
+      },
+    );
 
     for (final voucherId in _selectedVoucherIds) {
       try {
@@ -186,7 +186,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
 
     // Close progress dialog
     if (mounted) {
-      navigator.pop();
+      Navigator.of(dialogContext).pop();
     }
 
     // Show snackbar after dialog is closed

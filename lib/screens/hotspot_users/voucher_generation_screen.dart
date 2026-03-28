@@ -94,7 +94,10 @@ class _VoucherGenerationScreenState
     // Trigger profile load if not already loaded
     Future.microtask(() {
       final profilesAsync = ref.read(userProfileProvider);
-      if (!profilesAsync.hasValue || profilesAsync.isLoading) {
+      // Refresh if no value, loading, or has error
+      if (!profilesAsync.hasValue ||
+          profilesAsync.isLoading ||
+          profilesAsync.hasError) {
         ref.read(userProfileProvider.notifier).refresh();
       }
     });
@@ -555,17 +558,26 @@ class _VoucherGenerationScreenState
                                   ? _selectedProfile
                                   : null;
 
+                          final items = profiles.isNotEmpty
+                              ? profiles.map((profile) {
+                                  return DropdownMenuItem(
+                                    value: profile.name,
+                                    child: Text(profile.name),
+                                  );
+                                }).toList()
+                              : [
+                                  const DropdownMenuItem(
+                                    value: 'default',
+                                    child: Text('default (no profiles found)'),
+                                  ),
+                                ];
+
                           return _buildDropdown<String>(
                             label: 'Profile',
                             value: validValue,
-                            items: profiles.map((profile) {
-                              return DropdownMenuItem(
-                                value: profile.name,
-                                child: Text(profile.name),
-                              );
-                            }).toList(),
+                            items: items,
                             icon: Icons.pie_chart,
-                            hint: Text('Select Profile'),
+                            hint: const Text('Select Profile'),
                             onChanged: (value) =>
                                 setState(() => _selectedProfile = value),
                             validator: (value) => value == null
@@ -576,16 +588,29 @@ class _VoucherGenerationScreenState
                         loading: () => Center(
                           child: CircularProgressIndicator(),
                         ),
-                        error: (_, __) => _buildDropdown<String>(
-                          label: 'Profile',
-                          value: _selectedProfile,
-                          items: const [
-                            DropdownMenuItem(
-                                value: 'default', child: Text('default')),
+                        error: (error, _) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Error loading profiles',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _buildDropdown<String>(
+                              label: 'Profile',
+                              value: _selectedProfile,
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 'default', child: Text('default')),
+                              ],
+                              icon: Icons.pie_chart,
+                              onChanged: (value) =>
+                                  setState(() => _selectedProfile = value),
+                            ),
                           ],
-                          icon: Icons.pie_chart,
-                          onChanged: (value) =>
-                              setState(() => _selectedProfile = value),
                         ),
                       ),
                     ],

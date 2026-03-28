@@ -470,7 +470,7 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: context.appBackground,
           borderRadius: BorderRadius.circular(8),
@@ -479,23 +479,29 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
           children: [
             Icon(
               icon,
-              size: 14,
+              size: 12,
               color: context.appOnSurface.withValues(alpha: 0.5),
             ),
-            const SizedBox(width: 6),
-            Text(
-              '$label: ',
-              style: TextStyle(
-                color: context.appOnSurface.withValues(alpha: 0.5),
-                fontSize: 11,
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                '$label: ',
+                style: TextStyle(
+                  color: context.appOnSurface.withValues(alpha: 0.5),
+                  fontSize: 10,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            Text(
-              value,
-              style: TextStyle(
-                color: context.appOnSurface,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: context.appOnSurface,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

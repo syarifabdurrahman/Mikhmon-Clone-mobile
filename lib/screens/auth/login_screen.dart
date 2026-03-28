@@ -50,11 +50,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
   }
 
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (loadingContext) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              'Connecting...',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _hideLoadingDialog() {
+    Navigator.of(context).pop();
+  }
+
   Future<void> _login({RouterConnection? savedConnection}) async {
     if (!_formKey.currentState!.validate() && savedConnection == null) {
       return;
     }
 
+    _showLoadingDialog();
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -115,10 +148,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (mounted) {
+        _hideLoadingDialog();
         context.go('/main/dashboard');
       }
     } catch (e) {
       if (mounted) {
+        _hideLoadingDialog();
         setState(() {
           _isLoading = false;
           _errorMessage = e.toString();

@@ -42,6 +42,22 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     _scrollController.addListener(_onScroll);
   }
 
+  bool _hasInitiallyLoaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only refresh once when screen becomes visible
+    if (!_hasInitiallyLoaded) {
+      _hasInitiallyLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.invalidate(hotspotUsersProvider);
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -494,15 +510,16 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
 
-    // Store navigator key to close dialog later
-    final navigator = Navigator.of(context);
+    // Show progress dialog and store the dialog context for closing
+    if (!mounted) return;
 
-    // Show progress dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
+    late BuildContext dialogContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
           backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -517,9 +534,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               ),
             ],
           ),
-        ),
-      );
-    }
+        );
+      },
+    );
 
     for (final userId in _selectedUserIds) {
       try {
@@ -533,9 +550,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     // Exit selection mode first
     _exitSelectionMode();
 
-    // Close progress dialog
+    // Close progress dialog using the dialog context
     if (mounted) {
-      navigator.pop();
+      Navigator.of(dialogContext).pop();
     }
 
     // Show snackbar after dialog is closed
@@ -563,15 +580,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
 
-    // Store navigator
-    final navigator = Navigator.of(context);
+    if (!mounted) return;
 
-    // Show progress dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
+    late BuildContext dialogContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
           backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -586,9 +603,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               ),
             ],
           ),
-        ),
-      );
-    }
+        );
+      },
+    );
 
     for (final userId in _selectedUserIds) {
       try {
@@ -609,7 +626,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     _exitSelectionMode();
 
     // Close progress dialog
-    if (mounted) navigator.pop();
+    if (mounted) {
+      Navigator.of(dialogContext).pop();
+    }
 
     // Show snackbar after dialog is closed
     await Future.delayed(const Duration(milliseconds: 200));
@@ -636,15 +655,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
 
-    // Store navigator
-    final navigator = Navigator.of(context);
+    if (!mounted) return;
 
-    // Show progress dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
+    late BuildContext dialogContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
           backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -659,9 +678,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               ),
             ],
           ),
-        ),
-      );
-    }
+        );
+      },
+    );
 
     for (final userId in _selectedUserIds) {
       try {
@@ -682,7 +701,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     _exitSelectionMode();
 
     // Close progress dialog
-    if (mounted) navigator.pop();
+    if (mounted) {
+      Navigator.of(dialogContext).pop();
+    }
 
     // Show snackbar after dialog is closed
     await Future.delayed(const Duration(milliseconds: 200));
@@ -809,15 +830,15 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     int successCount = 0;
     int failCount = 0;
 
-    // Store navigator
-    final navigator = Navigator.of(context);
+    if (!mounted) return;
 
-    // Show progress dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
+    late BuildContext dialogContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
           backgroundColor: context.appSurface,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -832,14 +853,16 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               ),
             ],
           ),
-        ),
-      );
-    }
+        );
+      },
+    );
 
     final service = ref.read(routerOSServiceProvider);
     final client = service.client;
     if (client == null) {
-      if (mounted) navigator.pop();
+      if (mounted) {
+        Navigator.of(dialogContext).pop();
+      }
       return;
     }
 
@@ -865,7 +888,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     await ref.read(hotspotUsersProvider.notifier).refresh();
 
     // Close progress dialog
-    if (mounted) navigator.pop();
+    if (mounted) {
+      Navigator.of(dialogContext).pop();
+    }
 
     // Show snackbar after dialog is closed
     await Future.delayed(const Duration(milliseconds: 200));

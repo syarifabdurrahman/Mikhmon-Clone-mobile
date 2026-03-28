@@ -110,18 +110,18 @@
 
 ## 9. Error Handling & Recovery
 
-### Current Issues
-- Connection errors show generic messages
-- No retry button on most errors
-- App can get stuck in error state
+### Completed
+- [x] **Friendly error messages** - Created `ErrorUtils` with user-friendly messages for common errors
+- [x] **One-tap retry** - Created `ErrorStateWidget` reusable component with retry button
+- [x] **Connection status indicator** - Created `ConnectionStatusIndicator` and `ConnectionStatusBar` widgets
+- [x] **Auto-reconnect** - Added `reconnect()` method to RouterOSService
 
-### Improvements
-- [ ] **Friendly error messages** - "Can't reach router" instead of "SocketException"
-- [ ] **One-tap retry** - Every error state has a retry button
-- [ ] **Connection status indicator** - Always show: "Connected" or "Reconnecting..."
+### Remaining
 - [ ] **Offline mode** - Show cached data when router is unreachable
-- [ ] **Auto-reconnect** - Background retry with exponential backoff
 - [ ] **Error report button** - "Something wrong? Send report" for debugging
+
+### Notes
+- Hotspot users now auto-fetch on screen load (fixed auto-refresh issue)
 
 ---
 

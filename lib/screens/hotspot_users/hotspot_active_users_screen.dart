@@ -32,6 +32,22 @@ class _HotspotActiveUsersScreenState
     _startAutoRefresh();
   }
 
+  bool _hasInitiallyLoaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only refresh once when screen becomes visible
+    if (!_hasInitiallyLoaded) {
+      _hasInitiallyLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.invalidate(hotspotActiveUsersProvider);
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
