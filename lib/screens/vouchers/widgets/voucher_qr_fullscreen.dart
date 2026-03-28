@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/models/voucher.dart';
+import '../../../widgets/cached_qr_image.dart';
 
 /// Fullscreen QR code viewer for easy scanning
 class VoucherQrFullscreen extends StatefulWidget {
@@ -76,19 +76,10 @@ class _VoucherQrFullscreenState extends State<VoucherQrFullscreen> {
                       ),
                     ],
                   ),
-                  child: QrImageView(
+                  child: CachedQrImage(
                     data: voucher.qrData,
-                    version: QrVersions.auto,
                     size: _qrSize,
-                    gapless: false,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: Color(0xFF7C3AED),
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: Color(0xFF7C3AED),
-                    ),
+                    foregroundColor: const Color(0xFF7C3AED),
                   ),
                 ),
               ),

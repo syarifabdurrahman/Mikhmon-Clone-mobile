@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:go_router/go_router.dart';
+import '../../widgets/cached_qr_image.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import '../../utils/filter_utils.dart';
+import '../../utils/performance_utils.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/status_badge.dart';
@@ -27,17 +28,19 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
   bool _isSelectionMode = false;
   final Set<String> _selectedVoucherIds = {};
   final ScrollController _scrollController = ScrollController();
+  final Debouncer _searchDebouncer =
+      Debouncer(delay: const Duration(milliseconds: 300));
 
   @override
   void initState() {
     super.initState();
-    // Load vouchers on init
     Future.microtask(() => ref.read(vouchersProvider.notifier).refresh());
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchDebouncer.dispose();
     super.dispose();
   }
 
@@ -431,6 +434,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
               setState(() {
                 _searchQuery = value;
               });
+              _searchDebouncer.run(() {});
             },
           ),
 
@@ -617,6 +621,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
   Widget _buildTitleWithBadge(
       BuildContext context, AsyncValue<List<Voucher>> vouchersAsync) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           'Vouchers',
@@ -626,7 +631,9 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        _buildCountBadge(context, vouchersAsync),
+        Flexible(
+          child: _buildCountBadge(context, vouchersAsync),
+        ),
       ],
     );
   }
@@ -740,19 +747,11 @@ class _VoucherGridCard extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: QrImageView(
+                  child: CachedQrImage(
                     data: voucher.qrData,
-                    version: QrVersions.auto,
                     size: 100,
-                    gapless: false,
-                    eyeStyle: QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: isExpired ? Colors.grey : context.appPrimary,
-                    ),
-                    dataModuleStyle: QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: isExpired ? Colors.grey : context.appPrimary,
-                    ),
+                    foregroundColor:
+                        isExpired ? Colors.grey : context.appPrimary,
                   ),
                 ),
               ),

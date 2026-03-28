@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/models/voucher.dart';
+import '../../../widgets/cached_qr_image.dart';
 
 /// Print preview dialog showing vouchers before printing
 class PrintPreviewDialog extends StatefulWidget {
@@ -213,11 +213,9 @@ class _PrintPreviewDialogState extends State<PrintPreviewDialog> {
           Expanded(
             flex: 3,
             child: Center(
-              child: QrImageView(
+              child: CachedQrImage(
                 data: voucher.qrData,
-                version: QrVersions.auto,
                 size: 80,
-                gapless: false,
               ),
             ),
           ),

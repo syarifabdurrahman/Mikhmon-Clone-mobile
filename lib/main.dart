@@ -15,13 +15,20 @@ void main() async {
   // Initialize cache service
   await CacheService().init();
 
+  // Pre-load theme for instant display (no flash)
+  final preloadedTheme = await ThemeService.loadThemeMode();
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
   runApp(
-    const ProviderScope(
-      child: OmmonApp(),
+    ProviderScope(
+      overrides: [
+        themeModeProvider
+            .overrideWith((ref) => ThemeModeNotifier.preloaded(preloadedTheme)),
+      ],
+      child: const OmmonApp(),
     ),
   );
 }

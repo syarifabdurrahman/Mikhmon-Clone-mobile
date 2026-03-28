@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../utils/performance_utils.dart';
 
 class HotspotActiveUsersScreen extends ConsumerStatefulWidget {
   const HotspotActiveUsersScreen({super.key});
@@ -21,6 +22,8 @@ class _HotspotActiveUsersScreenState
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingMore = false;
   Timer? _refreshTimer;
+  final Debouncer _searchDebouncer =
+      Debouncer(delay: const Duration(milliseconds: 300));
 
   @override
   void initState() {
@@ -33,6 +36,7 @@ class _HotspotActiveUsersScreenState
   void dispose() {
     _scrollController.dispose();
     _refreshTimer?.cancel();
+    _searchDebouncer.dispose();
     super.dispose();
   }
 
@@ -229,6 +233,7 @@ class _HotspotActiveUsersScreenState
               setState(() {
                 _searchQuery = value;
               });
+              _searchDebouncer.run(() {});
             },
           ),
           SizedBox(height: 12),

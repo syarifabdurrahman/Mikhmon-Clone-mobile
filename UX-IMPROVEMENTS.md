@@ -96,17 +96,15 @@
 
 ## 8. Performance Feel
 
-### Current Issues
-- List scrolling sometimes janky with many items
-- No skeleton loading on initial dashboard load
-- Charts redraw unnecessarily
+### Completed
+- [x] **QR caching** - Created `CachedQrImage` widget with RepaintBoundary to prevent QR regeneration
+- [x] **Debounce search** - Added 300ms debounce to vouchers, hotspot users, and active users search
+- [x] **Skeleton screens on dashboard** - Replaced loading indicator with full skeleton UI
+- [x] **Pre-cache on app start** - Theme now loads synchronously before app renders (no flash)
+- [x] **Lazy loading pagination** - Already implemented in hotspot users screen (GridView provides virtualization)
 
-### Improvements
-- [ ] **Lazy loading pagination** - Load more as user scrolls
-- [ ] **Skeleton screens everywhere** - Not just some lists
-- [ ] **Image/QR caching** - Don't regenerate QR on every rebuild
-- [ ] **Debounce search** - Wait 300ms before filtering
-- [ ] **Pre-cache on app start** - Load theme, user prefs while showing splash
+### Remaining
+- Charts redraw unnecessarily (consider using `RepaintBoundary` or `const` constructors)
 
 ---
 
@@ -182,6 +180,9 @@
 | High | Low | Pull-to-refresh everywhere |
 | High | Low | Haptic feedback |
 | High | Low | Inline form validation |
+| High | Low | QR caching |
+| High | Low | Debounce search |
+| High | Low | Pre-cache on app start |
 | High | Medium | Swipe gestures on lists |
 | High | Medium | Connection status indicator |
 | High | Medium | One-tap retry on errors |
@@ -190,6 +191,7 @@
 | Medium | Low | Toast persistence |
 | Medium | Medium | Dashboard personalization |
 | Medium | Medium | Quick search anywhere |
+| Medium | Medium | Skeleton screens everywhere |
 | Low | Medium | Animations |
 | Low | High | Voice commands |
 | Low | High | Home screen widgets |

@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
+import '../../widgets/cached_qr_image.dart';
 
 class VoucherPreviewScreen extends ConsumerStatefulWidget {
   final List<Voucher> vouchers;
@@ -413,11 +413,9 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          QrImageView(
+          CachedQrImage(
             data: voucher.qrData,
-            version: QrVersions.auto,
             size: 80,
-            gapless: false,
           ),
           SizedBox(height: 8),
           Text(
@@ -554,19 +552,11 @@ class _VoucherCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: QrImageView(
+                    child: CachedQrImage(
                       data: voucher.qrData,
-                      version: QrVersions.auto,
                       size: 80,
-                      gapless: false,
-                      eyeStyle: QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: isExpired ? Colors.grey : context.appPrimary,
-                      ),
-                      dataModuleStyle: QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: isExpired ? Colors.grey : context.appPrimary,
-                      ),
+                      foregroundColor:
+                          isExpired ? Colors.grey : context.appPrimary,
                     ),
                   ),
                   SizedBox(width: 16),
@@ -795,19 +785,10 @@ class _FullScreenQRView extends StatelessWidget {
                   ),
                 ],
               ),
-              child: QrImageView(
+              child: CachedQrImage(
                 data: voucher.qrData,
-                version: QrVersions.auto,
                 size: MediaQuery.of(context).size.width * 0.7,
-                gapless: false,
-                eyeStyle: QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: isExpired ? Colors.grey : context.appPrimary,
-                ),
-                dataModuleStyle: QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: isExpired ? Colors.grey : context.appPrimary,
-                ),
+                foregroundColor: isExpired ? Colors.grey : context.appPrimary,
               ),
             ),
             SizedBox(height: 32),

@@ -57,6 +57,8 @@ class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
     _loadThemeMode();
   }
 
+  ThemeModeNotifier.preloaded(AppThemeMode mode) : super(mode);
+
   Future<void> _loadThemeMode() async {
     final mode = await ThemeService.loadThemeMode();
     state = mode;

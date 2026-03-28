@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../providers/app_providers.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'widgets/resource_card_widgets.dart';
 import 'widgets/expandable_chart.dart';
 import 'widgets/traffic_monitor_widgets.dart';
@@ -249,32 +250,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  Widget _buildDashboardSkeleton() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // At a glance skeleton
+          SkeletonLoaders.card(height: 100),
+          const SizedBox(height: 16),
+          // System info skeleton
+          SkeletonLoaders.card(height: 180),
+          const SizedBox(height: 16),
+          // Resource chart skeleton
+          SkeletonLoaders.chart(height: 250),
+          const SizedBox(height: 16),
+          // Traffic monitor skeleton
+          SkeletonLoaders.card(height: 150),
+          const SizedBox(height: 16),
+          // Income cards skeleton
+          Row(
+            children: [
+              Expanded(child: SkeletonLoaders.card(height: 100)),
+              const SizedBox(width: 8),
+              Expanded(child: SkeletonLoaders.card(height: 100)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Quick actions skeleton
+          SkeletonLoaders.card(height: 200),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBody() {
-    // Show loading indicator for initial load
+    // Show skeleton loading for initial load
     if (_isInitialLoad && _isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 48,
-              height: 48,
-              child: CircularProgressIndicator(
-                strokeWidth: 4,
-                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Loading dashboard...',
-              style: TextStyle(
-                color: context.appOnBackground.withValues(alpha: 0.7),
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildDashboardSkeleton();
     }
 
     if (_errorMessage != null) {

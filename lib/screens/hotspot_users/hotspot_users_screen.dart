@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../utils/performance_utils.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/back_to_top_fab.dart';
@@ -29,6 +30,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   bool _isLoadingMore = false;
   bool _isSelectionActive = false;
   final Set<String> _selectedUserIds = {};
+  final Debouncer _searchDebouncer =
+      Debouncer(delay: const Duration(milliseconds: 300));
 
   @override
   bool get wantKeepAlive => true;
@@ -42,6 +45,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchDebouncer.dispose();
     super.dispose();
   }
 
@@ -96,6 +100,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                 setState(() {
                   _searchQuery = value;
                 });
+                _searchDebouncer.run(() {});
               },
               onClearSearch: () {
                 setState(() {

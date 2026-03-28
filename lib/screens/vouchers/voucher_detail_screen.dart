@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
+import '../../widgets/cached_qr_image.dart';
 
 class VoucherDetailScreen extends ConsumerStatefulWidget {
   final Voucher voucher;
@@ -108,19 +108,11 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
                         ),
                       ],
                     ),
-                    child: QrImageView(
+                    child: CachedQrImage(
                       data: widget.voucher.qrData,
-                      version: QrVersions.auto,
                       size: 200,
-                      gapless: false,
-                      eyeStyle: QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: isExpired ? Colors.grey : context.appPrimary,
-                      ),
-                      dataModuleStyle: QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: isExpired ? Colors.grey : context.appPrimary,
-                      ),
+                      foregroundColor:
+                          isExpired ? Colors.grey : context.appPrimary,
                     ),
                   ),
 
