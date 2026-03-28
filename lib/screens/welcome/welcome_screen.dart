@@ -360,7 +360,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
           ),
         ],
       ),
-    );
+    ).then((_) => passwordController.dispose());
   }
 
   Future<void> _quickLogin(RouterConnection connection, String password) async {

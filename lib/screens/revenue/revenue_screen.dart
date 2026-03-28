@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../utils/filter_utils.dart';
 
 class RevenueScreen extends ConsumerStatefulWidget {
   const RevenueScreen({super.key});
@@ -101,7 +102,7 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
           foregroundColor: context.appOnSurface,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded),
+            icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => context.go('/main'),
             tooltip: 'Back',
           ),
@@ -114,7 +115,7 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
           ),
           actions: [
             PopupMenuButton<TimePeriod>(
-              icon: Icon(Icons.calendar_today_rounded),
+              icon: const Icon(Icons.calendar_today_rounded),
               initialValue: _timePeriod,
               onSelected: (period) {
                 setState(() {
@@ -131,12 +132,12 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
               ],
             ),
             IconButton(
-              icon: Icon(Icons.file_download_rounded),
+              icon: const Icon(Icons.file_download_rounded),
               onPressed: () => _exportToCSV(ref),
               tooltip: 'Export CSV',
             ),
             IconButton(
-              icon: Icon(Icons.refresh_rounded),
+              icon: const Icon(Icons.refresh_rounded),
               onPressed: () => ref.read(incomeProvider.notifier).refresh(),
             ),
           ],
@@ -647,12 +648,7 @@ class _RevenueChart extends StatelessWidget {
   }
 
   String _formatCurrency(double value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toStringAsFixed(0);
+    return FilterUtils.formatCurrency(value, symbol: '');
   }
 }
 
@@ -1066,41 +1062,35 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
 
     return incomeAsync.when(
       data: (income) {
-        var transactions = income.transactions;
+        // Apply filters using FilterUtils
+        final allTransactions = income.transactions;
+        var transactions = FilterUtils.filterBySearch<SalesTransaction>(
+          allTransactions,
+          _searchQuery,
+          [(t) => t.username, (t) => t.profile],
+        );
 
-        // Apply filters
-        if (_searchQuery.isNotEmpty) {
-          transactions = transactions
-              .where((t) =>
-                  t.username
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  t.profile.toLowerCase().contains(_searchQuery.toLowerCase()))
-              .toList();
-        }
+        transactions = FilterUtils.filterByField<SalesTransaction>(
+          transactions,
+          _selectedProfile,
+          (t) => t.profile,
+        );
 
-        if (_selectedProfile != null) {
-          transactions =
-              transactions.where((t) => t.profile == _selectedProfile).toList();
-        }
-
-        if (_startDate != null) {
-          transactions = transactions
-              .where((t) => t.timestamp.isAfter(_startDate!))
-              .toList();
-        }
-
-        if (_endDate != null) {
-          transactions = transactions
-              .where((t) => t.timestamp.isBefore(_endDate!))
-              .toList();
-        }
+        transactions = FilterUtils.filterByDateRange<SalesTransaction>(
+          transactions,
+          _startDate,
+          _endDate,
+          (t) => t.timestamp,
+        );
 
         // Sort by date (newest first)
-        transactions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        transactions = FilterUtils.sortByDate<SalesTransaction>(
+            transactions, (t) => t.timestamp);
 
-        final profiles =
-            income.transactions.map((t) => t.profile).toSet().toList()..sort();
+        final profiles = FilterUtils.getUniqueValues<SalesTransaction>(
+          allTransactions,
+          (t) => t.profile,
+        );
 
         return Column(
           children: [
@@ -1447,19 +1437,6 @@ class _TransactionCard extends StatelessWidget {
   }
 
   String _formatTimestamp(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
-    }
+    return FilterUtils.formatRelativeTime(timestamp);
   }
 }

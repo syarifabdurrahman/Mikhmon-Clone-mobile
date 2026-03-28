@@ -519,7 +519,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ],
       ),
-    );
+    ).then((_) => passwordController.dispose());
   }
 
   Widget _buildLogoSection(bool isSmallScreen) {

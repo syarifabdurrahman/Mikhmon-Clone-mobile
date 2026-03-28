@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
+import '../../utils/filter_utils.dart';
 import 'voucher_detail_screen.dart';
 
 class VouchersListScreen extends ConsumerStatefulWidget {
@@ -628,17 +629,12 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
   }
 
   List<Voucher> _filterVouchers(List<Voucher> vouchers) {
-    var filtered = vouchers;
-
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
-      filtered = filtered.where((v) {
-        return v.username.toLowerCase().contains(query) ||
-            v.password.toLowerCase().contains(query) ||
-            v.profile.toLowerCase().contains(query);
-      }).toList();
-    }
+    // Apply search filter using FilterUtils
+    var filtered = FilterUtils.filterBySearch<Voucher>(
+      vouchers,
+      _searchQuery,
+      [(v) => v.username, (v) => v.password, (v) => v.profile],
+    );
 
     // Apply status filter
     switch (_filter) {
