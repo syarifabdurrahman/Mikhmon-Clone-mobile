@@ -44,8 +44,8 @@
 | **Voucher Bulk Delete** | ✅ | Select and delete multiple vouchers at once |
 | **Voucher Templates** | ✅ | Full Size, Compact, and Minimal print templates |
 | **Sales Report Export** | ✅ | CSV export with date filtering and profile filter |
-| **Voucher Templates** | ✅ | Full Size, Compact, and Minimal print templates |
-| **Sales Report Export** | ✅ | CSV export with date filtering and profile filter |
+| **Performance Optimization** | ✅ | Memory leaks fixed, const constructors, reusable filter utilities |
+| **DRY Code** | ✅ | FilterUtils for consistent filtering across the app |
 
 ---
 
@@ -117,6 +117,38 @@
   - Disabled tap navigation in selection mode
 - **Files**:
   - `lib/screens/vouchers/vouchers_list_screen.dart` - Complete implementation
+
+### 6. Performance Optimization & DRY Code ✅
+**Optimized app performance and reduced code duplication**
+
+- **Memory Leak Fixes**:
+  - `welcome_screen.dart` - Added `passwordController.dispose()` after dialog closes
+  - `login_screen.dart` - Added `passwordController.dispose()` after dialog closes
+
+- **Const Constructors**:
+  - Added `const` to Icon widgets in AppBar actions (revenue_screen.dart)
+
+- **Reusable FilterUtils (DRY)**:
+  - Created `lib/utils/filter_utils.dart` with:
+    - `filterBySearch()` - Filter by search query across multiple fields
+    - `filterByDateRange()` - Filter by date range
+    - `filterByField()` - Filter by exact field value
+    - `getUniqueValues()` - Get unique values for filter chips
+    - `sortByDate()` - Sort by date (newest/oldest first)
+    - `sortAlphabetically()` - Sort alphabetically
+    - `formatCurrency()` - Currency formatting
+    - `formatRelativeTime()` - Relative time formatting
+
+- **Applied to Screens**:
+  - `revenue_screen.dart` - Replaced manual filter logic with FilterUtils
+  - `vouchers_list_screen.dart` - Updated to use FilterUtils for search
+
+- **Files**:
+  - `lib/screens/welcome/welcome_screen.dart` - Memory leak fix
+  - `lib/screens/auth/login_screen.dart` - Memory leak fix
+  - `lib/screens/revenue/revenue_screen.dart` - FilterUtils + const
+  - `lib/screens/vouchers/vouchers_list_screen.dart` - FilterUtils
+  - `lib/utils/filter_utils.dart` - New reusable utility
 
 ---
 
