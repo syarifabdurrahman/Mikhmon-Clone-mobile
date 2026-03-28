@@ -53,23 +53,34 @@ class InterfaceTraffic {
   String get rxRateDisplay => _formatBytesPerSecond(rxBytesPerSecond ?? 0);
 
   String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    if (bytes < 1024 * 1024 * 1024 * 1024)
+    }
+    if (bytes < 1024 * 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+    }
     return '${(bytes / (1024 * 1024 * 1024 * 1024)).toStringAsFixed(2)} TB';
   }
 
   String _formatBytesPerSecond(int bytesPerSecond) {
-    if (bytesPerSecond < 1024) return '$bytesPerSecond B/s';
-    if (bytesPerSecond < 1024 * 1024)
+    if (bytesPerSecond < 1024) {
+      return '$bytesPerSecond B/s';
+    }
+    if (bytesPerSecond < 1024 * 1024) {
       return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
-    if (bytesPerSecond < 1024 * 1024 * 1024)
+    }
+    if (bytesPerSecond < 1024 * 1024 * 1024) {
       return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
-    if (bytesPerSecond < 1024 * 1024 * 1024 * 1024)
+    }
+    if (bytesPerSecond < 1024 * 1024 * 1024 * 1024) {
       return '${(bytesPerSecond / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB/s';
+    }
     return '${(bytesPerSecond / (1024 * 1024 * 1024 * 1024)).toStringAsFixed(2)} TB/s';
   }
 
@@ -173,26 +184,32 @@ class UserProfile {
 
   // Display getters
   String get rateLimitDisplay {
-    if (rateLimitUpload == null && rateLimitDownload == null)
+    if (rateLimitUpload == null && rateLimitDownload == null) {
       return 'Unlimited';
+    }
     final upload = rateLimitUpload ?? 'unlimited';
     final download = rateLimitDownload ?? 'unlimited';
     return '$upload/$download';
   }
 
   String get validityDisplay {
-    if (validity == null || validity == 'unlimited' || validity == '0')
+    if (validity == null || validity == 'unlimited' || validity == '0') {
       return 'Unlimited';
+    }
     return validity!;
   }
 
   String get priceDisplay {
-    if (price == null || price == 0) return 'Free';
+    if (price == null || price == 0) {
+      return 'Free';
+    }
     return '\$${price!.toStringAsFixed(2)}';
   }
 
   String get sharedUsersDisplay {
-    if (sharedUsers == null || sharedUsers == 0) return 'Unlimited';
+    if (sharedUsers == null || sharedUsers == 0) {
+      return 'Unlimited';
+    }
     return '$sharedUsers user${sharedUsers! > 1 ? 's' : ''}';
   }
 
@@ -515,10 +532,15 @@ class HotspotActiveUser {
   String get dataUsed => _formatBytes(bytesIn + bytesOut);
 
   String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 }

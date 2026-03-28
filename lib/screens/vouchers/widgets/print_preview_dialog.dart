@@ -23,7 +23,7 @@ class PrintPreviewDialog extends StatefulWidget {
 class _PrintPreviewDialogState extends State<PrintPreviewDialog> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  int _vouchersPerPage = 4; // 2x2 grid
+  final int _vouchersPerPage = 4;
 
   @override
   void dispose() {
@@ -90,7 +90,7 @@ class _PrintPreviewDialogState extends State<PrintPreviewDialog> {
                       ),
                 ),
                 Text(
-                  '${widget.vouchers.length} vouchers • ${_totalPages} page(s)',
+                  '${widget.vouchers.length} vouchers • $_totalPages page(s)',
                   style: TextStyle(
                     color: context.appOnSurface.withValues(alpha: 0.6),
                     fontSize: 12,

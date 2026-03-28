@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../widgets/form/smart_text_field.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -20,6 +21,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   final _portController = TextEditingController();
 
+  final _ipFocusNode = FocusNode();
+  final _portFocusNode = FocusNode();
+  final _usernameFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
@@ -31,6 +37,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _portController.dispose();
+    _ipFocusNode.dispose();
+    _portFocusNode.dispose();
+    _usernameFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -190,71 +200,54 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Connection Form Fields
                     Column(
                       children: [
-                        TextFormField(
+                        SmartTextField(
                           controller: _ipController,
-                          keyboardType: TextInputType.url,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Router IP Address',
-                            hintText: '192.168.88.1',
-                            prefixIcon:
-                                const Icon(Icons.router_rounded, size: 20),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed: () {
-                                _ipController.clear();
-                              },
-                            ),
-                          ),
+                          inputType: SmartInputType.ip,
+                          focusNode: _ipFocusNode,
+                          nextFocusNode: _portFocusNode,
+                          labelText: 'Router IP Address',
+                          hintText: '192.168.88.1',
+                          prefixIcon: Icons.router_rounded,
                           validator: Validators.validateIP,
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        SmartTextField(
                           controller: _portController,
-                          keyboardType: TextInputType.number,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Port (Optional - RouterOS API:8728)',
-                            hintText: '8728',
-                            prefixIcon:
-                                const Icon(Icons.wifi_rounded, size: 20),
-                          ),
+                          inputType: SmartInputType.port,
+                          focusNode: _portFocusNode,
+                          nextFocusNode: _usernameFocusNode,
+                          labelText: 'Port (Optional - RouterOS API:8728)',
+                          hintText: '8728',
+                          prefixIcon: Icons.wifi_rounded,
                           validator: Validators.validatePort,
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        SmartTextField(
                           controller: _usernameController,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Username',
-                            hintText: 'admin',
-                            prefixIcon:
-                                const Icon(Icons.person_rounded, size: 20),
-                          ),
+                          inputType: SmartInputType.text,
+                          focusNode: _usernameFocusNode,
+                          nextFocusNode: _passwordFocusNode,
+                          labelText: 'Username',
+                          hintText: 'admin',
+                          prefixIcon: Icons.person_rounded,
                           validator: Validators.validateUsername,
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
+                        SmartTextField(
                           controller: _passwordController,
+                          inputType: SmartInputType.password,
+                          focusNode: _passwordFocusNode,
                           obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.done,
-                          decoration: InputDecoration(
-                            labelText: 'Password (Optional)',
-                            hintText: 'Leave empty if no password set',
-                            prefixIcon:
-                                const Icon(Icons.lock_rounded, size: 20),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed: _togglePasswordVisibility,
+                          labelText: 'Password (Optional)',
+                          hintText: 'Leave empty if no password set',
+                          prefixIcon: Icons.lock_rounded,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                             ),
+                            onPressed: _togglePasswordVisibility,
                           ),
                           validator: Validators.validateOptionalPassword,
                         ),

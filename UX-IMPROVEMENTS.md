@@ -52,18 +52,17 @@
 
 ## 5. Forms & Data Entry
 
-### Current Issues
-- Form fields don't auto-capitalize or use proper keyboard types
-- No clipboard paste support for MAC addresses
-- Error messages appear after submission, not inline
+### Completed
+- [x] **Smart keyboard types** - Numeric keyboard for port/IP fields (SmartTextField)
+- [x] **MAC address auto-format** - "aabbccddeeff" -> "AA:BB:CC:DD:EE:FF" (MACAddressInputFormatter)
+- [x] **Paste detection** - "MAC address detected in clipboard, paste?" (SmartTextField with enableMacPasteDetection)
+- [x] **Inline validation** - Validate as user types, not on submit (SmartTextField)
+- [x] **Auto-focus next field** - After entering IP, jump to port automatically (nextFocusNode)
+- [ ] **Undo/redo support** - Especially for bulk operations
 
 ### Improvements
-- [ ] **Smart keyboard types** - Numeric keyboard for port/IP fields
-- [ ] **MAC address auto-format** - "aabbccddeeff" -> "AA:BB:CC:DD:EE:FF"
-- [ ] **Paste detection** - "MAC address detected in clipboard, paste?"
-- [ ] **Inline validation** - Validate as user types, not on submit
-- [ ] **Auto-focus next field** - After entering IP, jump to port automatically
-- [ ] **Undo/redo support** - Especially for bulk operations
+- Use SmartTextField in all forms (settings, hotspot user forms)
+- Add MAC paste detection to hotspot host add/edit forms
 
 ---
 
