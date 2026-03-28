@@ -128,7 +128,7 @@ class AtAGlanceCard extends ConsumerWidget {
           color: Colors.amber,
           label: 'Today',
           value: incomeAsync.when(
-            data: (income) => _formatCurrency(income.summary.dailyTotal),
+            data: (income) => _formatCurrency(income.summary.todayIncome),
             loading: () => '-',
             error: (_, __) => '-',
           ),

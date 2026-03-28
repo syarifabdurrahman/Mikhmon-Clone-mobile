@@ -52,6 +52,7 @@ class _BackToTopFABState extends State<BackToTopFAB>
   }
 
   void _checkVisibility() {
+    if (!widget.scrollController.hasClients) return;
     final shouldShow = widget.scrollController.offset > widget.showThreshold;
     if (shouldShow != _isVisible) {
       setState(() {

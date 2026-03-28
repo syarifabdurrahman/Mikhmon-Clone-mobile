@@ -8,6 +8,7 @@ enum AppThemeMode {
   green, // Green theme (dark)
   pink, // Pink theme (dark)
   light, // Light theme
+  highContrast, // High contrast for accessibility
 }
 
 class AppTheme {
@@ -86,6 +87,16 @@ class AppTheme {
       onSurface: Color(0xFF1E293B),
       brightness: Brightness.light,
     ),
+    AppThemeMode.highContrast: ThemeColors(
+      primary: Color(0xFFFFFFFF),
+      secondary: Color(0xFF00FFFF),
+      background: Color(0xFF000000),
+      surface: Color(0xFF1A1A1A),
+      card: Color(0xFF2A2A2A),
+      onBackground: Color(0xFFFFFFFF),
+      onSurface: Color(0xFFFFFFFF),
+      brightness: Brightness.dark,
+    ),
   };
 
   static ThemeData getTheme(AppThemeMode mode) {
@@ -103,6 +114,7 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme => getTheme(AppThemeMode.purple);
+  static ThemeData get highContrastTheme => getTheme(AppThemeMode.highContrast);
 
   static ThemeData _buildTheme({
     required Color primary,

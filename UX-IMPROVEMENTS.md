@@ -82,17 +82,15 @@
 
 ## 7. Accessibility
 
-### Current Issues
-- No screen reader support
-- Low contrast on some status badges
-- Touch targets sometimes too small (< 44px)
+### Completed
+- [x] **Semantic labels** - Created `AccessibilityUtils` with semantic widget helpers
+- [x] **Minimum touch target 48x48dp** - Created `AccessibleIconButton`, `AccessibleListTile` with 48dp minimum
+- [x] **High contrast mode option** - Added `AppThemeMode.highContrast` to theme system (black/white)
+- [x] **Font scaling support** - Flutter handles this automatically via MediaQuery
+- [x] **Reduce motion option** - Added `AccessibilityUtils.shouldReduceMotion()` to detect system setting
 
 ### Improvements
-- [ ] **Semantic labels** - All interactive elements need labels
-- [ ] **Minimum touch target 48x48dp** - Especially for list item actions
-- [ ] **High contrast mode option** - For outdoor/bright environment use
-- [ ] **Font scaling support** - Respect system text size
-- [ ] **Reduce motion option** - Respect system accessibility settings
+- Add semantic labels to existing widgets throughout the app
 
 ---
 

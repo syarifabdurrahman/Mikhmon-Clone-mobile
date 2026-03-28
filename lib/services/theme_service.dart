@@ -62,6 +62,8 @@ class ThemeService {
         return 'Green Theme';
       case AppThemeMode.pink:
         return 'Pink Theme';
+      case AppThemeMode.highContrast:
+        return 'High Contrast';
     }
   }
 
@@ -78,6 +80,8 @@ class ThemeService {
         return Icons.eco_rounded;
       case AppThemeMode.pink:
         return Icons.favorite_rounded;
+      case AppThemeMode.highContrast:
+        return Icons.contrast_rounded;
     }
   }
 
@@ -94,6 +98,8 @@ class ThemeService {
         return const Color(0xFF10B981);
       case AppThemeMode.pink:
         return const Color(0xFFEC4899);
+      case AppThemeMode.highContrast:
+        return const Color(0xFFFFFFFF);
     }
   }
 
@@ -110,6 +116,8 @@ class ThemeService {
         return 'Nature inspired green';
       case AppThemeMode.pink:
         return 'Romantic pink vibes';
+      case AppThemeMode.highContrast:
+        return 'Maximum contrast for accessibility';
     }
   }
 }
