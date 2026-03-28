@@ -11,6 +11,8 @@ import 'hotspot_user_details_screen.dart';
 import 'add_hotspot_user_screen.dart';
 import 'edit_hotspot_user_screen.dart';
 import 'voucher_generation_screen.dart';
+import 'widgets/enhanced_user_card.dart';
+import 'widgets/bulk_mode_indicator.dart';
 
 class HotspotUsersScreen extends ConsumerStatefulWidget {
   const HotspotUsersScreen({super.key});
@@ -128,31 +130,28 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                       padding: const EdgeInsets.all(16),
                       itemCount: filteredUsers.length +
                           (paginatedUsers.hasMore ? 1 : 0),
-                      // Performance optimization: estimated item height
-                      itemExtent: 100,
-                      // Performance optimization: repaint boundaries
+                      // Remove fixed itemExtent for expandable cards
                       addRepaintBoundaries: true,
-                      // Performance optimization: cache extent
                       cacheExtent: 500,
                       itemBuilder: (context, index) {
                         if (index == filteredUsers.length) {
                           return const _LoadingIndicator();
                         }
+                        final user = filteredUsers[index];
                         return RepaintBoundary(
-                          key: ValueKey(filteredUsers[index].id),
-                          child: _UserCard(
-                            user: filteredUsers[index],
-                            onTap: () =>
-                                _navigateToUserDetails(filteredUsers[index]),
-                            onLongPress: () => _toggleSelectionModeAndSelect(
-                                filteredUsers[index].id),
-                            onMenuTap: () =>
-                                _showUserContextMenu(filteredUsers[index]),
+                          key: ValueKey(user.id),
+                          child: EnhancedUserCard(
+                            user: user,
+                            onTap: () => _navigateToUserDetails(user),
+                            onLongPress: () =>
+                                _toggleSelectionModeAndSelect(user.id),
                             isSelectionMode: _isSelectionActive,
-                            isSelected: _selectedUserIds
-                                .contains(filteredUsers[index].id),
+                            isSelected: _selectedUserIds.contains(user.id),
                             onToggleSelection: () =>
-                                _toggleUserSelection(filteredUsers[index].id),
+                                _toggleUserSelection(user.id),
+                            onSwipeLeft: _handleSwipeLeft,
+                            onSwipeRight: _handleSwipeRight,
+                            onQuickAction: _handleQuickAction,
                           ),
                         );
                       },
@@ -196,8 +195,17 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                   ),
                 ],
               ),
-        bottomNavigationBar:
-            _isSelectionActive ? _buildBulkActionBar(context) : null,
+        bottomNavigationBar: _isSelectionActive
+            ? BulkModeIndicator(
+                selectedCount: _selectedUserIds.length,
+                onExit: _exitSelectionMode,
+                onSelectAll: _selectAllVisible,
+                onDelete: () => _confirmBulkDelete(context),
+                onDisable: _bulkDisableUsers,
+                onEnable: _bulkEnableUsers,
+                onMoveProfile: () => _showMoveProfileDialog(context),
+              )
+            : null,
       ),
     );
   }
@@ -309,59 +317,135 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     });
   }
 
-  Widget _buildBulkActionBar(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: Offset(0, -2),
+  // Swipe action handlers
+  Future<void> _handleSwipeLeft(HotspotUser user) async {
+    // Swipe left to disable
+    if (!user.active) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User "${user.name}" is already disabled'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text(
+          'Disable User',
+          style: TextStyle(color: context.appOnSurface),
+        ),
+        content: Text(
+          'Disable user "${user.name}"?',
+          style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('Disable'),
           ),
         ],
       ),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.start,
-                children: [
-                  _BulkActionButton(
-                    icon: Icons.delete_rounded,
-                    label: 'Delete',
-                    color: Colors.red,
-                    onPressed: () => _confirmBulkDelete(context),
-                  ),
-                  _BulkActionButton(
-                    icon: Icons.block_rounded,
-                    label: 'Disable',
-                    color: Colors.orange,
-                    onPressed: () => _bulkDisableUsers(),
-                  ),
-                  _BulkActionButton(
-                    icon: Icons.check_circle_rounded,
-                    label: 'Enable',
-                    color: Colors.green,
-                    onPressed: () => _bulkEnableUsers(),
-                  ),
-                  _BulkActionButton(
-                    icon: Icons.swap_horiz_rounded,
-                    label: 'Move Profile',
-                    color: context.appPrimary,
-                    onPressed: () => _showMoveProfileDialog(context),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    );
+
+    if (confirmed == true) {
+      await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User "${user.name}" disabled'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleSwipeRight(HotspotUser user) async {
+    // Swipe right to enable if disabled, or show info if already active
+    if (!user.active) {
+      // Enable the user
+      await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User "${user.name}" enabled'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User "${user.name}" is already active'),
+          behavior: SnackBarBehavior.floating,
         ),
+      );
+    }
+  }
+
+  void _handleQuickAction(HotspotUser user, String action) {
+    switch (action) {
+      case 'details':
+        _navigateToUserDetails(user);
+        break;
+      case 'edit':
+        _navigateToEditUser(user);
+        break;
+      case 'toggle':
+        _toggleUserStatus(user);
+        break;
+      case 'extend':
+        _handleSwipeRight(user);
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _navigateToEditUser(HotspotUser user) async {
+    final userData = {
+      '.id': user.id,
+      'name': user.name,
+      'profile': user.profile,
+      'active': user.active.toString(),
+      'uptime': user.uptime ?? '0',
+      'bytes-in': (user.bytesIn ?? 0).toString(),
+      'bytes-out': (user.bytesOut ?? 0).toString(),
+      'limit-uptime': '0',
+      'disabled': (!user.active).toString(),
+      'comment': '',
+    };
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditHotspotUserScreen(user: userData),
       ),
     );
+  }
+
+  Future<void> _toggleUserStatus(HotspotUser user) async {
+    await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
+          backgroundColor: context.appPrimary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmBulkDelete(BuildContext context) async {

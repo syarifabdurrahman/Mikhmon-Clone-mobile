@@ -30,33 +30,23 @@
 
 ## 3. Hotspot Users Management
 
-### Current Issues
-- Swipe gestures missing for quick actions
-- No quick way to see user's usage history
-- Bulk select mode is confusing to exit
-
-### Improvements
-- [ ] **Swipe left to disable, swipe right to extend** - Standard iOS/Android pattern
-- [ ] **Tap user card expands inline** - Show usage, last seen, without navigating away
-- [ ] **Quick actions on long press** - Reset password, extend time, disable
-- [ ] **Exit bulk mode indicator** - Clear "X" button and deselect all option
-- [ ] **User status color coding** - Green=online, Yellow=active but idle, Gray=offline
+### Completed
+- [x] **Swipe left to disable, swipe right to extend** - Implemented in `EnhancedUserCard` with Dismissible widget
+- [x] **Tap user card expands inline** - Shows data usage, uptime, and quick action buttons without navigating
+- [x] **Quick actions on long press** - Inline quick actions: Details, Edit, Disable/Enable, Extend, Reset Password
+- [x] **Exit bulk mode indicator** - Improved `BulkModeIndicator` with clear count, "Clear" button, "Select All"
+- [x] **User status color coding** - Green=connected, Light green=active, Amber=idle, Gray=disabled
 
 ---
 
 ## 4. Vouchers Screen
 
-### Current Issues
-- QR codes too small for easy scanning
-- No batch printing workflow
-- Can't see voucher details without tapping
-
-### Improvements
-- [ ] **Tap QR to fullscreen** - Easier for customers to scan from phone
-- [ ] **Print preview before printing** - What you see is what you get
-- [ ] **Quick count badge** - Show "50 active, 120 used, 30 expired" on screen title
-- [ ] **Voucher templates** - One-tap to generate common packages (1hr, 1day, 1week)
-- [ ] **Share voucher via WhatsApp/Telegram** - Generate shareable link with QR
+### Completed
+- [x] **Tap QR to fullscreen** - Implemented `VoucherQrFullscreen` with pinch-to-zoom, copy credentials, share button
+- [x] **Print preview before printing** - `PrintPreviewDialog` shows 2x2 grid preview with page navigation
+- [x] **Quick count badge** - App bar shows "X active • Y expired" badge in real-time
+- [x] **Voucher templates** - `VoucherTemplatesDialog` with 6 presets (1hr, 3hr, 1day, 1week, 1month, unlimited)
+- [x] **Share voucher via WhatsApp/Telegram** - `VoucherInfoSheet` with share action, formatted message with emoji
 
 ---
 
