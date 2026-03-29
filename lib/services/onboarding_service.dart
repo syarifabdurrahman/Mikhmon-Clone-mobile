@@ -16,6 +16,7 @@ class OnboardingService {
   static const _agreedKey = 'user_agreement_accepted';
   static const _lastVersionKey = 'last_seen_version';
   static const _demoModeKey = 'demo_mode_enabled';
+  static const _setupCompletedKey = 'setup_completed';
 
   // Current app version - update this when releasing new features
   static const currentVersion = '1.0.0';
@@ -67,11 +68,21 @@ class OnboardingService {
     await _storage.write(key: _demoModeKey, value: enabled ? 'true' : 'false');
   }
 
+  static Future<bool> isSetupCompleted() async {
+    final value = await _storage.read(key: _setupCompletedKey);
+    return value == 'true';
+  }
+
+  static Future<void> setSetupCompleted() async {
+    await _storage.write(key: _setupCompletedKey, value: 'true');
+  }
+
   static Future<void> clearAll() async {
     await _storage.delete(key: _completedKey);
     await _storage.delete(key: _agreedKey);
     await _storage.delete(key: _lastVersionKey);
     await _storage.delete(key: _demoModeKey);
+    await _storage.delete(key: _setupCompletedKey);
   }
 
   /// Check if there's a new version the user hasn't seen yet

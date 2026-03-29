@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/onboarding_service.dart';
+import '../../services/cache_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -44,11 +45,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _completeOnboarding({bool demoMode = false}) async {
     await OnboardingService.setCompleted();
     await OnboardingService.setAgreementAccepted();
+
     if (demoMode) {
       await OnboardingService.setDemoMode(true);
-    }
-    if (mounted) {
-      context.go('/');
+      await OnboardingService.setSetupCompleted();
+      // Populate demo data
+      final cache = CacheService();
+      await cache.populateDemoData();
+      if (mounted) {
+        context.go('/main/dashboard');
+      }
+    } else {
+      if (mounted) {
+        context.go('/');
+      }
     }
   }
 
@@ -350,54 +360,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
 
           const SizedBox(height: 20),
-
-          // Agreement checkbox
-          GestureDetector(
-            onTap: () {
-              setState(() => _agreedToTerms = !_agreedToTerms);
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _agreedToTerms
-                    ? context.appSuccess.withValues(alpha: 0.05)
-                    : context.appSurface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _agreedToTerms
-                      ? context.appSuccess.withValues(alpha: 0.3)
-                      : context.appOnSurface.withValues(alpha: 0.15),
-                ),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Checkbox(
-                      value: _agreedToTerms,
-                      onChanged: (value) {
-                        setState(() => _agreedToTerms = value ?? false);
-                      },
-                      activeColor: context.appSuccess,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'I understand the risks and have backed up my router configuration',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: context.appOnSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
         ],
       ),
     );
@@ -479,6 +441,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 40),
+
+          // Agreement checkbox
+          GestureDetector(
+            onTap: () {
+              setState(() => _agreedToTerms = !_agreedToTerms);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: _agreedToTerms
+                    ? context.appSuccess.withValues(alpha: 0.05)
+                    : context.appSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _agreedToTerms
+                      ? context.appSuccess.withValues(alpha: 0.3)
+                      : context.appOnSurface.withValues(alpha: 0.15),
+                ),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: _agreedToTerms,
+                      onChanged: (value) {
+                        setState(() => _agreedToTerms = value ?? false);
+                      },
+                      activeColor: context.appSuccess,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'I have backed up my router and understand the risks',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: context.appOnSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
           // Connect router button
           SizedBox(

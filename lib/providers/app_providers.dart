@@ -16,6 +16,7 @@ import '../services/onboarding_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
+import '../screens/onboarding/setup_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
@@ -242,6 +243,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding',
         name: 'onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/setup',
+        name: 'setup',
+        builder: (context, state) => const SetupScreen(),
       ),
       GoRoute(
         path: '/login',

@@ -68,6 +68,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     Navigator.of(context).pop();
   }
 
+  Future<void> _navigateAfterLogin() async {
+    final setupDone = await OnboardingService.isSetupCompleted();
+    if (mounted) {
+      if (setupDone) {
+        context.go('/main/dashboard');
+      } else {
+        context.go('/setup');
+      }
+    }
+  }
+
   Future<void> _quickLogin(RouterConnection connection, String password) async {
     _showLoadingDialog();
 
@@ -82,7 +93,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
       if (mounted) {
         _hideLoadingDialog();
-        context.go('/main/dashboard');
+        _navigateAfterLogin();
       }
     } catch (e) {
       if (mounted) {
@@ -130,7 +141,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
       if (mounted) {
         _hideLoadingDialog();
-        context.go('/main/dashboard');
+        _navigateAfterLogin();
       }
     } catch (e) {
       if (mounted) {
