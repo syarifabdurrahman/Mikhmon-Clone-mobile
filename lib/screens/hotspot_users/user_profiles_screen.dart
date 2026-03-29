@@ -33,25 +33,22 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
       child: Scaffold(
         backgroundColor: context.appBackground,
         appBar: _buildAppBar(),
-        body: profilesAsync.when(
-          data: (profiles) {
-            if (profiles.isEmpty) {
-              return _buildEmptyState();
-            }
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(userProfileProvider);
-              },
-              child: ListView.builder(
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await ref.read(userProfileProvider.notifier).refresh();
+          },
+          child: profilesAsync.when(
+            data: (profiles) {
+              if (profiles.isEmpty) {
+                return _buildEmptyState();
+              }
+              return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: profiles.length,
-                // Performance optimization: estimated item height for better scrolling
+                physics: const AlwaysScrollableScrollPhysics(),
                 itemExtent: 190,
-                // Performance optimization: explicit repaint boundaries
                 addRepaintBoundaries: true,
-                // Performance optimization: keep widgets alive for better performance
                 addAutomaticKeepAlives: true,
-                // Performance optimization: cache extent determines how many widgets to render off-screen
                 cacheExtent: 500,
                 itemBuilder: (context, index) {
                   return RepaintBoundary(
@@ -63,15 +60,18 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
                     ),
                   );
                 },
+              );
+            },
+            loading: () => SizedBox(
+              height: 400,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 5,
+                itemBuilder: (context, index) => SkeletonLoaders.userListItem(),
               ),
-            );
-          },
-          loading: () => ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: 5,
-            itemBuilder: (context, index) => SkeletonLoaders.userListItem(),
+            ),
+            error: (error, stack) => _buildErrorState(error.toString()),
           ),
-          error: (error, stack) => _buildErrorState(error.toString()),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _navigateToAddProfile,

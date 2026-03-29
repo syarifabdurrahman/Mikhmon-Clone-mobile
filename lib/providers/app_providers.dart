@@ -12,8 +12,10 @@ import '../services/resource_history.dart';
 import '../services/theme_service.dart';
 import '../services/template_service.dart';
 import '../services/log_service.dart';
+import '../services/onboarding_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
@@ -230,6 +232,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/',
         name: 'welcome',
         builder: (context, state) => const WelcomeScreen(),
+        redirect: (context, state) async {
+          final completed = await OnboardingService.isCompleted();
+          if (!completed) return '/onboarding';
+          return null;
+        },
+      ),
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/login',
@@ -832,12 +844,18 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
   @override
   Future<List<UserProfile>> build() async {
-    final cache = ref.read(cacheServiceProvider);
+    // Always fetch from API to ensure fresh data
+    final profiles = await _fetchProfilesAndCache();
 
-    // Try to get cached profiles first
+    // If API returned data, use it
+    if (profiles.isNotEmpty) {
+      return profiles;
+    }
+
+    // API returned empty or failed - fall back to cache
+    final cache = ref.read(cacheServiceProvider);
     final cachedProfiles = cache.getUserProfiles();
     if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
-      // Apply filtering to cached data as well
       return cachedProfiles
           .where((p) => !_systemProfileNames
               .contains(p['name']?.toString().toLowerCase()))
@@ -845,8 +863,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
           .toList();
     }
 
-    // No cache, fetch from API
-    return await _fetchProfilesAndCache();
+    return [];
   }
 
   Future<List<UserProfile>> _fetchProfilesAndCache() async {
@@ -883,10 +900,10 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
   Future<void> silentRefresh() async {
     try {
       final newData = await _fetchProfilesAndCache();
-      state = AsyncValue.data(newData);
-    } catch (e) {
-      // Silent refresh failed
-    }
+      if (newData.isNotEmpty) {
+        state = AsyncValue.data(newData);
+      }
+    } catch (_) {}
   }
 
   Future<void> addProfile(UserProfile profile) async {

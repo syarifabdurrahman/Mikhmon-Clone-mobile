@@ -326,6 +326,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
         body: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(vouchersProvider);
+            await ref.read(vouchersProvider.future);
           },
           child: Column(
             children: [
@@ -344,9 +345,14 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                     }
                     return _buildVouchersGrid(filteredVouchers);
                   },
-                  loading: () => SkeletonLoaders.grid(
-                    crossAxisCount: 2,
-                    itemCount: 6,
+                  loading: () => SizedBox(
+                    height: 400,
+                    child: SingleChildScrollView(
+                      child: SkeletonLoaders.grid(
+                        crossAxisCount: 2,
+                        itemCount: 6,
+                      ),
+                    ),
                   ),
                   error: (error, _) => Center(
                     child: Column(

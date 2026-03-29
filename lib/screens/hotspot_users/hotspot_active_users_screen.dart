@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../utils/performance_utils.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class HotspotActiveUsersScreen extends ConsumerStatefulWidget {
   const HotspotActiveUsersScreen({super.key});
@@ -128,24 +129,25 @@ class _HotspotActiveUsersScreenState
           children: [
             _buildSearchAndFilter(),
             Expanded(
-              child: activeUsersAsync.when(
-                data: (paginatedUsers) {
-                  final users = paginatedUsers.users
-                      .map((data) => HotspotActiveUser.fromJson(data))
-                      .toList();
-                  final filteredUsers = _filterUsers(users);
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await ref.read(hotspotActiveUsersProvider.notifier).refresh();
+                },
+                color: context.appPrimary,
+                child: activeUsersAsync.when(
+                  data: (paginatedUsers) {
+                    final users = paginatedUsers.users
+                        .map((data) => HotspotActiveUser.fromJson(data))
+                        .toList();
+                    final filteredUsers = _filterUsers(users);
 
-                  if (filteredUsers.isEmpty) {
-                    return _buildEmptyState();
-                  }
+                    if (filteredUsers.isEmpty) {
+                      return _buildEmptyState();
+                    }
 
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(hotspotActiveUsersProvider);
-                    },
-                    color: context.appPrimary,
-                    child: ListView.builder(
+                    return ListView.builder(
                       controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
                       itemCount: filteredUsers.length +
                           (paginatedUsers.hasMore ? 1 : 0),
@@ -165,41 +167,48 @@ class _HotspotActiveUsersScreenState
                           ),
                         );
                       },
+                    );
+                  },
+                  loading: () => SizedBox(
+                    height: 400,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: 5,
+                      itemBuilder: (context, index) =>
+                          SkeletonLoaders.userListItem(),
                     ),
-                  );
-                },
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(context.appPrimary),
                   ),
-                ),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        size: 64,
-                        color: context.appError,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Error loading active users',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: context.appOnSurface,
-                            ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        error.toString(),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color:
-                                  context.appOnSurface.withValues(alpha: 0.7),
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  error: (error, stack) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 64,
+                          color: context.appError,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Error loading active users',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: context.appOnSurface,
+                                  ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          error.toString(),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color:
+                                    context.appOnSurface.withValues(alpha: 0.7),
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../services/onboarding_service.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -21,6 +22,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   String? _errorMessage;
 
   static const Color primaryColor = Color(0xFF7B61FF);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      OnboardingService.showWhatsNewIfNeeded(context);
+    });
+  }
 
   @override
   void dispose() {
@@ -169,15 +178,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: primaryColor,
-      body: Stack(
+      resizeToAvoidBottomInset: true,
+      body: Column(
         children: [
+          // Header
           SafeArea(
+            bottom: false,
             child: SizedBox(
               width: double.infinity,
-              height: size.height * 0.22,
+              height: size.height * 0.18,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -216,10 +229,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               ),
             ),
           ),
-          Align(
-            alignment: Alignment.bottomCenter,
+          // Content
+          Expanded(
             child: Container(
-              height: size.height * 0.72,
               width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -228,8 +240,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   topRight: Radius.circular(40),
                 ),
               ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(30),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(30, 30, 30, bottomPadding + 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -251,15 +263,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         color: Colors.grey[600],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    _buildSavedConnectionsSection(),
                     const SizedBox(height: 20),
+                    // Saved connections (scrollable within expanded)
+                    Expanded(
+                      child: _buildSavedConnectionsSection(),
+                    ),
+                    const SizedBox(height: 12),
                     _buildToggleButton(),
                     if (_showLoginForm) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _buildLoginForm(),
                     ],
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     Center(
                       child: TextButton(
                         onPressed: () => context.go('/main/dashboard'),

@@ -130,25 +130,26 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               },
             ),
             Expanded(
-              child: usersAsync.when(
-                data: (paginatedUsers) {
-                  // Convert Map data to HotspotUser objects
-                  final users = paginatedUsers.users
-                      .map((data) => HotspotUser.fromJson(data))
-                      .toList();
-                  final filteredUsers = _filterUsers(users);
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await ref.read(hotspotUsersProvider.notifier).refresh();
+                },
+                color: context.appPrimary,
+                child: usersAsync.when(
+                  data: (paginatedUsers) {
+                    // Convert Map data to HotspotUser objects
+                    final users = paginatedUsers.users
+                        .map((data) => HotspotUser.fromJson(data))
+                        .toList();
+                    final filteredUsers = _filterUsers(users);
 
-                  if (filteredUsers.isEmpty) {
-                    return _buildEmptyState();
-                  }
+                    if (filteredUsers.isEmpty) {
+                      return _buildEmptyState();
+                    }
 
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(hotspotUsersProvider);
-                    },
-                    color: context.appPrimary,
-                    child: ListView.builder(
+                    return ListView.builder(
                       controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
                       itemCount: filteredUsers.length +
                           (paginatedUsers.hasMore ? 1 : 0),
@@ -177,16 +178,19 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                           ),
                         );
                       },
+                    );
+                  },
+                  loading: () => SizedBox(
+                    height: 400,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: 5,
+                      itemBuilder: (context, index) =>
+                          SkeletonLoaders.userListItem(),
                     ),
-                  );
-                },
-                loading: () => ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: 5,
-                  itemBuilder: (context, index) =>
-                      SkeletonLoaders.userListItem(),
+                  ),
+                  error: (error, stack) => _buildErrorState(error.toString()),
                 ),
-                error: (error, stack) => _buildErrorState(error.toString()),
               ),
             ),
           ],

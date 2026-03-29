@@ -709,7 +709,7 @@ class _VoucherGenerationScreenState
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: context.appSuccess,
-                                    foregroundColor: Colors.white,
+                                    foregroundColor: context.appOnSurface,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(6),
                                     ),
@@ -799,7 +799,7 @@ class _VoucherGenerationScreenState
                   child: OutlinedButton(
                     onPressed: _isGenerating ? null : _resetForm,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: context.appOnSurface,
                       side: BorderSide(color: Colors.grey.shade600),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -862,7 +862,7 @@ class _VoucherGenerationScreenState
                 Text(
                   title,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: context.appOnSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),

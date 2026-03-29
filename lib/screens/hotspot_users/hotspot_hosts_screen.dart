@@ -86,7 +86,9 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
           title: Text('Hotspot Hosts'),
         ),
         body: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(hotspotHostsProvider),
+          onRefresh: () async {
+            await ref.read(hotspotHostsProvider.notifier).silentRefresh();
+          },
           child: Column(
             children: [
               _buildSearchAndFilter(),
@@ -372,10 +374,13 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
   }
 
   Widget _buildLoadingState() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      itemBuilder: (context, index) => SkeletonLoaders.userListItem(),
+    return SizedBox(
+      height: 400,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 5,
+        itemBuilder: (context, index) => SkeletonLoaders.userListItem(),
+      ),
     );
   }
 

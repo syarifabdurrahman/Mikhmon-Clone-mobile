@@ -107,7 +107,9 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(activityLogsProvider),
+        onRefresh: () async {
+          ref.invalidate(activityLogsProvider);
+        },
         child: logsAsync.when(
           data: (logs) {
             final filteredLogs = _applyFilters(logs);
@@ -129,10 +131,14 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
               ],
             );
           },
-          loading: () => ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: 5,
-            itemBuilder: (context, index) => SkeletonLoaders.transactionItem(),
+          loading: () => SizedBox(
+            height: 400,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 5,
+              itemBuilder: (context, index) =>
+                  SkeletonLoaders.transactionItem(),
+            ),
           ),
           error: (error, _) => _buildErrorState(error.toString()),
         ),
