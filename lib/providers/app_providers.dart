@@ -53,7 +53,7 @@ final themeModeProvider =
 });
 
 class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeModeNotifier() : super(AppThemeMode.purple) {
+  ThemeModeNotifier() : super(AppThemeMode.light) {
     _loadThemeMode();
   }
 
@@ -72,7 +72,7 @@ class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
   /// Clear saved theme (reset to default)
   Future<void> clearTheme() async {
     await ThemeService.clearThemeMode();
-    state = AppThemeMode.purple;
+    state = AppThemeMode.light;
   }
 
   /// Get theme data for current mode
@@ -266,7 +266,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: 'generate',
-                name: 'generate_vouchers',
+                name: 'generate_user_vouchers',
                 builder: (context, state) => const VoucherGenerationScreen(),
               ),
               GoRoute(
@@ -364,6 +364,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/main/vouchers',
             name: 'vouchers',
             builder: (context, state) => const VouchersListScreen(),
+            routes: [
+              GoRoute(
+                path: 'generate',
+                name: 'generate_vouchers',
+                builder: (context, state) => const VoucherGenerationScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/main/logs',

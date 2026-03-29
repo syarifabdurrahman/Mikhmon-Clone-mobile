@@ -135,6 +135,8 @@ GoogleService-Info.plist
 firestore.rules
 firestore.indexes.json
 
+contoh_login.webp
+
 # Uncomment to include specific VSCode configurations
 # /.vscode/settings.json
 # /.vscode/tasks.json

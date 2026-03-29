@@ -143,8 +143,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                   }
 
                   return RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(hotspotUsersProvider.notifier).refresh(),
+                    onRefresh: () async {
+                      ref.invalidate(hotspotUsersProvider);
+                    },
                     color: context.appPrimary,
                     child: ListView.builder(
                       controller: _scrollController,

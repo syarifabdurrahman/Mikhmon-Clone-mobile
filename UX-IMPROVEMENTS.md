@@ -142,23 +142,7 @@
 
 ---
 
-## 11. Onboarding & Help
-
-### Current Issues
-- No first-time user guidance
-- Help docs buried in settings
-- No tooltips for new features
-
-### Improvements
-- [ ] **Interactive tutorial** - First launch walkthrough
-- [ ] **Contextual tooltips** - "?" icons that explain features
-- [ ] **"What's new" modal** - Show on update with new features
-- [ ] **Video tutorials** - Link to YouTube guides
-- [ ] **Sample data option** - "Try with demo data" for new users
-
----
-
-## 12. Dark Mode & Theming
+## 19. Dark Mode & Theming
 
 ### Current Issues
 - No automatic dark/light based on system
@@ -184,15 +168,21 @@
 | High | Low | QR caching |
 | High | Low | Debounce search |
 | High | Low | Pre-cache on app start |
+| High | Low | Empty states with illustrations |
+| High | Low | Undo delete snackbar |
 | High | Medium | Swipe gestures on lists |
 | High | Medium | Connection status indicator |
 | High | Medium | One-tap retry on errors |
-| High | High | Offline mode |
+| High | Medium | Confirmation dialogs for delete |
+| High | Medium | Global search |
+| High | High | Offline mode with cached data |
 | Medium | Low | Smart keyboard types |
 | Medium | Low | Toast persistence |
 | Medium | Medium | Dashboard personalization |
 | Medium | Medium | Quick search anywhere |
 | Medium | Medium | Skeleton screens everywhere |
+| Medium | Medium | Filter presets |
+| Medium | High | Settings customization |
 | Low | Medium | Animations |
 | Low | High | Voice commands |
 | Low | High | Home screen widgets |

@@ -14,13 +14,13 @@ class ThemeService {
       if (savedMode != null) {
         return AppThemeMode.values.firstWhere(
           (e) => e.toString() == savedMode,
-          orElse: () => AppThemeMode.purple,
+          orElse: () => AppThemeMode.light,
         );
       }
     } catch (e) {
       // Error loading theme, use default
     }
-    return AppThemeMode.purple;
+    return AppThemeMode.light;
   }
 
   /// Save theme mode to storage

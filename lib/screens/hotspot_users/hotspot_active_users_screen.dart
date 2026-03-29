@@ -140,8 +140,9 @@ class _HotspotActiveUsersScreenState
                   }
 
                   return RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(hotspotActiveUsersProvider.notifier).refresh(),
+                    onRefresh: () async {
+                      ref.invalidate(hotspotActiveUsersProvider);
+                    },
                     color: context.appPrimary,
                     child: ListView.builder(
                       controller: _scrollController,

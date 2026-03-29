@@ -16,6 +16,8 @@ class MainShellScreen extends ConsumerStatefulWidget {
 }
 
 class _MainShellScreenState extends ConsumerState<MainShellScreen> {
+  int _currentTab = 0;
+
   static const _routes = [
     '/main/dashboard',
     '/main/users',
@@ -25,11 +27,14 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
   ];
 
   int _getTabFromPath(String path) {
-    if (path.contains('/main/dashboard')) return 0;
-    if (path.contains('/main/users')) return 1;
-    if (path.contains('/main/profiles')) return 2;
-    if (path.contains('/main/hosts')) return 3;
-    if (path.contains('/main/settings')) return 4;
+    if (path == '/main/dashboard' || path.startsWith('/main/dashboard'))
+      return 0;
+    if (path == '/main/users' ||
+        path.startsWith('/main/users') ||
+        path.startsWith('/main/vouchers')) return 1;
+    if (path == '/main/profiles' || path.startsWith('/main/profiles')) return 2;
+    if (path == '/main/hosts' || path.startsWith('/main/hosts')) return 3;
+    if (path == '/main/settings' || path.startsWith('/main/settings')) return 4;
     return 0;
   }
 
@@ -42,27 +47,16 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final location = GoRouterState.of(context).uri.path;
-    final tab = _getTabFromPath(location);
-    Future.microtask(() {
-      final currentTab = ref.read(currentTabProvider);
-      if (tab != currentTab) {
-        ref.read(currentTabProvider.notifier).state = tab;
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final currentTab = ref.watch(currentTabProvider);
+    // Always get current tab from route
+    final location = GoRouterState.of(context).uri.path;
+    final computedTab = _getTabFromPath(location);
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        if (currentTab != 0) {
+        if (computedTab != 0) {
           _navigateToTab(0);
         }
       },
@@ -70,12 +64,10 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
         backgroundColor: context.appBackground,
         body: NotificationListener<ScrollNotification>(
           onNotification: (notification) {
-            // Detect swipe down to open search
             if (notification is ScrollUpdateNotification) {
               if (notification.scrollDelta != null &&
                   notification.scrollDelta! > 0 &&
                   notification.metrics.pixels == 0) {
-                // User swiped down from top
                 showGlobalSearch(context);
                 return true;
               }
@@ -85,16 +77,16 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
           child: widget.child,
         ),
         bottomNavigationBar: ConvexAppBar(
+          key: ValueKey('nav_$computedTab'),
           style: TabStyle.reactCircle,
           backgroundColor: context.appSurface,
           activeColor: context.appPrimary,
           color: context.appOnSurface.withValues(alpha: 0.5),
-          initialActiveIndex: currentTab,
+          initialActiveIndex: computedTab,
           height: 65,
           top: -30,
           curveSize: 90,
           onTap: (index) {
-            ref.read(currentTabProvider.notifier).state = index;
             _navigateToTab(index);
           },
           items: [

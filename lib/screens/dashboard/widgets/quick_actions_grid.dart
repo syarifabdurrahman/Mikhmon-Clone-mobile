@@ -92,6 +92,12 @@ class QuickActionsGrid extends StatelessWidget {
         color: const Color(0xFFF59E0B), // Amber
         onTap: () => context.go('/main/hosts'),
       ),
+      QuickActionItem(
+        icon: Icons.payments_rounded,
+        label: 'Revenue',
+        color: const Color(0xFFEC4899), // Pink
+        onTap: () => context.push('/main/revenue'),
+      ),
     ];
   }
 

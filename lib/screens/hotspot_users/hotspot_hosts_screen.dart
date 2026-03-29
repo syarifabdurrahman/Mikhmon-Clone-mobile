@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../widgets/skeleton_loader.dart';
 
 enum HostFilter {
   all,
@@ -84,23 +85,26 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
           ),
           title: Text('Hotspot Hosts'),
         ),
-        body: Column(
-          children: [
-            _buildSearchAndFilter(),
-            Expanded(
-              child: hostsAsync.when(
-                data: (hosts) {
-                  final filteredHosts = _filterHosts(hosts);
-                  if (filteredHosts.isEmpty) {
-                    return _buildEmptyState();
-                  }
-                  return _buildHostsList(filteredHosts);
-                },
-                loading: () => _buildLoadingState(),
-                error: (error, _) => _buildErrorState(error),
+        body: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(hotspotHostsProvider),
+          child: Column(
+            children: [
+              _buildSearchAndFilter(),
+              Expanded(
+                child: hostsAsync.when(
+                  data: (hosts) {
+                    final filteredHosts = _filterHosts(hosts);
+                    if (filteredHosts.isEmpty) {
+                      return _buildEmptyState();
+                    }
+                    return _buildHostsList(filteredHosts);
+                  },
+                  loading: () => _buildLoadingState(),
+                  error: (error, _) => _buildErrorState(error),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -368,10 +372,10 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
   }
 
   Widget _buildLoadingState() {
-    return Center(
-      child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) => SkeletonLoaders.userListItem(),
     );
   }
 

@@ -323,52 +323,57 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                   ),
                 ],
         ),
-        body: Column(
-          children: [
-            // Search and Filter Bar
-            _buildSearchAndFilterBar(),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(vouchersProvider);
+          },
+          child: Column(
+            children: [
+              // Search and Filter Bar
+              _buildSearchAndFilterBar(),
 
-            // Vouchers Grid
-            Expanded(
-              child: vouchersAsync.when(
-                data: (vouchers) {
-                  final filteredVouchers = _filterVouchers(vouchers);
-                  if (filteredVouchers.isEmpty) {
-                    return vouchers.isEmpty
-                        ? _buildEmptyState()
-                        : _buildNoFilterResultsState();
-                  }
-                  return _buildVouchersGrid(filteredVouchers);
-                },
-                loading: () => SkeletonLoaders.grid(
-                  crossAxisCount: 2,
-                  itemCount: 6,
-                ),
-                error: (error, _) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline,
-                          size: 64, color: context.appError),
-                      SizedBox(height: 16),
-                      Text('Error loading vouchers',
-                          style: TextStyle(color: context.appOnBackground)),
-                      SizedBox(height: 8),
-                      Text(error.toString(),
-                          style: TextStyle(
-                              color: context.appOnBackground
-                                  .withValues(alpha: 0.7))),
-                      SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _refreshVouchers,
-                        child: Text('Retry'),
-                      ),
-                    ],
+              // Vouchers Grid
+              Expanded(
+                child: vouchersAsync.when(
+                  data: (vouchers) {
+                    final filteredVouchers = _filterVouchers(vouchers);
+                    if (filteredVouchers.isEmpty) {
+                      return vouchers.isEmpty
+                          ? _buildEmptyState()
+                          : _buildNoFilterResultsState();
+                    }
+                    return _buildVouchersGrid(filteredVouchers);
+                  },
+                  loading: () => SkeletonLoaders.grid(
+                    crossAxisCount: 2,
+                    itemCount: 6,
+                  ),
+                  error: (error, _) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline,
+                            size: 64, color: context.appError),
+                        SizedBox(height: 16),
+                        Text('Error loading vouchers',
+                            style: TextStyle(color: context.appOnBackground)),
+                        SizedBox(height: 8),
+                        Text(error.toString(),
+                            style: TextStyle(
+                                color: context.appOnBackground
+                                    .withValues(alpha: 0.7))),
+                        SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _refreshVouchers,
+                          child: Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         floatingActionButton: _isSelectionMode
             ? null

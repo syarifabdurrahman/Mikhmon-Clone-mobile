@@ -49,16 +49,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Don't show loading if we have cached data (seamless navigation)
     _loadDashboardData(showLoading: !hasCachedData);
 
-    // Also refresh hotspot users data for AtAGlance card
+    // Refresh hotspot users and profiles for AtAGlance card
     _refreshHotspotUsers();
+    _refreshUserProfiles();
 
     _startPeriodicRefresh();
   }
 
   void _refreshHotspotUsers() {
-    // Refresh hotspot users for AtAGlance widget
     Future.microtask(() {
       ref.invalidate(hotspotUsersProvider);
+    });
+  }
+
+  void _refreshUserProfiles() {
+    Future.microtask(() {
+      ref.invalidate(userProfileProvider);
     });
   }
 

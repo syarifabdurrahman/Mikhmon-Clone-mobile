@@ -75,63 +75,81 @@ class AtAGlanceCard extends ConsumerWidget {
     AsyncValue usersAsync,
     AsyncValue incomeAsync,
   ) {
-    return Row(
+    return Column(
       children: [
-        // Online users
-        _buildMetric(
-          context,
-          icon: Icons.wifi_rounded,
-          color: Colors.green,
-          label: 'Online',
-          value: usersAsync.when(
-            data: (paginatedUsers) {
-              final online = paginatedUsers.users.where((u) {
-                final user = HotspotUser.fromJson(u);
-                return user.uptime != null &&
-                    user.uptime != '0s' &&
-                    user.uptime != '00:00:00';
-              }).length;
-              return '$online';
-            },
-            loading: () => '-',
-            error: (_, __) => '-',
-          ),
+        Row(
+          children: [
+            // Online users
+            Expanded(
+              child: _buildMetric(
+                context,
+                icon: Icons.wifi_rounded,
+                color: Colors.green,
+                label: 'Online',
+                value: usersAsync.when(
+                  data: (paginatedUsers) {
+                    final online = paginatedUsers.users.where((u) {
+                      final user = HotspotUser.fromJson(u);
+                      return user.uptime != null &&
+                          user.uptime != '0s' &&
+                          user.uptime != '00:00:00';
+                    }).length;
+                    return '$online';
+                  },
+                  loading: () => '-',
+                  error: (_, __) => '-',
+                ),
+              ),
+            ),
+            // Total users
+            Expanded(
+              child: _buildMetric(
+                context,
+                icon: Icons.people_rounded,
+                color: context.appPrimary,
+                label: 'Total',
+                value: usersAsync.when(
+                  data: (paginatedUsers) => '${paginatedUsers.users.length}',
+                  loading: () => '-',
+                  error: (_, __) => '-',
+                ),
+              ),
+            ),
+          ],
         ),
-        Container(
-          width: 1,
-          height: 24,
-          color: context.appOnSurface.withValues(alpha: 0.1),
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-        ),
-        // Total users
-        _buildMetric(
-          context,
-          icon: Icons.people_rounded,
-          color: context.appPrimary,
-          label: 'Total',
-          value: usersAsync.when(
-            data: (paginatedUsers) => '${paginatedUsers.users.length}',
-            loading: () => '-',
-            error: (_, __) => '-',
-          ),
-        ),
-        Container(
-          width: 1,
-          height: 24,
-          color: context.appOnSurface.withValues(alpha: 0.1),
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-        ),
-        // Today's revenue
-        _buildMetric(
-          context,
-          icon: Icons.payments_rounded,
-          color: Colors.amber,
-          label: 'Today',
-          value: incomeAsync.when(
-            data: (income) => _formatCurrency(income.summary.todayIncome),
-            loading: () => '-',
-            error: (_, __) => '-',
-          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            // Today's revenue
+            Expanded(
+              child: _buildMetric(
+                context,
+                icon: Icons.today_rounded,
+                color: Colors.amber,
+                label: 'Today',
+                value: incomeAsync.when(
+                  data: (income) => _formatCurrency(income.summary.todayIncome),
+                  loading: () => '-',
+                  error: (_, __) => '-',
+                ),
+              ),
+            ),
+            // This Month revenue
+            Expanded(
+              child: _buildMetric(
+                context,
+                icon: Icons.calendar_month_rounded,
+                color: Colors.orange,
+                label: 'Month',
+                value: incomeAsync.when(
+                  data: (income) =>
+                      _formatCurrency(income.summary.thisMonthIncome),
+                  loading: () => '-',
+                  error: (_, __) => '-',
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -144,33 +162,31 @@ class AtAGlanceCard extends ConsumerWidget {
     required String label,
     required String value,
   }) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.appOnSurface.withValues(alpha: 0.6),
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.appOnSurface.withValues(alpha: 0.6),
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: context.appOnSurface,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: context.appOnSurface,
-                  fontWeight: FontWeight.bold,
-                ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 

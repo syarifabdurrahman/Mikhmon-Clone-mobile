@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../services/models/activity_log.dart';
 import '../../services/log_service.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/skeleton_loader.dart';
 
 /// Provider for activity logs
 final activityLogsProvider =
@@ -105,29 +106,36 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
           ),
         ],
       ),
-      body: logsAsync.when(
-        data: (logs) {
-          final filteredLogs = _applyFilters(logs);
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(activityLogsProvider),
+        child: logsAsync.when(
+          data: (logs) {
+            final filteredLogs = _applyFilters(logs);
 
-          return Column(
-            children: [
-              _buildFilterBar(logs),
-              Expanded(
-                child: filteredLogs.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredLogs.length,
-                        itemBuilder: (context, index) {
-                          return _LogCard(log: filteredLogs[index]);
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _buildErrorState(error.toString()),
+            return Column(
+              children: [
+                _buildFilterBar(logs),
+                Expanded(
+                  child: filteredLogs.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredLogs.length,
+                          itemBuilder: (context, index) {
+                            return _LogCard(log: filteredLogs[index]);
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+          loading: () => ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 5,
+            itemBuilder: (context, index) => SkeletonLoaders.transactionItem(),
+          ),
+          error: (error, _) => _buildErrorState(error.toString()),
+        ),
       ),
     );
   }

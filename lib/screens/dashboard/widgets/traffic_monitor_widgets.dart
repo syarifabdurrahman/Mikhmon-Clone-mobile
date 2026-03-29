@@ -14,6 +14,7 @@ class TrafficMonitorCard extends ConsumerStatefulWidget {
 
 class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
   Timer? _refreshTimer;
+  bool _isExpanded = false;
 
   @override
   void initState() {
@@ -46,69 +47,103 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
           return const SizedBox.shrink();
         }
 
+        final displayInterfaces =
+            _isExpanded ? interfaces : interfaces.take(4).toList();
+
         return Card(
           color: context.appSurface,
           elevation: 0,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: context.appPrimary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            onTap: interfaces.length > 4
+                ? () {
+                    setState(() {
+                      _isExpanded = !_isExpanded;
+                    });
+                  }
+                : null,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: context.appPrimary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.swap_vert_rounded,
+                            color: context.appPrimary, size: 20),
                       ),
-                      child: Icon(Icons.swap_vert_rounded,
-                          color: context.appPrimary, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('Network Traffic',
-                        style: TextStyle(
-                            color: context.appOnSurface.withValues(alpha: 0.7),
-                            fontSize: 14)),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                  color: Colors.green, shape: BoxShape.circle)),
-                          const SizedBox(width: 4),
-                          Text('LIVE',
-                              style: TextStyle(
-                                  color: Colors.green.shade700,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w600)),
-                        ],
+                      const SizedBox(width: 12),
+                      Text('Network Traffic',
+                          style: TextStyle(
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.7),
+                              fontSize: 14)),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle)),
+                            const SizedBox(width: 4),
+                            Text('LIVE',
+                                style: TextStyle(
+                                    color: Colors.green.shade700,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ...interfaces.take(4).map((iface) => _buildInterfaceRow(iface)),
-                if (interfaces.length > 4)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text('+${interfaces.length - 4} more interfaces',
-                        style: TextStyle(
-                            color: context.appOnSurface.withValues(alpha: 0.5),
-                            fontSize: 11)),
+                      if (interfaces.length > 4) ...[
+                        const SizedBox(width: 8),
+                        Icon(
+                          _isExpanded ? Icons.expand_less : Icons.expand_more,
+                          color: context.appOnSurface.withValues(alpha: 0.5),
+                          size: 20,
+                        ),
+                      ],
+                    ],
                   ),
-              ],
+                  const SizedBox(height: 16),
+                  ...displayInterfaces
+                      .map((iface) => _buildInterfaceRow(iface)),
+                  if (interfaces.length > 4 && !_isExpanded)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('+${interfaces.length - 4} more interfaces',
+                          style: TextStyle(
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.5),
+                              fontSize: 11)),
+                    ),
+                  if (_isExpanded)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('Tap to collapse',
+                          style: TextStyle(
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.4),
+                              fontSize: 10)),
+                    ),
+                ],
+              ),
             ),
           ),
         );

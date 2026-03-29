@@ -418,15 +418,15 @@ class _VoucherGenerationScreenState
         context.go('/main');
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF1E1E2E),
+        backgroundColor: context.appBackground,
         resizeToAvoidBottomInset: true,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2A2A3C),
+          backgroundColor: context.appSurface,
           title: Text(
             'Generate Vouchers',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: context.appOnSurface),
           ),
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: context.appOnSurface),
           actions: [
             IconButton(
               icon: Icon(Icons.refresh),
@@ -755,7 +755,7 @@ class _VoucherGenerationScreenState
                   child: ElevatedButton(
                     onPressed: _isGenerating ? null : _generateVouchers,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6C63FF),
+                      backgroundColor: context.appPrimary,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: Colors.grey,
                       shape: RoundedRectangleBorder(
@@ -838,9 +838,9 @@ class _VoucherGenerationScreenState
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2A3C),
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF3A3A4C)),
+        border: Border.all(color: context.appOnSurface.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -849,7 +849,7 @@ class _VoucherGenerationScreenState
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF3A3A4C),
+              color: context.appOnSurface.withValues(alpha: 0.05),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
@@ -857,7 +857,7 @@ class _VoucherGenerationScreenState
             ),
             child: Row(
               children: [
-                Icon(icon, color: const Color(0xFF6C63FF), size: 20),
+                Icon(icon, color: context.appPrimary, size: 20),
                 SizedBox(width: 8),
                 Text(
                   title,
@@ -891,27 +891,31 @@ class _VoucherGenerationScreenState
     return TextFormField(
       controller: controller,
       textCapitalization: textCapitalization,
-      style: TextStyle(color: Colors.white),
+      style: TextStyle(color: context.appOnSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade400),
+        labelStyle:
+            TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
         hintText: helperText,
-        hintStyle: TextStyle(color: Colors.grey.shade600),
-        prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
+        hintStyle:
+            TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
+        prefixIcon: Icon(icon, color: context.appPrimary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade700),
+          borderSide:
+              BorderSide(color: context.appOnSurface.withValues(alpha: 0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade700),
+          borderSide:
+              BorderSide(color: context.appOnSurface.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+          borderSide: BorderSide(color: context.appPrimary),
         ),
         filled: true,
-        fillColor: const Color(0xFF1E1E2E),
+        fillColor: context.appSurface,
       ),
     );
   }
@@ -928,29 +932,34 @@ class _VoucherGenerationScreenState
     return TextFormField(
       controller: controller,
       keyboardType: TextInputType.number,
-      style: TextStyle(color: Colors.white),
+      style: TextStyle(color: context.appOnSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade400),
+        labelStyle:
+            TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
         hintText: helperText,
-        hintStyle: TextStyle(color: Colors.grey.shade600),
-        prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
+        hintStyle:
+            TextStyle(color: context.appOnSurface.withValues(alpha: 0.4)),
+        prefixIcon: Icon(icon, color: context.appPrimary),
         suffix: Text('($min - $max)',
-            style: TextStyle(color: Colors.grey.shade500)),
+            style:
+                TextStyle(color: context.appOnSurface.withValues(alpha: 0.5))),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade700),
+          borderSide:
+              BorderSide(color: context.appOnSurface.withValues(alpha: 0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade700),
+          borderSide:
+              BorderSide(color: context.appOnSurface.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+          borderSide: BorderSide(color: context.appPrimary),
         ),
         filled: true,
-        fillColor: const Color(0xFF1E1E2E),
+        fillColor: context.appSurface,
       ),
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -984,27 +993,30 @@ class _VoucherGenerationScreenState
       onChanged: onChanged,
       hint: hint,
       validator: validator,
-      iconEnabledColor: const Color(0xFF6C63FF),
-      dropdownColor: const Color(0xFF2A2A3C),
-      style: TextStyle(color: Colors.white),
+      iconEnabledColor: context.appPrimary,
+      dropdownColor: context.appSurface,
+      style: TextStyle(color: context.appOnSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade400),
-        prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
+        labelStyle:
+            TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
+        prefixIcon: Icon(icon, color: context.appPrimary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade700),
+          borderSide:
+              BorderSide(color: context.appOnSurface.withValues(alpha: 0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade700),
+          borderSide:
+              BorderSide(color: context.appOnSurface.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+          borderSide: BorderSide(color: context.appPrimary),
         ),
         filled: true,
-        fillColor: const Color(0xFF1E1E2E),
+        fillColor: context.appSurface,
       ),
     );
   }

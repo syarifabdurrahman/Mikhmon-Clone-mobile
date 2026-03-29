@@ -449,6 +449,12 @@ class HotspotUser {
     return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 
+  String get simpleUptime {
+    if (uptime == null || uptime == '0s' || uptime == '00:00:00') return '-';
+    // Simplify: 1d 2h 3m -> 1d2h, 1h 2m -> 1h2m
+    return uptime!.replaceAll(' ', '').replaceAll('s', '');
+  }
+
   Map<String, dynamic> toMap() {
     // Keep disabled in sync with active
     final disabledValue = (!active).toString();

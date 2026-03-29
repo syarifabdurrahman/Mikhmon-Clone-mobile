@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
-import '../../widgets/form/smart_text_field.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +17,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _ipController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _portController = TextEditingController();
+  final _portController = TextEditingController(text: '8728');
 
   final _ipFocusNode = FocusNode();
   final _portFocusNode = FocusNode();
@@ -30,6 +28,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _saveConnection = true;
+
+  static const Color primaryColor = Color(0xFF7B61FF);
 
   @override
   void dispose() {
@@ -44,33 +44,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _togglePasswordVisibility() {
-    setState(() {
-      _obscurePassword = !_obscurePassword;
-    });
-  }
-
   void _showLoadingDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (loadingContext) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: Colors.white,
         content: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.primary,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
             ),
             const SizedBox(width: 16),
-            Text(
+            const Text(
               'Connecting...',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              style: TextStyle(color: Color(0xFF1E293B)),
             ),
           ],
         ),
@@ -94,11 +84,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
-
       String host, port, username, password;
 
       if (savedConnection != null) {
@@ -123,21 +108,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             rememberMe: false,
           );
 
-      // Save connection if requested and not already saved
-
-      // Save connection if requested and not already saved
       if (_saveConnection && savedConnection == null) {
         final connections = ref.read(savedConnectionsProvider);
         final connectionsList = connections.value ?? [];
 
-        // Check if this connection already exists
         final exists = connectionsList.any(
             (c) => c.host == host && c.port == port && c.username == username);
 
         if (!exists) {
-          // Generate a name for the connection
           final name = '$username@${host}_$port';
-
           await ref.read(savedConnectionsProvider.notifier).addConnection(
                 name: name,
                 host: host,
@@ -165,210 +144,311 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isSmallScreen = size.height < 700;
 
     return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.go('/'),
-        ),
-        title: Text(
-          'ΩMMON',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.appOnSurface,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? 24 : 32,
-              vertical: 24,
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isSmallScreen ? double.infinity : 500,
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _buildLogoSection(isSmallScreen),
-                    const SizedBox(height: 32),
-                    Text(
-                      'RouterOS Login',
-                      style:
-                          Theme.of(context).textTheme.displayMedium?.copyWith(
-                                color: context.appOnBackground,
-                                fontWeight: FontWeight.bold,
-                              ),
-                      textAlign: TextAlign.center,
+      backgroundColor: primaryColor,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SizedBox(
+              width: double.infinity,
+              height: size.height * 0.18,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => context.go('/'),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.router_rounded,
+                        size: 40,
+                        color: Colors.white,
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    if (_errorMessage != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.errorColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _errorMessage!,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: context.appOnBackground,
-                                  ),
-                          textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "ΩMMON",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Open Mikrotik Monitor",
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 10,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: size.height * 0.78,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(30),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Add New Router",
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
                         ),
                       ),
-                    const SizedBox(height: 24),
-                    // Connection Form Fields
-                    Column(
-                      children: [
-                        SmartTextField(
-                          controller: _ipController,
-                          inputType: SmartInputType.ip,
-                          focusNode: _ipFocusNode,
-                          nextFocusNode: _portFocusNode,
-                          labelText: 'Router IP Address',
-                          hintText: '192.168.88.1',
-                          prefixIcon: Icons.router_rounded,
-                          validator: Validators.validateIP,
+                      const SizedBox(height: 4),
+                      Text(
+                        "Enter your Mikrotik router details",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
                         ),
-                        const SizedBox(height: 16),
-                        SmartTextField(
-                          controller: _portController,
-                          inputType: SmartInputType.port,
-                          focusNode: _portFocusNode,
-                          nextFocusNode: _usernameFocusNode,
-                          labelText: 'Port (Optional - RouterOS API:8728)',
-                          hintText: '8728',
-                          prefixIcon: Icons.wifi_rounded,
-                          validator: Validators.validatePort,
+                      ),
+                      const SizedBox(height: 24),
+                      if (_errorMessage != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Color(0xFFF43F5E),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!.replaceAll('Exception: ', ''),
+                                  style: const TextStyle(
+                                    color: Color(0xFFF43F5E),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        SmartTextField(
-                          controller: _usernameController,
-                          inputType: SmartInputType.text,
-                          focusNode: _usernameFocusNode,
-                          nextFocusNode: _passwordFocusNode,
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: TextFormField(
+                              controller: _ipController,
+                              focusNode: _ipFocusNode,
+                              onFieldSubmitted: (_) =>
+                                  _portFocusNode.requestFocus(),
+                              decoration: InputDecoration(
+                                labelText: 'Router IP',
+                                hintText: '192.168.88.1',
+                                prefixIcon:
+                                    const Icon(Icons.router_rounded, size: 20),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide:
+                                      const BorderSide(color: primaryColor),
+                                ),
+                              ),
+                              validator: Validators.validateIP,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 1,
+                            child: TextFormField(
+                              controller: _portController,
+                              focusNode: _portFocusNode,
+                              onFieldSubmitted: (_) =>
+                                  _usernameFocusNode.requestFocus(),
+                              decoration: InputDecoration(
+                                labelText: 'Port',
+                                hintText: '8728',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide:
+                                      const BorderSide(color: primaryColor),
+                                ),
+                              ),
+                              validator: Validators.validatePort,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _usernameController,
+                        focusNode: _usernameFocusNode,
+                        onFieldSubmitted: (_) =>
+                            _passwordFocusNode.requestFocus(),
+                        decoration: InputDecoration(
                           labelText: 'Username',
                           hintText: 'admin',
-                          prefixIcon: Icons.person_rounded,
-                          validator: Validators.validateUsername,
+                          prefixIcon:
+                              const Icon(Icons.person_rounded, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: primaryColor),
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        SmartTextField(
-                          controller: _passwordController,
-                          inputType: SmartInputType.password,
-                          focusNode: _passwordFocusNode,
-                          obscureText: _obscurePassword,
-                          labelText: 'Password (Optional)',
-                          hintText: 'Leave empty if no password set',
-                          prefixIcon: Icons.lock_rounded,
+                        validator: Validators.validateUsername,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        focusNode: _passwordFocusNode,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Optional',
+                          prefixIcon: const Icon(Icons.lock_rounded, size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility
                                   : Icons.visibility_off,
+                              size: 20,
                             ),
-                            onPressed: _togglePasswordVisibility,
+                            onPressed: () {
+                              setState(
+                                  () => _obscurePassword = !_obscurePassword);
+                            },
                           ),
-                          validator: Validators.validateOptionalPassword,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _saveConnection,
-                              onChanged: (value) {
-                                setState(() {
-                                  _saveConnection = value ?? false;
-                                });
-                              },
-                              fillColor:
-                                  WidgetStateProperty.resolveWith((states) {
-                                if (states.contains(WidgetState.selected)) {
-                                  return Colors.green;
-                                }
-                                return context.appOnSurface
-                                    .withValues(alpha: 0.2);
-                              }),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _saveConnection = !_saveConnection;
-                                });
-                              },
-                              child: Text(
-                                'Save connection',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: context.appOnSurface,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: isSmallScreen ? 48 : 56,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.appPrimary,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 16 : 24,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: primaryColor),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : Text(
-                                'Login',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                  color: Colors.white,
-                                ),
-                              ),
+                        validator: Validators.validateOptionalPassword,
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Saved Connections Section - show only if there are saved connections
-                    _buildSavedConnectionsSection(),
-                  ],
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _saveConnection,
+                            onChanged: (value) {
+                              setState(() => _saveConnection = value ?? false);
+                            },
+                            activeColor: primaryColor,
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(
+                                  () => _saveConnection = !_saveConnection);
+                            },
+                            child: const Text(
+                              'Save this router',
+                              style: TextStyle(color: Color(0xFF64748B)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : () => _login(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.login_rounded),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Connect',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      _buildSavedConnectionsSection(),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => context.go('/'),
+                          child: Text(
+                            "BACK TO HOME",
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -387,24 +467,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.history_rounded,
+                const Icon(
+                  Icons.flash_on_rounded,
                   size: 18,
-                  color: context.appOnBackground.withValues(alpha: 0.6),
+                  color: Colors.amber,
                 ),
                 const SizedBox(width: 8),
+                const Text(
+                  'Saved Routers',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                const Spacer(),
                 Text(
-                  'Saved Connections',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.appOnBackground.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w500,
-                      ),
+                  '${connections.length} saved',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             ...connections.map((conn) => _buildConnectionCard(conn)),
-            const SizedBox(height: 16),
           ],
         );
       },
@@ -414,61 +499,77 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildConnectionCard(RouterConnection connection) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      color: context.appSurface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: InkWell(
-        onTap: _isLoading ? null : () => _showQuickLoginDialog(connection),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: context.appPrimary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : () => _showQuickLoginDialog(connection),
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        primaryColor,
+                        primaryColor.withValues(alpha: 0.7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      connection.name.isNotEmpty
+                          ? connection.name[0].toUpperCase()
+                          : 'R',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  Icons.router_rounded,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        connection.name,
+                        style: const TextStyle(
+                          color: Color(0xFF1E293B),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${connection.host}:${connection.port}',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.login_rounded,
                   size: 18,
-                  color: context.appPrimary,
+                  color: primaryColor,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      connection.name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: context.appOnSurface,
-                            fontWeight: FontWeight.w500,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      connection.address,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: context.appOnSurface.withValues(alpha: 0.6),
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                connection.username,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: context.appOnSurface.withValues(alpha: 0.5),
-                    ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -476,107 +577,126 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _showQuickLoginDialog(RouterConnection connection) {
-    // Password is required for saved connections
-    final passwordController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: context.appSurface,
-        title: Text(
-          'Connect to ${connection.name}',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.appOnSurface,
-              ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Host: ${connection.host}:${connection.port}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.appOnSurface.withValues(alpha: 0.7),
-                  ),
-            ),
-            Text(
-              'Username: ${connection.username}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.appOnSurface.withValues(alpha: 0.7),
-                  ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                hintText: 'Enter router password',
-                prefixIcon: const Icon(Icons.lock_rounded, size: 20),
-              ),
-              autofocus: true,
-              onSubmitted: (value) {
-                Navigator.pop(dialogContext);
-                // Update the password controller and login
-                _passwordController.text = value;
-                _login(savedConnection: connection);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              'Cancel',
-              style:
-                  TextStyle(color: context.appOnSurface.withValues(alpha: 0.6)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _passwordController.text = passwordController.text;
-              _login(savedConnection: connection);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: context.appPrimary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Connect'),
-          ),
-        ],
+      builder: (dialogContext) => _QuickLoginDialog(
+        connection: connection,
+        onConnect: (password) {
+          _passwordController.text = password;
+          _login(savedConnection: connection);
+        },
       ),
-    ).then((_) => passwordController.dispose());
+    );
   }
 
-  Widget _buildLogoSection(bool isSmallScreen) {
-    return Container(
-      width: isSmallScreen ? 80 : 100,
-      height: isSmallScreen ? 80 : 100,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            context.appPrimary,
-            const Color(0xFF1976D2),
-          ],
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(text, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+      ],
+    );
+  }
+}
+
+class _QuickLoginDialog extends StatefulWidget {
+  final RouterConnection connection;
+  final Function(String password) onConnect;
+
+  const _QuickLoginDialog({
+    required this.connection,
+    required this.onConnect,
+  });
+
+  @override
+  State<_QuickLoginDialog> createState() => _QuickLoginDialogState();
+}
+
+class _QuickLoginDialogState extends State<_QuickLoginDialog> {
+  late final TextEditingController _passwordController;
+  static const Color primaryColor = Color(0xFF7B61FF);
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      title: Text(
+        'Connect to ${widget.connection.name}',
+        style: const TextStyle(
+          color: Color(0xFF1E293B),
+          fontWeight: FontWeight.bold,
         ),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: context.appPrimary.withValues(alpha: 0.3),
-            blurRadius: 16,
-            spreadRadius: 4,
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildInfoRow(Icons.dns_rounded,
+              '${widget.connection.host}:${widget.connection.port}'),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.person_rounded, widget.connection.username),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _passwordController,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_rounded, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: primaryColor),
+              ),
+            ),
+            autofocus: true,
+            onSubmitted: (value) {
+              Navigator.pop(context);
+              widget.onConnect(value);
+            },
           ),
         ],
       ),
-      child: Icon(
-        Icons.router_rounded,
-        size: isSmallScreen ? 35 : 45,
-        color: Colors.white,
-      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            widget.onConnect(_passwordController.text);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Connect'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(text, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+      ],
     );
   }
 }

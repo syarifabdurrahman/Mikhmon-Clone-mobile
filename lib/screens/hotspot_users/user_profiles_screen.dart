@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../widgets/skeleton_loader.dart';
 import 'add_edit_profile_screen.dart';
 
 class UserProfilesScreen extends ConsumerStatefulWidget {
@@ -38,7 +39,9 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
               return _buildEmptyState();
             }
             return RefreshIndicator(
-              onRefresh: () => ref.read(userProfileProvider.notifier).refresh(),
+              onRefresh: () async {
+                ref.invalidate(userProfileProvider);
+              },
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: profiles.length,
@@ -63,8 +66,10 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
               ),
             );
           },
-          loading: () => Center(
-            child: CircularProgressIndicator(),
+          loading: () => ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 5,
+            itemBuilder: (context, index) => SkeletonLoaders.userListItem(),
           ),
           error: (error, stack) => _buildErrorState(error.toString()),
         ),

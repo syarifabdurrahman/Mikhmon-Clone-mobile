@@ -103,11 +103,16 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
   }
 
   bool _isUserConnected() {
-    final activeUsersAsync = ref.read(hotspotActiveUsersProvider);
-    final activeUsersValue = activeUsersAsync.value;
-    if (activeUsersValue == null) return false;
-    return activeUsersValue.users
-        .any((activeUser) => activeUser['user'] == widget.user.name);
+    try {
+      final activeUsersAsync = ref.read(hotspotActiveUsersProvider);
+      if (activeUsersAsync.hasError) return false;
+      final activeUsersValue = activeUsersAsync.value;
+      if (activeUsersValue == null) return false;
+      return activeUsersValue.users
+          .any((activeUser) => activeUser['user'] == widget.user.name);
+    } catch (e) {
+      return false;
+    }
   }
 
   @override
@@ -411,8 +416,8 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
               if (widget.user.uptime != null && widget.user.uptime != '0s')
                 _buildInfoChip(
                   icon: Icons.access_time_rounded,
-                  label: 'Uptime',
-                  value: widget.user.uptime!,
+                  label: 'Up',
+                  value: widget.user.simpleUptime,
                 ),
             ],
           ),
