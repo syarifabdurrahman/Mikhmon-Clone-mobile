@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/onboarding_service.dart';
+import '../../l10n/locale_provider.dart';
 
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
@@ -298,6 +299,56 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     borderSide: BorderSide(color: context.appPrimary, width: 2),
                   ),
                 ),
+                style: TextStyle(color: context.appOnSurface),
+              ),
+              const SizedBox(height: 20),
+
+              // Language
+              _buildLabel('Language'),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: ref.read(localeProvider).languageCode,
+                items: LocaleService.localeNames.entries.map((e) {
+                  return DropdownMenuItem(
+                    value: e.key,
+                    child: Row(
+                      children: [
+                        Text(LocaleService.localeFlags[e.key] ?? ''),
+                        const SizedBox(width: 8),
+                        Text(e.value),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(localeProvider.notifier).setLocale(Locale(value));
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: 'Select language',
+                  prefixIcon:
+                      Icon(Icons.language_rounded, color: context.appPrimary),
+                  filled: true,
+                  fillColor: context.appSurface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: context.appOnSurface.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: context.appOnSurface.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: context.appPrimary, width: 2),
+                  ),
+                ),
+                dropdownColor: context.appSurface,
                 style: TextStyle(color: context.appOnSurface),
               ),
               const SizedBox(height: 40),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../services/onboarding_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -128,7 +129,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (mounted) {
         _hideLoadingDialog();
-        context.go('/main/dashboard');
+        final setupDone = await OnboardingService.isSetupCompleted();
+        if (mounted) {
+          if (setupDone) {
+            context.go('/main/dashboard');
+          } else {
+            context.go('/setup');
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -586,16 +594,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _login(savedConnection: connection);
         },
       ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-      ],
     );
   }
 }

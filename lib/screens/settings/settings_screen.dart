@@ -5,12 +5,39 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../services/template_service.dart';
+import '../../services/cache_service.dart';
+import '../../l10n/locale_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _companyController = TextEditingController();
+  bool _initialized = false;
+
+  @override
+  void dispose() {
+    _companyController.dispose();
+    super.dispose();
+  }
+
+  void _initFromCache() {
+    if (_initialized) return;
+    _initialized = true;
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    if (settings != null && settings['companyName'] != null) {
+      _companyController.text = settings['companyName'];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _initFromCache();
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
@@ -19,7 +46,7 @@ class SettingsScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/main'),
         ),
         title: Text(
           'Settings',
@@ -35,6 +62,10 @@ class SettingsScreen extends ConsumerWidget {
           _buildSectionHeader(context, 'Appearance'),
           const SizedBox(height: 8),
           _buildThemeCard(context, ref),
+          const SizedBox(height: 24),
+          _buildSectionHeader(context, 'General'),
+          const SizedBox(height: 8),
+          _buildGeneralCard(context, ref),
           const SizedBox(height: 24),
           _buildSectionHeader(context, 'Voucher Templates'),
           const SizedBox(height: 8),
@@ -231,6 +262,303 @@ class SettingsScreen extends ConsumerWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGeneralCard(BuildContext context, WidgetRef ref) {
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    final currentLocale = ref.watch(localeProvider);
+    final selectedCountry = settings?['country'] as String?;
+    final selectedCurrency = settings?['currency'] as String?;
+
+    return Card(
+      color: context.appSurface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Language
+            _buildSettingsTile(
+              context,
+              icon: Icons.language_rounded,
+              title: 'Language',
+              subtitle: LocaleService.localeNames[currentLocale.languageCode] ??
+                  'English',
+              trailing:
+                  '${LocaleService.localeFlags[currentLocale.languageCode] ?? ''} ',
+              onTap: () => _showLanguageDialog(context, ref),
+            ),
+            Divider(color: context.appOnSurface.withValues(alpha: 0.08)),
+            // Country
+            _buildSettingsTile(
+              context,
+              icon: Icons.public_rounded,
+              title: 'Country',
+              subtitle: selectedCountry ?? 'Not set',
+              onTap: () => _showCountryDialog(context, ref, cache),
+            ),
+            Divider(color: context.appOnSurface.withValues(alpha: 0.08)),
+            // Currency
+            _buildSettingsTile(
+              context,
+              icon: Icons.attach_money_rounded,
+              title: 'Currency',
+              subtitle: selectedCurrency ?? 'Not set',
+              onTap: () => _showCurrencyDialog(context, ref, cache),
+            ),
+            Divider(color: context.appOnSurface.withValues(alpha: 0.08)),
+            // Business Name
+            _buildSettingsTile(
+              context,
+              icon: Icons.business_rounded,
+              title: 'Business Name',
+              subtitle:
+                  (settings?['companyName'] as String?)?.isNotEmpty == true
+                      ? settings!['companyName']
+                      : 'Not set',
+              onTap: () => _showCompanyDialog(context, ref, cache),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    String? trailing,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: context.appPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 20, color: context.appPrimary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: context.appOnSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.appOnSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null)
+              Text(trailing, style: const TextStyle(fontSize: 16)),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: context.appOnSurface.withValues(alpha: 0.3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: context.appSurface,
+        title: Text('Language', style: TextStyle(color: context.appOnSurface)),
+        children: LocaleService.localeNames.entries.map((e) {
+          return SimpleDialogOption(
+            onPressed: () {
+              ref.read(localeProvider.notifier).setLocale(Locale(e.key));
+              Navigator.pop(ctx);
+            },
+            child: Row(
+              children: [
+                Text(LocaleService.localeFlags[e.key] ?? '',
+                    style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
+                Text(e.value, style: TextStyle(color: context.appOnSurface)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _showCountryDialog(
+      BuildContext context, WidgetRef ref, CacheService cache) {
+    final countries = [
+      'Indonesia',
+      'Malaysia',
+      'Philippines',
+      'Thailand',
+      'Vietnam',
+      'Singapore',
+      'Cambodia',
+      'Myanmar',
+      'Laos',
+      'Bangladesh',
+      'India',
+      'Pakistan',
+      'Nigeria',
+      'Kenya',
+      'Tanzania',
+      'South Africa',
+      'Brazil',
+      'Other',
+    ];
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: context.appSurface,
+        title: Text('Country', style: TextStyle(color: context.appOnSurface)),
+        children: countries.map((c) {
+          return SimpleDialogOption(
+            onPressed: () async {
+              final current = cache.getAppSettings() ?? {};
+              await cache.saveAppSettings(
+                country: c,
+                currency: current['currency'] ?? 'USD',
+                companyName: current['companyName'] ?? '',
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) setState(() {});
+            },
+            child: Text(c, style: TextStyle(color: context.appOnSurface)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  static const _currencies = {
+    'IDR': 'Indonesian Rupiah',
+    'MYR': 'Malaysian Ringgit',
+    'PHP': 'Philippine Peso',
+    'THB': 'Thai Baht',
+    'VND': 'Vietnamese Dong',
+    'SGD': 'Singapore Dollar',
+    'KHR': 'Cambodian Riel',
+    'MMK': 'Myanmar Kyat',
+    'BDT': 'Bangladeshi Taka',
+    'INR': 'Indian Rupee',
+    'PKR': 'Pakistani Rupee',
+    'NGN': 'Nigerian Naira',
+    'KES': 'Kenyan Shilling',
+    'TZS': 'Tanzanian Shilling',
+    'ZAR': 'South African Rand',
+    'BRL': 'Brazilian Real',
+    'USD': 'US Dollar',
+  };
+
+  void _showCurrencyDialog(
+      BuildContext context, WidgetRef ref, CacheService cache) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: context.appSurface,
+        title: Text('Currency', style: TextStyle(color: context.appOnSurface)),
+        children: _currencies.entries.map((e) {
+          return SimpleDialogOption(
+            onPressed: () async {
+              final current = cache.getAppSettings() ?? {};
+              await cache.saveAppSettings(
+                country: current['country'] ?? '',
+                currency: e.key,
+                companyName: current['companyName'] ?? '',
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) setState(() {});
+            },
+            child: Text('${e.key} - ${e.value}',
+                style: TextStyle(color: context.appOnSurface)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _showCompanyDialog(
+      BuildContext context, WidgetRef ref, CacheService cache) {
+    final controller = TextEditingController(
+      text: cache.getAppSettings()?['companyName'] ?? '',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text('Business Name',
+            style: TextStyle(color: context.appOnSurface)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'e.g., My WiFi Shop',
+            filled: true,
+            fillColor: context.appBackground,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          style: TextStyle(color: context.appOnSurface),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              controller.dispose();
+              Navigator.pop(ctx);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final current = cache.getAppSettings() ?? {};
+              await cache.saveAppSettings(
+                country: current['country'] ?? '',
+                currency: current['currency'] ?? 'USD',
+                companyName: controller.text.trim(),
+              );
+              controller.dispose();
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) setState(() {});
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.appPrimary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }

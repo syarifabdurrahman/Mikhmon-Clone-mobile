@@ -7,7 +7,6 @@ import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/skeleton_loader.dart';
-import 'widgets/resource_card_widgets.dart';
 import 'widgets/expandable_chart.dart';
 import 'widgets/traffic_monitor_widgets.dart';
 import 'widgets/at_a_glance_card.dart';

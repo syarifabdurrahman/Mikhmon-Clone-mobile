@@ -411,7 +411,7 @@ class _TemplateGenerateDialogState extends State<TemplateGenerateDialog> {
           // Profile
           _buildLabel('Profile'),
           DropdownButtonFormField<String>(
-            value: _selectedProfile,
+            initialValue: _selectedProfile,
             decoration: InputDecoration(
               filled: true,
               fillColor: context.appBackground,

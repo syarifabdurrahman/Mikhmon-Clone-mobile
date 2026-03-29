@@ -5,7 +5,7 @@ import '../../../theme/app_theme.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/models.dart';
 
-/// A compact "At a Glance" summary card showing key metrics
+/// A compact "Quick Info" summary card showing key metrics
 class AtAGlanceCard extends ConsumerWidget {
   const AtAGlanceCard({super.key});
 
@@ -37,7 +37,7 @@ class AtAGlanceCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'At a Glance',
+                    'Quick Info',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: context.appOnSurface,
                           fontWeight: FontWeight.bold,

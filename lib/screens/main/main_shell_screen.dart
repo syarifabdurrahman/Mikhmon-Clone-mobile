@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import '../../theme/app_theme.dart';
-import '../../providers/app_providers.dart';
 import '../../widgets/global_search.dart';
 
 class MainShellScreen extends ConsumerStatefulWidget {
@@ -16,8 +15,6 @@ class MainShellScreen extends ConsumerStatefulWidget {
 }
 
 class _MainShellScreenState extends ConsumerState<MainShellScreen> {
-  int _currentTab = 0;
-
   static const _routes = [
     '/main/dashboard',
     '/main/users',
@@ -27,14 +24,23 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
   ];
 
   int _getTabFromPath(String path) {
-    if (path == '/main/dashboard' || path.startsWith('/main/dashboard'))
+    if (path == '/main/dashboard' || path.startsWith('/main/dashboard')) {
       return 0;
+    }
     if (path == '/main/users' ||
         path.startsWith('/main/users') ||
-        path.startsWith('/main/vouchers')) return 1;
-    if (path == '/main/profiles' || path.startsWith('/main/profiles')) return 2;
-    if (path == '/main/hosts' || path.startsWith('/main/hosts')) return 3;
-    if (path == '/main/settings' || path.startsWith('/main/settings')) return 4;
+        path.startsWith('/main/vouchers')) {
+      return 1;
+    }
+    if (path == '/main/profiles' || path.startsWith('/main/profiles')) {
+      return 2;
+    }
+    if (path == '/main/hosts' || path.startsWith('/main/hosts')) {
+      return 3;
+    }
+    if (path == '/main/settings' || path.startsWith('/main/settings')) {
+      return 4;
+    }
     return 0;
   }
 

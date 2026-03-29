@@ -432,23 +432,27 @@ class _PrintSettingsDialogState extends State<PrintSettingsDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          ..._templates.map((template) {
-            return RadioListTile<String>(
-              title: Text(
-                template,
-                style: TextStyle(color: context.appOnSurface),
-              ),
-              value: template,
-              groupValue: _selectedTemplate,
-              onChanged: (value) {
-                setState(() {
-                  _selectedTemplate = value!;
-                });
-              },
-              activeColor: context.appPrimary,
-              contentPadding: EdgeInsets.zero,
-            );
-          }),
+          RadioGroup<String>(
+            groupValue: _selectedTemplate,
+            onChanged: (value) {
+              setState(() {
+                _selectedTemplate = value!;
+              });
+            },
+            child: Column(
+              children: _templates.map((template) {
+                return RadioListTile<String>(
+                  title: Text(
+                    template,
+                    style: TextStyle(color: context.appOnSurface),
+                  ),
+                  value: template,
+                  activeColor: context.appPrimary,
+                  contentPadding: EdgeInsets.zero,
+                );
+              }).toList(),
+            ),
+          ),
         ],
       ),
       actions: [
