@@ -49,9 +49,77 @@
 
 ---
 
-## 🆕 Recent Updates (March 28, 2026)
+## 🆕 Recent Updates (March 30, 2026)
 
-### 3. Voucher Templates ✅
+### 1. App Localization (i18n) ✅
+**Complete localization support for English, Indonesian, and Malay languages**
+
+- **Central Translation File**: Created `lib/l10n/translations.dart` with 100+ translation keys
+- **Pattern**: Used `AppStrings.of(context).keyName` for all user-facing strings
+- **Languages Supported**:
+  - English (en) - Default
+  - Indonesian (id)
+  - Malay (ms)
+
+- **Localized Screens**:
+  - ✅ `settings_screen.dart` - Settings page with controller fix
+  - ✅ `onboarding_screen.dart` - Onboarding flow
+  - ✅ `setup_screen.dart` - Quick setup wizard
+  - ✅ `welcome_screen.dart` - Welcome page
+  - ✅ `dashboard_screen.dart` - Main dashboard
+  - ✅ `main_shell_screen.dart` - Navigation tabs
+  - ✅ `hotspot_users_screen.dart` - User management
+  - ✅ `vouchers_list_screen.dart` - Voucher list
+  - ✅ `revenue_screen.dart` - Revenue dashboard
+  - ✅ `activity_logs_screen.dart` - Activity logs
+  - ✅ `login_screen.dart` - Login screen
+  - ✅ `voucher_generation_screen.dart` - Voucher generation
+  - ✅ `user_profiles_screen.dart` - Profile management
+  - ✅ `hotspot_active_users_screen.dart` - Active users
+  - ✅ `voucher_preview_screen.dart` - Voucher preview with QR
+  - ✅ `voucher_detail_screen.dart` - Voucher details
+  - ✅ `hotspot_host_detail_screen.dart` - Host details
+  - ✅ `hotspot_user_details_screen.dart` - User details
+  - ✅ `add_hotspot_user_screen.dart` - Add user
+  - ✅ `edit_hotspot_user_screen.dart` - Edit user
+  - ✅ `add_edit_profile_screen.dart` - Add/edit profile
+  - ✅ `hotspot_host_details_screen.dart` - Host details
+  - ✅ `hotspot_hosts_screen.dart` - Hosts list
+  - ✅ `voucher_templates_dialog.dart` - Template dialog
+  - ✅ `print_preview_dialog.dart` - Print preview
+  - ✅ `voucher_qr_fullscreen.dart` - QR fullscreen
+  - ✅ `traffic_monitor_widgets.dart` - Traffic widget
+  - ✅ `combined_resource_chart.dart` - Resource chart
+  - ✅ `expandable_chart.dart` - Expandable chart
+  - ✅ `vouchers_list_screen.dart` - Voucher list
+
+- **Translation Keys Added**:
+  - Navigation: `dashboardNav`, `usersNav`, `hostsNav`, `settingsNav`, `settings`
+  - Common: `cancel`, `save`, `delete`, `edit`, `refresh`, `retry`, `close`, `ok`, `loading`, `copy`, `share`
+  - Onboarding: `onboardingWelcome`, `onboardingSubtitle`, `onboardingDescription`, `skip`, `next`, `back`, `continue_`
+  - Features: `whatYouCanDo`, `feature titles and descriptions`
+  - Login/Connect: `connect`, `connectionFailed`, `tryDemoData`, `connectionError`
+  - User Management: `addUserTitle`, `editUserTitle`, `fullName`, `passwordOptional`, `limitUptime`, `addUserSuccess`, `editUserSuccess`, `userDetails`, `name`, `ipAddress`, `macAddress`, `uptime`, `bytesUsed`, `status`, `deleteUser`, `enable`, `disable`, `generateVoucher`, `backToHome`, `lastSeen`, `connectedSince`, `filterAll`, `filterActive`, `filterInactive`, `selectedCount`, `alreadyDisabled`, `disabled`, `enabled`, `alreadyActive`, `userDeleted`, `noProfilesAvailable`, `loadingProfiles`, `failedToLoadProfiles`, `viewDetails`, `deleteProfile`, `profileDeleted`, `profileDetails`, `editProfile`, `addProfile`, `sharedUsers`, `rateLimit`, `validity`, `price`
+  - Voucher: `pleaseSelectProfile`, `notConnectedLoginFirst`, `failedToGenerateVouchers`, `usernamePasswordSeparate`, `usernameEqualPassword`, `characters`, `defaultNoProfilesFound`, `selectProfile`, `showUsers`, `totalVouchers`, `profileLabel`, `failedToShare`, `failedToPrint`, `failedToCreateScreenshot`, `vouchersCopied`, `voucherCopied`, `credentialsCopied`, `voucherDetailsCopied`, `scanVoucher`, `copiedToClipboard`
+  - Active Users: `logoutUser`, `failedToLogoutUser`, `details`, `logout`
+  - Hosts: `hotspotHosts`, `deviceDetails`, `hostDetails`, `removeHost`, `removeHostConfirmation`, `hostRemovedSuccessfully`, `blockMacAddress`, `blockMacConfirmation`, `macAddressBlocked`, `remove`, `block`
+  - User Details: `failedToRefresh`, `deleteUserConfirmation`, `failedToDeleteUser`, `failedToCreateUser`, `failedToUpdateUser`, `failedToSaveProfile`, `noProfilesAvailableCreateProfileFirst`
+  - Revenue: `noTransactionsToExport`, `failedToExport`, `allProfiles`, `thisWeek`, `thisMonth`, `thisQuarter`, `thisYear`
+  - Print: `previewAndPrint`, `printAll`, `customSettings`, `generate`
+  - Dashboard Widgets: `networkTraffic`, `live`, `moreInterfaces`, `tapToCollapse`, `systemResources`
+
+- **Bug Fixes**:
+  - Fixed `translations.dart` corruption (stray `}` closing class prematurely)
+  - Removed duplicate translation keys (`delete`, `edit`, `uptime`, `selectedCount`, `noProfilesAvailable`, etc.)
+  - Fixed "TextEditingController used after being disposed" in settings_screen.dart
+  - Fixed duplicate "Open Mikrotik Monitor" text on welcome/onboarding screens
+  - Removed `const` from widgets using `AppStrings.of(context)` to avoid const context errors
+
+- **Files Modified**:
+  - `lib/l10n/translations.dart` - Central translation file (created & maintained)
+  - All screen files listed above - Replaced hardcoded strings with translations
+
+### 2. Voucher Templates ✅
 **Customizable print templates for vouchers**
 
 - **Template Options**:
@@ -1042,4 +1110,4 @@ Choose a feature to implement:
 
 ---
 
-_Last Updated: March 28, 2026_
+_Last Updated: March 30, 2026_

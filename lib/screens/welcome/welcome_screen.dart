@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../services/onboarding_service.dart';
+import '../../services/cache_service.dart';
 import '../../l10n/translations.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -31,6 +32,27 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         context.go('/main/dashboard');
       } else {
         context.go('/setup');
+      }
+    }
+  }
+
+  Future<void> _enableDemoMode() async {
+    _showLoadingDialog();
+    try {
+      await OnboardingService.setDemoMode(true);
+      await OnboardingService.setSetupCompleted();
+      final cache = CacheService();
+      await cache.populateDemoData();
+      if (mounted) {
+        Navigator.of(context).pop();
+        context.go('/main/dashboard');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to enable demo mode: $e')),
+        );
       }
     }
   }
@@ -172,7 +194,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "Open Mikrotik Monitor",
+                    AppStrings.of(context).onboardingSubtitle,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 11,
@@ -207,7 +229,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         color: Color(0xFF1E293B),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       AppStrings.of(context).selectRouter,
                       style: TextStyle(
@@ -215,7 +237,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         color: Colors.grey[600],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     // Saved connections
                     Expanded(
                       child: _buildSavedConnectionsSection(),
@@ -252,19 +274,37 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => context.go('/main/dashboard'),
-                        child: Text(
-                          AppStrings.of(context).enterApp,
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    // Demo mode button - always available
+                    TextButton(
+                      onPressed: () => _enableDemoMode(),
+                      child: Text(
+                        AppStrings.of(context).tryDemoData,
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
                         ),
                       ),
+                    ),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final service = ref.watch(routerOSServiceProvider);
+                        if (!service.isConnected) {
+                          return const SizedBox.shrink();
+                        }
+                        return Center(
+                          child: TextButton(
+                            onPressed: () => context.go('/main/dashboard'),
+                            child: Text(
+                              AppStrings.of(context).enterApp,
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                letterSpacing: 2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -333,42 +373,45 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   }
 
   Widget _buildEmptyConnections() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          style: BorderStyle.solid,
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFFE2E8F0),
+            style: BorderStyle.solid,
+          ),
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.wifi_tethering_off_rounded,
-            size: 48,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            AppStrings.of(context).noRoutersSaved,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.wifi_tethering_off_rounded,
+              size: 48,
+              color: Colors.grey[400],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            AppStrings.of(context).tapToConnectFirstRouter,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[500],
+            const SizedBox(height: 12),
+            Text(
+              AppStrings.of(context).noRoutersSaved,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              AppStrings.of(context).tapToConnectFirstRouter,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

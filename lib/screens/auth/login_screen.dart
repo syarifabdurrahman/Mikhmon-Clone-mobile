@@ -5,6 +5,7 @@ import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../services/onboarding_service.dart';
+import '../../services/cache_service.dart';
 import '../../l10n/translations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -72,6 +73,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _hideLoadingDialog() {
     Navigator.of(context).pop();
+  }
+
+  Future<void> _enableDemoMode() async {
+    _showLoadingDialog();
+    try {
+      await OnboardingService.setDemoMode(true);
+      await OnboardingService.setSetupCompleted();
+      final cache = CacheService();
+      await cache.populateDemoData();
+      if (mounted) {
+        Navigator.of(context).pop();
+        context.go('/main/dashboard');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to enable demo mode: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _login({RouterConnection? savedConnection}) async {
@@ -192,7 +214,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "Open Mikrotik Monitor",
+                    AppStrings.of(context).onboardingSubtitle,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 10,
@@ -295,16 +317,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          Expanded(
-                            flex: 1,
+                          SizedBox(
+                            width: 120,
                             child: TextFormField(
                               controller: _portController,
                               focusNode: _portFocusNode,
-                              onFieldSubmitted: (_) =>
-                                  _usernameFocusNode.requestFocus(),
                               decoration: InputDecoration(
                                 labelText: AppStrings.of(context).port,
-                                hintText: AppStrings.of(context).portHint,
+                                hintText: '8728',
+                                prefixIcon: Tooltip(
+                                  message: 'RouterOS API port (default: 8728)',
+                                  child: Icon(Icons.info_outline_rounded,
+                                      size: 18),
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -351,6 +376,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           hintText: AppStrings.of(context).optional,
                           prefixIcon: const Icon(Icons.lock_rounded, size: 20),
                           suffixIcon: IconButton(
+                            tooltip: _obscurePassword
+                                ? 'Show password'
+                                : 'Hide password',
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility
@@ -433,7 +461,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => _enableDemoMode(),
+                          child: Text(
+                            AppStrings.of(context).tryDemoData,
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       const Divider(),
                       const SizedBox(height: 16),
                       _buildSavedConnectionsSection(),

@@ -255,6 +255,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginScreen(),
       ),
       ShellRoute(
+        redirect: (context, state) async {
+          final container = ProviderScope.containerOf(context);
+          final service = container.read(routerOSServiceProvider);
+          if (!service.isConnected) {
+            return '/';
+          }
+          return null;
+        },
         builder: (context, state, child) => MainShellScreen(child: child),
         routes: [
           GoRoute(

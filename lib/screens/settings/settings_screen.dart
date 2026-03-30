@@ -6,6 +6,7 @@ import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../services/template_service.dart';
 import '../../services/cache_service.dart';
+import '../../services/onboarding_service.dart';
 import '../../l10n/locale_provider.dart';
 import '../../l10n/translations.dart';
 
@@ -325,8 +326,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       : AppStrings.of(context).notSet,
               onTap: () => _showCompanyDialog(context, ref, cache),
             ),
+            Divider(color: context.appOnSurface.withValues(alpha: 0.08)),
+            // Reset Onboarding
+            _buildSettingsTile(
+              context,
+              icon: Icons.refresh_rounded,
+              title: 'Reset Onboarding',
+              subtitle: 'Show welcome screens again',
+              onTap: () => _showResetOnboardingDialog(context),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showResetOnboardingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Reset Onboarding?'),
+        content: Text(
+            'You will see the welcome screens next time you open the app.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppStrings.of(context).cancel),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await OnboardingService.clearAll();
+              if (context.mounted) {
+                context.go('/');
+              }
+            },
+            child: Text('Reset'),
+          ),
+        ],
       ),
     );
   }
@@ -1054,6 +1091,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(authStateProvider.notifier).logout();
+              await OnboardingService.setDemoMode(false);
               if (context.mounted) {
                 context.go('/');
               }
@@ -1173,7 +1211,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               // Tagline
               Text(
-                'Open Mikrotik Monitor',
+                AppStrings.of(context).onboardingSubtitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: context.appSecondary,
                       fontWeight: FontWeight.w600,

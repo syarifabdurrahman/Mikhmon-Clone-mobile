@@ -199,15 +199,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Open Mikrotik Monitor',
-            style: TextStyle(
-              fontSize: 16,
-              color: context.appOnSurface.withValues(alpha: 0.6),
-              letterSpacing: 0.5,
-            ),
-          ),
           const SizedBox(height: 24),
           Text(
             AppStrings.of(context).onboardingDescription,
