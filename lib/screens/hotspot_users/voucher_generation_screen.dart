@@ -6,6 +6,7 @@ import '../../providers/app_providers.dart';
 import '../../utils/validity_parser.dart';
 import '../../services/models/voucher.dart';
 import '../../services/log_service.dart';
+import '../../l10n/translations.dart';
 import 'voucher_preview_screen.dart';
 
 // Enum for user mode
@@ -169,7 +170,7 @@ class _VoucherGenerationScreenState
     if (_selectedProfile == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select a profile')),
+        SnackBar(content: Text(AppStrings.of(context).pleaseSelectProfile)),
       );
       return;
     }
@@ -184,7 +185,7 @@ class _VoucherGenerationScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Not connected to RouterOS. Please login first.'),
+            content: Text(AppStrings.of(context).notConnectedLoginFirst),
             backgroundColor: context.appError,
           ),
         );
@@ -295,7 +296,9 @@ class _VoucherGenerationScreenState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to generate vouchers: $e'),
+            content: Text(AppStrings.of(context)
+                .failedToGenerateVouchers
+                .replaceAll('%s', e.toString())),
             backgroundColor: context.appError,
             duration: const Duration(seconds: 5),
           ),
@@ -469,8 +472,10 @@ class _VoucherGenerationScreenState
                       _buildDropdown<String>(
                         label: 'Server',
                         value: _selectedServer,
-                        items: const [
-                          DropdownMenuItem(value: 'all', child: Text('all')),
+                        items: [
+                          DropdownMenuItem(
+                              value: 'all',
+                              child: Text(AppStrings.of(context).filterAll)),
                         ],
                         icon: Icons.router,
                         onChanged: (value) =>
@@ -483,14 +488,16 @@ class _VoucherGenerationScreenState
                       _buildDropdown<UserMode>(
                         label: 'User Mode',
                         value: _userMode,
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: UserMode.up,
-                            child: Text('Username & Password (Separate)'),
+                            child: Text(AppStrings.of(context)
+                                .usernamePasswordSeparate),
                           ),
                           DropdownMenuItem(
                             value: UserMode.vc,
-                            child: Text('Username = Password (Voucher)'),
+                            child: Text(
+                                AppStrings.of(context).usernameEqualPassword),
                           ),
                         ],
                         icon: Icons.person,
@@ -512,7 +519,9 @@ class _VoucherGenerationScreenState
                         items: [4, 5, 6, 7, 8].map((length) {
                           return DropdownMenuItem(
                             value: length,
-                            child: Text('$length characters'),
+                            child: Text(AppStrings.of(context)
+                                .characters
+                                .replaceAll('%d', length.toString())),
                           );
                         }).toList(),
                         icon: Icons.text_fields,
@@ -566,9 +575,10 @@ class _VoucherGenerationScreenState
                                   );
                                 }).toList()
                               : [
-                                  const DropdownMenuItem(
+                                  DropdownMenuItem(
                                     value: 'default',
-                                    child: Text('default (no profiles found)'),
+                                    child: Text(AppStrings.of(context)
+                                        .defaultNoProfilesFound),
                                   ),
                                 ];
 
@@ -577,7 +587,7 @@ class _VoucherGenerationScreenState
                             value: validValue,
                             items: items,
                             icon: Icons.pie_chart,
-                            hint: const Text('Select Profile'),
+                            hint: Text(AppStrings.of(context).selectProfile),
                             onChanged: (value) =>
                                 setState(() => _selectedProfile = value),
                             validator: (value) => value == null
@@ -602,9 +612,11 @@ class _VoucherGenerationScreenState
                             _buildDropdown<String>(
                               label: 'Profile',
                               value: _selectedProfile,
-                              items: const [
+                              items: [
                                 DropdownMenuItem(
-                                    value: 'default', child: Text('default')),
+                                    value: 'default',
+                                    child: Text(AppStrings.of(context)
+                                        .defaultNoProfilesFound)),
                               ],
                               icon: Icons.pie_chart,
                               onChanged: (value) =>
@@ -714,7 +726,7 @@ class _VoucherGenerationScreenState
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
-                                  child: Text('Show Users'),
+                                  child: Text(AppStrings.of(context).showUsers),
                                 ),
                               ),
                             ],

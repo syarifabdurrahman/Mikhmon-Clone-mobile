@@ -6,6 +6,7 @@ import '../../utils/validators.dart';
 import '../../utils/validity_parser.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../l10n/translations.dart';
 
 class AddHotspotUserScreen extends ConsumerStatefulWidget {
   const AddHotspotUserScreen({super.key});
@@ -66,7 +67,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('No profiles available. Please create a profile first.'),
+              content: Text(
+                  AppStrings.of(context).noProfilesAvailableCreateProfileFirst),
               backgroundColor: context.appError,
             ),
           );
@@ -89,7 +91,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Not connected to RouterOS. Please login first.'),
+              content: Text(AppStrings.of(context).notConnectedLoginFirst),
               backgroundColor: context.appError,
             ),
           );
@@ -140,7 +142,9 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create user: $e'),
+            content: Text(AppStrings.of(context)
+                .failedToCreateUser
+                .replaceAll('%s', e.toString())),
             backgroundColor: context.appError,
           ),
         );
@@ -185,20 +189,20 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                _buildHeader(),
-                SizedBox(height: 24),
-                _buildUsernameField(),
-                SizedBox(height: 16),
-                _buildPasswordField(),
-                SizedBox(height: 16),
-                _buildConfirmPasswordField(),
-                SizedBox(height: 16),
-                _buildProfileSelector(),
-                SizedBox(height: 16),
-                _buildCommentField(),
-                SizedBox(height: 24),
-                _buildSubmitButton(),
-              ],
+                  _buildHeader(),
+                  SizedBox(height: 24),
+                  _buildUsernameField(),
+                  SizedBox(height: 16),
+                  _buildPasswordField(),
+                  SizedBox(height: 16),
+                  _buildConfirmPasswordField(),
+                  SizedBox(height: 16),
+                  _buildProfileSelector(),
+                  SizedBox(height: 16),
+                  _buildCommentField(),
+                  SizedBox(height: 24),
+                  _buildSubmitButton(),
+                ],
               ),
             ),
           ),
@@ -408,13 +412,13 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
                         child: Text(
                           'No profiles available. Please create a profile first.',
                           style: TextStyle(
-                              color: context.appOnSurface
-                                  .withValues(alpha: 0.7)),
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.7)),
                         ),
                       ),
                       TextButton(
                         onPressed: () => context.go('/main/profiles'),
-                        child: Text('Create Profile'),
+                        child: Text(AppStrings.of(context).addProfile),
                       ),
                     ],
                   ),
@@ -515,7 +519,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.error_outline_rounded, color: context.appError),
+                      Icon(Icons.error_outline_rounded,
+                          color: context.appError),
                       SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -529,7 +534,8 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
                             Text(
                               error.toString(),
                               style: TextStyle(
-                                color: context.appOnSurface.withValues(alpha: 0.6),
+                                color:
+                                    context.appOnSurface.withValues(alpha: 0.6),
                                 fontSize: 12,
                               ),
                             ),
@@ -539,7 +545,9 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
                       IconButton(
                         icon: Icon(Icons.refresh),
                         onPressed: () async {
-                          await ref.read(userProfileProvider.notifier).refresh();
+                          await ref
+                              .read(userProfileProvider.notifier)
+                              .refresh();
                         },
                         tooltip: 'Retry',
                       ),
@@ -592,8 +600,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: context.appPrimary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              context.appOnSurface.withValues(alpha: 0.1),
+          disabledBackgroundColor: context.appOnSurface.withValues(alpha: 0.1),
         ),
         child: _isLoading
             ? SizedBox(

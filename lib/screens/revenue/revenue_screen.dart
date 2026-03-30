@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../utils/filter_utils.dart';
+import '../../l10n/translations.dart';
 
 class RevenueScreen extends ConsumerStatefulWidget {
   const RevenueScreen({super.key});
@@ -42,7 +43,8 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
     if (income == null || income.transactions.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No transactions to export')),
+          SnackBar(
+              content: Text(AppStrings.of(context).noTransactionsToExport)),
         );
       }
       return;
@@ -79,7 +81,9 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to export: $e'),
+            content: Text(AppStrings.of(context)
+                .failedToExport
+                .replaceAll('%s', e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -122,13 +126,19 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
                   _timePeriod = period;
                 });
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: TimePeriod.week, child: Text('This Week')),
+              itemBuilder: (context) => [
                 PopupMenuItem(
-                    value: TimePeriod.month, child: Text('This Month')),
+                    value: TimePeriod.week,
+                    child: Text(AppStrings.of(context).thisWeek)),
                 PopupMenuItem(
-                    value: TimePeriod.quarter, child: Text('This Quarter')),
-                PopupMenuItem(value: TimePeriod.year, child: Text('This Year')),
+                    value: TimePeriod.month,
+                    child: Text(AppStrings.of(context).thisMonth)),
+                PopupMenuItem(
+                    value: TimePeriod.quarter,
+                    child: Text(AppStrings.of(context).thisQuarter)),
+                PopupMenuItem(
+                    value: TimePeriod.year,
+                    child: Text(AppStrings.of(context).thisYear)),
               ],
             ),
             IconButton(
@@ -897,7 +907,8 @@ class _ByProfileTab extends ConsumerWidget {
         );
       },
       loading: () => Center(child: CircularProgressIndicator()),
-      error: (_, __) => Center(child: Text('Error loading data')),
+      error: (_, __) =>
+          Center(child: Text(AppStrings.of(context).connectionError)),
     );
   }
 
@@ -1134,7 +1145,8 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
         );
       },
       loading: () => Center(child: CircularProgressIndicator()),
-      error: (_, __) => Center(child: Text('Error loading data')),
+      error: (_, __) =>
+          Center(child: Text(AppStrings.of(context).connectionError)),
     );
   }
 
@@ -1264,7 +1276,7 @@ class _FilterBar extends StatelessWidget {
               child: Row(
                 children: [
                   FilterChip(
-                    label: Text('All Profiles'),
+                    label: Text(AppStrings.of(context).allProfiles),
                     selected: selectedProfile == null,
                     onSelected: (selected) {
                       onProfileChanged(selected ? null : '');

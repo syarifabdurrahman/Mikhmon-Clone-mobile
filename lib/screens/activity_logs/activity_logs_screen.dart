@@ -7,6 +7,7 @@ import '../../services/models/activity_log.dart';
 import '../../services/log_service.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../l10n/translations.dart';
 
 /// Provider for activity logs
 final activityLogsProvider =
@@ -365,7 +366,7 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
     logsAsync.whenData((logs) {
       if (logs.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No logs to export')),
+          SnackBar(content: Text(AppStrings.of(context).noLogsToExport)),
         );
         return;
       }
@@ -374,7 +375,7 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
       // In a real app, you would use LogService.exportToCsv() and save/share the CSV file
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Exported ${logs.length} log entries'),
+          content: Text(AppStrings.of(context).exportedLogEntries.replaceFirst('%d', logs.length.toString())),
           action: SnackBarAction(
             label: 'OK',
             onPressed: () {},
@@ -409,7 +410,7 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(foregroundColor: context.appError),
-            child: const Text('Clear'),
+            child: Text(AppStrings.of(context).clear),
           ),
         ],
       ),
@@ -419,7 +420,7 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
       await ref.read(activityLogsProvider.notifier).clearLogs();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logs cleared')),
+          SnackBar(content: Text(AppStrings.of(context).logsCleared)),
         );
       }
     }

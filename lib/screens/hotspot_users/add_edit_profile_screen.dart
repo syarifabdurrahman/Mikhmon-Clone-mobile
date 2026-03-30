@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../l10n/translations.dart';
 
 class AddEditProfileScreen extends ConsumerStatefulWidget {
   final UserProfile? profile;
@@ -14,7 +15,8 @@ class AddEditProfileScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AddEditProfileScreen> createState() => _AddEditProfileScreenState();
+  ConsumerState<AddEditProfileScreen> createState() =>
+      _AddEditProfileScreenState();
 }
 
 class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
@@ -49,18 +51,19 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
   void _loadProfileData(UserProfile profile) {
     _nameController.text = profile.name;
     _rateLimitUploadController.text = profile.rateLimitUpload ?? 'unlimited';
-    _rateLimitDownloadController.text = profile.rateLimitDownload ?? 'unlimited';
+    _rateLimitDownloadController.text =
+        profile.rateLimitDownload ?? 'unlimited';
     _validityController.text = profile.validity ?? 'unlimited';
     _priceController.text = profile.price?.toString() ?? '0.0';
     _sharedUsersController.text = profile.sharedUsers?.toString() ?? '1';
     _autologout = profile.autologout ?? true;
 
-    _unlimitedRateLimit = profile.rateLimitUpload == null &&
-        profile.rateLimitDownload == null;
-    _unlimitedValidity = profile.validity == null ||
-        profile.validity == 'unlimited';
-    _unlimitedSharedUsers = profile.sharedUsers == null ||
-        profile.sharedUsers == 0;
+    _unlimitedRateLimit =
+        profile.rateLimitUpload == null && profile.rateLimitDownload == null;
+    _unlimitedValidity =
+        profile.validity == null || profile.validity == 'unlimited';
+    _unlimitedSharedUsers =
+        profile.sharedUsers == null || profile.sharedUsers == 0;
   }
 
   @override
@@ -87,11 +90,16 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
       final profile = UserProfile(
         id: widget.profile?.id ?? '*${DateTime.now().millisecondsSinceEpoch}',
         name: _nameController.text.trim().toLowerCase(),
-        rateLimitUpload: _unlimitedRateLimit ? null : _rateLimitUploadController.text.trim(),
-        rateLimitDownload: _unlimitedRateLimit ? null : _rateLimitDownloadController.text.trim(),
+        rateLimitUpload:
+            _unlimitedRateLimit ? null : _rateLimitUploadController.text.trim(),
+        rateLimitDownload: _unlimitedRateLimit
+            ? null
+            : _rateLimitDownloadController.text.trim(),
         validity: _unlimitedValidity ? null : _validityController.text.trim(),
         price: double.tryParse(_priceController.text) ?? 0.0,
-        sharedUsers: _unlimitedSharedUsers ? null : int.tryParse(_sharedUsersController.text) ?? 1,
+        sharedUsers: _unlimitedSharedUsers
+            ? null
+            : int.tryParse(_sharedUsersController.text) ?? 1,
         autologout: _autologout,
       );
 
@@ -116,7 +124,9 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save profile: $e'),
+            content: Text(AppStrings.of(context)
+                .failedToSaveProfile
+                .replaceAll('%s', e.toString())),
             backgroundColor: context.appError,
           ),
         );
@@ -161,29 +171,29 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             child: Form(
               key: _formKey,
               child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(isEditing),
-                SizedBox(height: 24),
-                _buildNameField(),
-                SizedBox(height: 16),
-                _buildPriceField(),
-                SizedBox(height: 24),
-                _buildRateLimitSection(),
-                SizedBox(height: 16),
-                _buildValiditySection(),
-                SizedBox(height: 16),
-                _buildSharedUsersSection(),
-                SizedBox(height: 16),
-                _buildAutologoutSwitch(),
-                SizedBox(height: 24),
-                _buildSubmitButton(isEditing),
-              ],
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(isEditing),
+                  SizedBox(height: 24),
+                  _buildNameField(),
+                  SizedBox(height: 16),
+                  _buildPriceField(),
+                  SizedBox(height: 24),
+                  _buildRateLimitSection(),
+                  SizedBox(height: 16),
+                  _buildValiditySection(),
+                  SizedBox(height: 16),
+                  _buildSharedUsersSection(),
+                  SizedBox(height: 16),
+                  _buildAutologoutSwitch(),
+                  SizedBox(height: 24),
+                  _buildSubmitButton(isEditing),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -241,7 +251,8 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
           decoration: InputDecoration(
             hintText: 'e.g., premium, 1hour, trial',
             prefixIcon: Icon(Icons.card_membership_rounded),
-            helperText: 'Profile names should be lowercase (e.g., default, premium)',
+            helperText:
+                'Profile names should be lowercase (e.g., default, premium)',
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
@@ -417,7 +428,8 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
               decoration: InputDecoration(
                 hintText: '1h',
                 prefixIcon: Icon(Icons.access_time_rounded),
-                helperText: 'e.g., 5s (sec), 5m (min), 1h (hour), 1d (day), 1mo (month)',
+                helperText:
+                    'e.g., 5s (sec), 5m (min), 1h (hour), 1d (day), 1mo (month)',
               ),
               validator: _unlimitedValidity
                   ? null
@@ -469,7 +481,8 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
               decoration: InputDecoration(
                 hintText: '1',
                 prefixIcon: Icon(Icons.people_rounded),
-                helperText: 'Number of users that can share this profile (0 = unlimited)',
+                helperText:
+                    'Number of users that can share this profile (0 = unlimited)',
               ),
               validator: _unlimitedSharedUsers
                   ? null

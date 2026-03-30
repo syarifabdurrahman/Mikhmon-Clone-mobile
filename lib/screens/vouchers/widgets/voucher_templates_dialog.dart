@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
+import '../../../l10n/translations.dart';
 
 /// Predefined voucher template for quick generation
 class VoucherTemplate {
@@ -178,7 +179,7 @@ class VoucherTemplatesDialog extends StatelessWidget {
                     // Navigate to custom generation
                   },
                   icon: const Icon(Icons.tune_rounded),
-                  label: const Text('Custom Settings'),
+                  label: Text(AppStrings.of(context).customSettings),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: context.appPrimary,
                     side: BorderSide(color: context.appPrimary),
@@ -442,7 +443,7 @@ class _TemplateGenerateDialogState extends State<TemplateGenerateDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            'Cancel',
+            AppStrings.of(context).cancel,
             style:
                 TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
           ),
@@ -457,8 +458,8 @@ class _TemplateGenerateDialogState extends State<TemplateGenerateDialog> {
             ));
             Navigator.pop(context);
           },
-          icon: const Icon(Icons.bolt_rounded, size: 18),
-          label: const Text('Generate'),
+          icon: Icon(Icons.bolt_rounded, size: 18),
+          label: Text(AppStrings.of(context).generate),
           style: ElevatedButton.styleFrom(
             backgroundColor: template.color,
             foregroundColor: Colors.white,

@@ -7,6 +7,7 @@ import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../utils/performance_utils.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../l10n/translations.dart';
 
 class HotspotActiveUsersScreen extends ConsumerStatefulWidget {
   const HotspotActiveUsersScreen({super.key});
@@ -281,13 +282,13 @@ class _HotspotActiveUsersScreenState
               SizedBox(width: 12),
               Expanded(
                 child: SegmentedButton<String>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
-                      value: 'All',
-                      label: Text('All'),
+                      value: 'all',
+                      label: Text(AppStrings.of(context).filterAll),
                     ),
                     ButtonSegment(
-                      value: 'hotspot1',
+                      value: 'HS1',
                       label: Text('HS1'),
                     ),
                   ],
@@ -511,7 +512,7 @@ class _HotspotActiveUsersScreenState
                       _confirmLogout(user);
                     },
                     icon: Icon(Icons.logout_rounded),
-                    label: Text('Logout User'),
+                    label: Text(AppStrings.of(context).logoutUser),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: context.appError,
                       foregroundColor: Colors.white,
@@ -565,13 +566,13 @@ class _HotspotActiveUsersScreenState
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: context.appSurface,
-        title: Text('Logout User'),
+        title: Text(AppStrings.of(context).logoutUser),
         content: Text(
             'Are you sure you want to logout "${user.username}" from ${user.address}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel'),
+            child: Text(AppStrings.of(context).cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -593,7 +594,9 @@ class _HotspotActiveUsersScreenState
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to logout user: $e'),
+                      content: Text(AppStrings.of(context)
+                          .failedToLogoutUser
+                          .replaceAll('%s', e.toString())),
                       backgroundColor: context.appError,
                     ),
                   );
@@ -603,7 +606,7 @@ class _HotspotActiveUsersScreenState
             style: TextButton.styleFrom(
               foregroundColor: context.appError,
             ),
-            child: Text('Logout'),
+            child: Text(AppStrings.of(context).logout),
           ),
         ],
       ),
@@ -829,7 +832,7 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                   TextButton.icon(
                     onPressed: widget.onDetails,
                     icon: Icon(Icons.info_outline_rounded, size: 18),
-                    label: Text('Details'),
+                    label: Text(AppStrings.of(context).details),
                     style: TextButton.styleFrom(
                       foregroundColor: context.appPrimary,
                     ),
@@ -838,7 +841,7 @@ class _UserCardWidgetState extends State<_UserCardWidget> {
                   ElevatedButton.icon(
                     onPressed: widget.onLogout,
                     icon: Icon(Icons.logout_rounded, size: 18),
-                    label: Text('Logout'),
+                    label: Text(AppStrings.of(context).logout),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: context.appError.withValues(alpha: 0.1),
                       foregroundColor: context.appError,

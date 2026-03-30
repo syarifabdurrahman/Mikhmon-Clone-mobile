@@ -12,6 +12,7 @@ import 'widgets/traffic_monitor_widgets.dart';
 import 'widgets/at_a_glance_card.dart';
 import 'widgets/system_alerts_card.dart';
 import 'widgets/quick_actions_grid.dart';
+import '../../l10n/translations.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -342,7 +343,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         backgroundColor: context.appPrimary,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text('Retry'),
+                      child: Text(AppStrings.of(context).retry),
                     ),
                   ],
                 ),
@@ -686,7 +687,9 @@ class _UserSearchDelegate extends SearchDelegate<String> {
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(
-        child: Text('Error: $error'),
+        child: Text(AppStrings.of(context)
+            .errorPrefix
+            .replaceAll('%s', error.toString())),
       ),
     );
   }

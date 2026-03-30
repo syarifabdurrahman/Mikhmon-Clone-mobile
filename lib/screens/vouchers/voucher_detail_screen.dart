@@ -7,6 +7,7 @@ import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/cached_qr_image.dart';
+import '../../l10n/translations.dart';
 
 class VoucherDetailScreen extends ConsumerStatefulWidget {
   final Voucher voucher;
@@ -284,7 +285,7 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _copyVoucher,
                       icon: Icon(Icons.copy_rounded),
-                      label: Text('Copy'),
+                      label: Text(AppStrings.of(context).copy),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: context.appPrimary,
                         foregroundColor: Colors.white,
@@ -300,7 +301,7 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _shareVoucher,
                       icon: Icon(Icons.share_rounded),
-                      label: Text('Share'),
+                      label: Text(AppStrings.of(context).share),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: context.appSecondary,
                         foregroundColor: Colors.white,
@@ -329,7 +330,7 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Voucher copied to clipboard'),
+          content: Text(AppStrings.of(context).voucherCopied),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -414,7 +415,7 @@ class _CredentialRow extends StatelessWidget {
               Clipboard.setData(ClipboardData(text: value));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Copied'),
+                  content: Text(AppStrings.of(context).copiedToClipboard),
                   behavior: SnackBarBehavior.floating,
                   duration: const Duration(seconds: 1),
                 ),

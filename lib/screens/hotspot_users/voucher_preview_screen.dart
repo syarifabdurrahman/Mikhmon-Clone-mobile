@@ -11,6 +11,7 @@ import '../../services/models/voucher.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/cached_qr_image.dart';
+import '../../l10n/translations.dart';
 
 class VoucherPreviewScreen extends ConsumerStatefulWidget {
   final List<Voucher> vouchers;
@@ -205,8 +206,9 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text('${widget.vouchers.length} vouchers copied to clipboard'),
+          content: Text(AppStrings.of(context)
+              .vouchersCopied
+              .replaceAll('%d', '${widget.vouchers.length}')),
           behavior: SnackBarBehavior.floating,
           action: SnackBarAction(
             label: 'DISMISS',
@@ -224,7 +226,7 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Voucher copied to clipboard'),
+          content: Text(AppStrings.of(context).voucherCopied),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -240,7 +242,10 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share: $e')),
+          SnackBar(
+              content: Text(AppStrings.of(context)
+                  .failedToShare
+                  .replaceAll('%s', e.toString()))),
         );
       }
     }
@@ -261,7 +266,10 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share: $e')),
+          SnackBar(
+              content: Text(AppStrings.of(context)
+                  .failedToShare
+                  .replaceAll('%s', e.toString()))),
         );
       }
     }
@@ -279,7 +287,10 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to print vouchers: $e')),
+          SnackBar(
+              content: Text(AppStrings.of(context)
+                  .failedToPrint
+                  .replaceAll('%s', e.toString()))),
         );
       }
     } finally {
@@ -335,8 +346,12 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Text('Total: ${widget.vouchers.length}'),
-                    Text('Profile: ${widget.profileName}'),
+                    Text(AppStrings.of(context)
+                        .totalVouchers
+                        .replaceAll('%d', '${widget.vouchers.length}')),
+                    Text(AppStrings.of(context)
+                        .profileLabel
+                        .replaceAll('%s', widget.profileName)),
                   ],
                 ),
                 SizedBox(height: 16),
@@ -391,7 +406,10 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create screenshot: $e')),
+          SnackBar(
+              content: Text(AppStrings.of(context)
+                  .failedToCreateScreenshot
+                  .replaceAll('%s', e.toString()))),
         );
       }
     } finally {
@@ -748,7 +766,7 @@ class _FullScreenQRView extends StatelessWidget {
           icon: Icon(Icons.close_rounded),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Scan Voucher'),
+        title: Text(AppStrings.of(context).scanVoucher),
         actions: [
           IconButton(
             icon: Icon(Icons.copy_rounded),
@@ -758,7 +776,7 @@ class _FullScreenQRView extends StatelessWidget {
               Clipboard.setData(ClipboardData(text: text));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Copied to clipboard'),
+                  content: Text(AppStrings.of(context).copiedToClipboard),
                   behavior: SnackBarBehavior.floating,
                   duration: const Duration(seconds: 2),
                 ),

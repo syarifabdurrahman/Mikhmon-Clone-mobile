@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/models/voucher.dart';
 import '../../../widgets/cached_qr_image.dart';
+import '../../../l10n/translations.dart';
 
 /// Print preview dialog showing vouchers before printing
 class PrintPreviewDialog extends StatefulWidget {
@@ -326,7 +327,7 @@ class _PrintPreviewDialogState extends State<PrintPreviewDialog> {
               Navigator.pop(context);
             },
             icon: const Icon(Icons.print_rounded, size: 18),
-            label: const Text('Print All'),
+            label: Text(AppStrings.of(context).printAll),
             style: ElevatedButton.styleFrom(
               backgroundColor: context.appPrimary,
               foregroundColor: Colors.white,
@@ -473,7 +474,7 @@ class _PrintSettingsDialogState extends State<PrintSettingsDialog> {
             backgroundColor: context.appPrimary,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Preview & Print'),
+          child: Text(AppStrings.of(context).previewAndPrint),
         ),
       ],
     );

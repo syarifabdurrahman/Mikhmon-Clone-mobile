@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/global_search.dart';
+import '../../l10n/translations.dart';
 
 class MainShellScreen extends ConsumerStatefulWidget {
   final Widget child;
@@ -96,11 +97,19 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
             _navigateToTab(index);
           },
           items: [
-            TabItem(icon: Icons.dashboard_rounded, title: 'Dash'),
-            TabItem(icon: Icons.people_rounded, title: 'Users'),
+            TabItem(
+                icon: Icons.dashboard_rounded,
+                title: AppStrings.of(context).dashboardNav),
+            TabItem(
+                icon: Icons.people_rounded,
+                title: AppStrings.of(context).usersNav),
             TabItem(icon: Icons.add_rounded, title: ''),
-            TabItem(icon: Icons.router_rounded, title: 'Hosts'),
-            TabItem(icon: Icons.settings_rounded, title: 'Settings'),
+            TabItem(
+                icon: Icons.router_rounded,
+                title: AppStrings.of(context).hostsNav),
+            TabItem(
+                icon: Icons.settings_rounded,
+                title: AppStrings.of(context).settingsNav),
           ],
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/resource_history.dart';
+import '../../../l10n/translations.dart';
 
 class CombinedResourceChart extends StatefulWidget {
   final ResourceHistoryNotifier resourceHistory;
@@ -334,7 +335,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('System Resources',
+                          Text(AppStrings.of(context).systemResources,
                               style: TextStyle(
                                   color: context.appOnSurface
                                       .withValues(alpha: 0.7),
@@ -353,7 +354,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                               ],
                             )
                           else
-                            Text('Loading...',
+                            Text(AppStrings.of(context).loading,
                                 style: TextStyle(
                                     color: context.appOnSurface
                                         .withValues(alpha: 0.5),
@@ -375,7 +376,7 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
                                 size: isSmallScreen ? 10 : 12,
                                 color: context.appPrimary),
                             const SizedBox(width: 4),
-                            Text('LIVE',
+                            Text(AppStrings.of(context).live,
                                 style: TextStyle(
                                     color: context.appPrimary,
                                     fontSize: isSmallScreen ? 9 : 10,

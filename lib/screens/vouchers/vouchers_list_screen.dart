@@ -13,6 +13,7 @@ import '../../widgets/skeleton_loader.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/back_to_top_fab.dart';
 import 'voucher_detail_screen.dart';
+import '../../l10n/translations.dart';
 
 class VouchersListScreen extends ConsumerStatefulWidget {
   const VouchersListScreen({super.key});
@@ -61,7 +62,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
     final filtered = _filterVouchers(vouchers);
     if (filtered.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No vouchers to print')),
+        SnackBar(content: Text(AppStrings.of(context).noVouchersToPrint)),
       );
       return;
     }
@@ -129,7 +130,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppStrings.of(context).delete),
           ),
         ],
       ),
@@ -232,7 +233,9 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                   tooltip: 'Back',
                 ),
           title: _isSelectionMode
-              ? Text('${_selectedVoucherIds.length} selected')
+              ? Text(AppStrings.of(context)
+                  .selectedCount
+                  .replaceFirst('%d', _selectedVoucherIds.length.toString()))
               : _buildTitleWithBadge(context, vouchersAsync),
           actions: _isSelectionMode
               ? [
@@ -287,7 +290,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                                 width: _currentSort == VoucherSort.newest
                                     ? 8
                                     : 24),
-                            Text('Newest First'),
+                            Text(AppStrings.of(context).newestFirst),
                           ],
                         ),
                       ),
@@ -302,7 +305,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                                 width: _currentSort == VoucherSort.oldest
                                     ? 8
                                     : 24),
-                            Text('Oldest First'),
+                            Text(AppStrings.of(context).oldestFirst),
                           ],
                         ),
                       ),
@@ -315,7 +318,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                                   size: 18, color: context.appPrimary),
                             SizedBox(
                                 width: _currentSort == VoucherSort.az ? 8 : 24),
-                            Text('A to Z'),
+                            Text(AppStrings.of(context).aToZ),
                           ],
                         ),
                       ),
@@ -361,7 +364,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                         Icon(Icons.error_outline,
                             size: 64, color: context.appError),
                         SizedBox(height: 16),
-                        Text('Error loading vouchers',
+                        Text(AppStrings.of(context).errorLoadingVouchers,
                             style: TextStyle(color: context.appOnBackground)),
                         SizedBox(height: 8),
                         Text(error.toString(),
@@ -371,7 +374,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                         SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _refreshVouchers,
-                          child: Text('Retry'),
+                          child: Text(AppStrings.of(context).retry),
                         ),
                       ],
                     ),
@@ -565,22 +568,23 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: context.appSurface,
-        title: Text('Delete Voucher',
+        title: Text(AppStrings.of(context).deleteVoucherTitle,
             style: TextStyle(color: context.appOnSurface)),
-        content: Text('Delete voucher "${voucher.username}"?',
+        content: Text(
+            AppStrings.of(context).deleteVoucherMessage(voucher.username),
             style:
                 TextStyle(color: context.appOnSurface.withValues(alpha: 0.7))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('Cancel',
+            child: Text(AppStrings.of(context).cancel,
                 style: TextStyle(
                     color: context.appOnSurface.withValues(alpha: 0.7))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppStrings.of(context).delete),
           ),
         ],
       ),
@@ -590,8 +594,8 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
       await ref.read(vouchersProvider.notifier).deleteVoucher(voucher.username);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Voucher deleted'),
-            behavior: SnackBarBehavior.floating));
+          content: Text(AppStrings.of(context).voucherDeleted),
+        ));
       }
     }
   }

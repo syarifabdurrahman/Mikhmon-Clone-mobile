@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../theme/app_theme.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/models.dart';
+import '../../../l10n/translations.dart';
 
 class TrafficMonitorCard extends ConsumerStatefulWidget {
   const TrafficMonitorCard({super.key});
@@ -81,7 +82,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                             color: context.appPrimary, size: 20),
                       ),
                       const SizedBox(width: 12),
-                      Text('Network Traffic',
+                      Text(AppStrings.of(context).networkTraffic,
                           style: TextStyle(
                               color:
                                   context.appOnSurface.withValues(alpha: 0.7),
@@ -103,7 +104,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                                     color: Colors.green,
                                     shape: BoxShape.circle)),
                             const SizedBox(width: 4),
-                            Text('LIVE',
+                            Text(AppStrings.of(context).live,
                                 style: TextStyle(
                                     color: Colors.green.shade700,
                                     fontSize: 9,
@@ -127,7 +128,10 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                   if (interfaces.length > 4 && !_isExpanded)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text('+${interfaces.length - 4} more interfaces',
+                      child: Text(
+                          AppStrings.of(context)
+                              .moreInterfaces
+                              .replaceAll('%d', '${interfaces.length - 4}'),
                           style: TextStyle(
                               color:
                                   context.appOnSurface.withValues(alpha: 0.5),
@@ -136,7 +140,7 @@ class _TrafficMonitorCardState extends ConsumerState<TrafficMonitorCard> {
                   if (_isExpanded)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text('Tap to collapse',
+                      child: Text(AppStrings.of(context).tapToCollapse,
                           style: TextStyle(
                               color:
                                   context.appOnSurface.withValues(alpha: 0.4),

@@ -14,6 +14,7 @@ import 'edit_hotspot_user_screen.dart';
 import 'voucher_generation_screen.dart';
 import 'widgets/enhanced_user_card.dart';
 import 'widgets/bulk_mode_indicator.dart';
+import '../../l10n/translations.dart';
 
 class HotspotUsersScreen extends ConsumerStatefulWidget {
   const HotspotUsersScreen({super.key});
@@ -253,9 +254,11 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               tooltip: 'Back',
             ),
       title: _isSelectionActive
-          ? Text('${_selectedUserIds.length} selected')
+          ? Text(AppStrings.of(context)
+              .selectedCount
+              .replaceAll('%d', '${_selectedUserIds.length}'))
           : Text(
-              'Hotspot Users',
+              AppStrings.of(context).hotspotUsers,
               style: TextStyle(
                 color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
@@ -349,7 +352,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (!user.active) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('User "${user.name}" is already disabled'),
+          content: Text(AppStrings.of(context)
+              .alreadyDisabled
+              .replaceAll('%s', user.name)),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -361,22 +366,22 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       builder: (context) => AlertDialog(
         backgroundColor: context.appSurface,
         title: Text(
-          'Disable User',
+          AppStrings.of(context).disable,
           style: TextStyle(color: context.appOnSurface),
         ),
         content: Text(
-          'Disable user "${user.name}"?',
+          '${AppStrings.of(context).disable} user "${user.name}"?',
           style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(AppStrings.of(context).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.orange),
-            child: const Text('Disable'),
+            child: Text(AppStrings.of(context).disable),
           ),
         ],
       ),
@@ -387,7 +392,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('User "${user.name}" disabled'),
+            content: Text(
+                AppStrings.of(context).disabled.replaceAll('%s', user.name)),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
           ),
@@ -404,7 +410,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('User "${user.name}" enabled'),
+            content: Text(
+                AppStrings.of(context).enabled.replaceAll('%s', user.name)),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -413,7 +420,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('User "${user.name}" is already active'),
+          content: Text(
+              AppStrings.of(context).alreadyActive.replaceAll('%s', user.name)),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -499,7 +507,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(AppStrings.of(context).delete),
           ),
         ],
       ),
@@ -735,7 +743,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
         if (profileNames.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('No profiles available'),
+              content: Text(AppStrings.of(context).noProfilesAvailable),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -813,13 +821,13 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       },
       loading: () => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Loading profiles...'),
+          content: Text(AppStrings.of(context).loadingProfiles),
           behavior: SnackBarBehavior.floating,
         ),
       ),
       error: (_, __) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to load profiles'),
+          content: Text(AppStrings.of(context).failedToLoadProfiles),
           behavior: SnackBarBehavior.floating,
         ),
       ),
@@ -1021,13 +1029,14 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: context.appSurface,
-        title: Text('Delete User'),
-        content: Text(
-            'Are you sure you want to delete user "${user.name}"? This action cannot be undone.'),
+        title: Text(AppStrings.of(context).deleteUser),
+        content: Text(AppStrings.of(context)
+            .deleteUserConfirmation
+            .replaceAll('%s', user.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: Text(AppStrings.of(context).cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -1039,7 +1048,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               if (mounted) {
                 messenger.showSnackBar(
                   SnackBar(
-                    content: Text('User "${user.name}" deleted successfully'),
+                    content: Text(AppStrings.of(context)
+                        .userDeleted
+                        .replaceAll('%s', user.name)),
                     backgroundColor: primaryColor,
                   ),
                 );
@@ -1048,7 +1059,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
             style: TextButton.styleFrom(
               foregroundColor: context.appError,
             ),
-            child: Text('Delete'),
+            child: Text(AppStrings.of(context).delete),
           ),
         ],
       ),
@@ -1109,20 +1120,19 @@ class _SearchAndFilterBar extends StatelessWidget {
           ),
           SizedBox(height: 12),
           SegmentedButton<UserStatusFilter>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: UserStatusFilter.all,
-                label: Text('All'),
+                label: Text(AppStrings.of(context).filterAll),
                 icon: Icon(Icons.people_rounded, size: 18),
               ),
               ButtonSegment(
                 value: UserStatusFilter.active,
-                label: Text('Active'),
-                icon: Icon(Icons.check_circle_rounded, size: 18),
+                label: Text(AppStrings.of(context).filterActive),
               ),
               ButtonSegment(
                 value: UserStatusFilter.inactive,
-                label: Text('Inactive'),
+                label: Text(AppStrings.of(context).filterInactive),
                 icon: Icon(Icons.cancel_rounded, size: 18),
               ),
             ],
@@ -1229,9 +1239,9 @@ class _UserInfo extends StatelessWidget {
             Flexible(
               child: Text(
                 user.name,
-                style: TextStyle(
-                  color: context.appOnSurface,
-                  fontWeight: FontWeight.bold,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1417,12 +1427,12 @@ class _UserContextMenu extends StatelessWidget {
           _buildDragHandle(context),
           ListTile(
             leading: Icon(Icons.visibility_rounded),
-            title: Text('View Details'),
+            title: Text(AppStrings.of(context).viewDetails),
             onTap: onViewDetails,
           ),
           ListTile(
             leading: Icon(Icons.edit_rounded),
-            title: Text('Edit User'),
+            title: Text(AppStrings.of(context).editUserTitle),
             onTap: onEdit,
           ),
           ListTile(
@@ -1430,12 +1440,14 @@ class _UserContextMenu extends StatelessWidget {
               user.active ? Icons.wifi_off_rounded : Icons.wifi_rounded,
               color: user.active ? context.appError : context.appPrimary,
             ),
-            title: Text(user.active ? 'Disable User' : 'Enable User'),
+            title: Text(user.active
+                ? AppStrings.of(context).disable
+                : AppStrings.of(context).enable),
             onTap: onToggleStatus,
           ),
           ListTile(
             leading: Icon(Icons.delete_rounded, color: context.appError),
-            title: Text('Delete User'),
+            title: Text(AppStrings.of(context).deleteUser),
             onTap: onDelete,
           ),
           SizedBox(height: 8),

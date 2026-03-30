@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/resource_history.dart';
+import '../../../l10n/translations.dart';
 
 /// Time range options for the chart
 enum ChartTimeRange {
@@ -415,7 +416,7 @@ class _FullScreenChartState extends State<_FullScreenChart> {
         backgroundColor: context.appSurface,
         foregroundColor: context.appOnSurface,
         elevation: 0,
-        title: const Text('System Resources'),
+        title: Text(AppStrings.of(context).systemResources),
         actions: [
           if (latest != null) ...[
             _buildLiveIndicator(context),

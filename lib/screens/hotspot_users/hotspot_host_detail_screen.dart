@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../utils/mac_vendor_detector.dart';
+import '../../l10n/translations.dart';
 
 class HotspotHostDetailScreen extends StatelessWidget {
   final HotspotHost host;
@@ -18,7 +19,8 @@ class HotspotHostDetailScreen extends StatelessWidget {
     final deviceType = MacVendorDetector.getDeviceType(host.macAddress);
     final deviceIcon = MacVendorDetector.getDeviceIcon(host.macAddress);
     final vendorName = vendor?.name ?? 'Unknown Vendor';
-    final deviceColor = Color(MacVendorDetector.getDeviceColorHex(host.macAddress));
+    final deviceColor =
+        Color(MacVendorDetector.getDeviceColorHex(host.macAddress));
 
     return PopScope(
       canPop: false,
@@ -28,51 +30,52 @@ class HotspotHostDetailScreen extends StatelessWidget {
       },
       child: Scaffold(
         backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        foregroundColor: context.appOnSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('Device Details'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: () {
-              // Refresh data
-            },
+        appBar: AppBar(
+          backgroundColor: context.appSurface,
+          foregroundColor: context.appOnSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.pop(),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Device Header Card
-            _buildDeviceHeaderCard(context, deviceIcon, vendorName, deviceType, deviceColor),
-            SizedBox(height: 16),
-
-            // Connection Status Card
-            _buildConnectionStatusCard(context),
-            SizedBox(height: 16),
-
-            // Network Information Card
-            _buildNetworkInfoCard(context, deviceType, deviceColor),
-            SizedBox(height: 16),
-
-            // Data Usage Card
-            if (host.bytesIn != null || host.bytesOut != null)
-              _buildDataUsageCard(context),
-            SizedBox(height: 16),
-
-            // Vendor Information Card
-            _buildVendorInfoCard(context, vendor, deviceColor),
+          title: Text(AppStrings.of(context).deviceDetails),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: () {
+                // Refresh data
+              },
+            ),
           ],
         ),
-      ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Device Header Card
+              _buildDeviceHeaderCard(
+                  context, deviceIcon, vendorName, deviceType, deviceColor),
+              SizedBox(height: 16),
+
+              // Connection Status Card
+              _buildConnectionStatusCard(context),
+              SizedBox(height: 16),
+
+              // Network Information Card
+              _buildNetworkInfoCard(context, deviceType, deviceColor),
+              SizedBox(height: 16),
+
+              // Data Usage Card
+              if (host.bytesIn != null || host.bytesOut != null)
+                _buildDataUsageCard(context),
+              SizedBox(height: 16),
+
+              // Vendor Information Card
+              _buildVendorInfoCard(context, vendor, deviceColor),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -204,7 +207,8 @@ class HotspotHostDetailScreen extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
@@ -464,7 +468,6 @@ class HotspotHostDetailScreen extends StatelessWidget {
               ],
             ),
             SizedBox(height: 16),
-
             if (vendor != null) ...[
               _buildInfoRow(
                 context,
@@ -516,7 +519,8 @@ class HotspotHostDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: context.appOnSurface.withValues(alpha: 0.5)),
+          Icon(icon,
+              size: 18, color: context.appOnSurface.withValues(alpha: 0.5)),
           SizedBox(width: 12),
           Text(
             '$label:',

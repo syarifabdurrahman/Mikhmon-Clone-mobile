@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../l10n/translations.dart';
 import 'add_edit_profile_screen.dart';
 
 class UserProfilesScreen extends ConsumerStatefulWidget {
@@ -202,7 +203,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
           children: [
             ListTile(
               leading: Icon(Icons.visibility_rounded),
-              title: Text('View Details'),
+              title: Text(AppStrings.of(context).viewDetails),
               onTap: () {
                 Navigator.pop(context);
                 _showProfileDetails(profile);
@@ -210,7 +211,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
             ),
             ListTile(
               leading: Icon(Icons.edit_rounded),
-              title: Text('Edit Profile'),
+              title: Text(AppStrings.of(context).editProfile),
               onTap: () {
                 Navigator.pop(context);
                 _navigateToEditProfile(profile);
@@ -267,7 +268,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: Text(AppStrings.of(context).cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -280,7 +281,9 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
               if (mounted) {
                 messenger.showSnackBar(
                   SnackBar(
-                    content: Text('Profile "${profile.name}" deleted'),
+                    content: Text(AppStrings.of(context)
+                        .profileDeleted
+                        .replaceAll('%s', profile.name)),
                     backgroundColor: primaryColor,
                   ),
                 );
@@ -289,7 +292,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
             style: TextButton.styleFrom(
               foregroundColor: context.appError,
             ),
-            child: Text('Delete'),
+            child: Text(AppStrings.of(context).deleteProfile),
           ),
         ],
       ),
@@ -613,7 +616,7 @@ class _ProfileDetailsSheet extends StatelessWidget {
               onEdit();
             },
             icon: Icon(Icons.edit_rounded),
-            label: Text('Edit'),
+            label: Text(AppStrings.of(context).editProfile),
             style: OutlinedButton.styleFrom(
               foregroundColor: context.appPrimary,
               side: BorderSide(color: context.appPrimary),
@@ -629,7 +632,7 @@ class _ProfileDetailsSheet extends StatelessWidget {
               onDelete();
             },
             icon: Icon(Icons.delete_rounded),
-            label: Text('Delete'),
+            label: Text(AppStrings.of(context).deleteProfile),
             style: ElevatedButton.styleFrom(
               backgroundColor: context.appError,
               foregroundColor: Colors.white,

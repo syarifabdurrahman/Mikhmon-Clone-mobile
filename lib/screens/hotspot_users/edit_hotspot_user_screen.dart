@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../l10n/translations.dart';
 
 class EditHotspotUserScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
@@ -69,7 +70,8 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('No profiles available. Please create a profile first.'),
+              content: Text(
+                  AppStrings.of(context).noProfilesAvailableCreateProfileFirst),
               backgroundColor: context.appError,
             ),
           );
@@ -95,7 +97,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Not connected to RouterOS. Please login first.'),
+              content: Text(AppStrings.of(context).notConnectedLoginFirst),
               backgroundColor: context.appError,
             ),
           );
@@ -141,8 +143,8 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('User "${widget.user['name']}" updated successfully on RouterOS'),
+            content: Text(
+                'User "${widget.user['name']}" updated successfully on RouterOS'),
             backgroundColor: context.appSuccess,
           ),
         );
@@ -156,7 +158,9 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to update user: $e'),
+              content: Text(AppStrings.of(context)
+                  .failedToUpdateUser
+                  .replaceAll('%s', e.toString())),
               backgroundColor: context.appError,
             ),
           );
@@ -198,19 +202,19 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                SizedBox(height: 24),
-                _buildUsernameDisplay(),
-                SizedBox(height: 16),
-                _buildPasswordField(),
-                SizedBox(height: 16),
-                _buildProfileSelector(),
-                SizedBox(height: 16),
-                _buildCommentField(),
-                SizedBox(height: 24),
-                _buildSubmitButton(),
-              ],
+                children: [
+                  _buildHeader(),
+                  SizedBox(height: 24),
+                  _buildUsernameDisplay(),
+                  SizedBox(height: 16),
+                  _buildPasswordField(),
+                  SizedBox(height: 16),
+                  _buildProfileSelector(),
+                  SizedBox(height: 16),
+                  _buildCommentField(),
+                  SizedBox(height: 24),
+                  _buildSubmitButton(),
+                ],
               ),
             ),
           ),
@@ -367,13 +371,13 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                         child: Text(
                           'No profiles available. Please create a profile first.',
                           style: TextStyle(
-                              color: context.appOnSurface
-                                  .withValues(alpha: 0.7)),
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.7)),
                         ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text('Create Profile'),
+                        child: Text(AppStrings.of(context).addProfile),
                       ),
                     ],
                   ),
@@ -530,8 +534,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: context.appPrimary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              context.appOnSurface.withValues(alpha: 0.1),
+          disabledBackgroundColor: context.appOnSurface.withValues(alpha: 0.1),
         ),
         child: _isLoading
             ? SizedBox(
@@ -558,7 +561,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                   ),
                 ],
               ),
-          ),
-        );
+      ),
+    );
   }
 }

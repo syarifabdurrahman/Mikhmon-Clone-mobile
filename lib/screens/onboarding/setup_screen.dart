@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/onboarding_service.dart';
 import '../../l10n/locale_provider.dart';
+import '../../l10n/translations.dart';
 
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
@@ -99,8 +100,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   Future<void> _saveAndContinue() async {
     if (_selectedCountry == null || _selectedCurrency == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please select your country and currency')),
+        SnackBar(
+            content:
+                Text(AppStrings.of(context).pleaseSelectCountryAndCurrency)),
       );
       return;
     }
@@ -122,7 +124,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving settings: $e')),
+          SnackBar(
+              content: Text(AppStrings.of(context)
+                  .errorSavingSettings
+                  .replaceAll('%s', e.toString()))),
         );
       }
     } finally {
@@ -150,7 +155,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
           TextButton(
             onPressed: _skipSetup,
             child: Text(
-              'Skip',
+              AppStrings.of(context).skip,
               style: TextStyle(
                 color: context.appOnSurface.withValues(alpha: 0.5),
               ),
@@ -174,7 +179,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Quick Setup',
+                AppStrings.of(context).quickSetup,
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -183,7 +188,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Set your preferences for currency and location. You can change these later in Settings.',
+                AppStrings.of(context).quickSetupDescription,
                 style: TextStyle(
                   fontSize: 15,
                   color: context.appOnSurface.withValues(alpha: 0.6),
@@ -193,7 +198,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               const SizedBox(height: 32),
 
               // Country
-              _buildLabel('Country'),
+              _buildLabel(AppStrings.of(context).country),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _selectedCountry,
@@ -202,7 +207,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                 }).toList(),
                 onChanged: _onCountryChanged,
                 decoration: InputDecoration(
-                  hintText: 'Select your country',
+                  hintText: AppStrings.of(context).selectYourCountry,
                   prefixIcon:
                       Icon(Icons.public_rounded, color: context.appPrimary),
                   filled: true,
@@ -230,7 +235,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               const SizedBox(height: 20),
 
               // Currency
-              _buildLabel('Currency'),
+              _buildLabel(AppStrings.of(context).currency),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _selectedCurrency,
@@ -244,7 +249,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   setState(() => _selectedCurrency = value);
                 },
                 decoration: InputDecoration(
-                  hintText: 'Select your currency',
+                  hintText: AppStrings.of(context).selectYourCurrency,
                   prefixIcon: Icon(Icons.attach_money_rounded,
                       color: context.appPrimary),
                   filled: true,
@@ -272,7 +277,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
               const SizedBox(height: 20),
 
               // Company name (optional)
-              _buildLabel('Business Name (optional)'),
+              _buildLabel(AppStrings.of(context).businessName),
               const SizedBox(height: 8),
               TextField(
                 controller: _companyController,

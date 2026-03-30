@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../services/onboarding_service.dart';
+import '../../l10n/translations.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -72,8 +73,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
             ),
             const SizedBox(width: 16),
-            const Text(
-              'Connecting...',
+            Text(
+              AppStrings.of(context).connecting,
               style: TextStyle(color: Color(0xFF1E293B)),
             ),
           ],
@@ -91,13 +92,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.error_outline, color: Color(0xFFF43F5E)),
-            SizedBox(width: 12),
+            const Icon(Icons.error_outline, color: Color(0xFFF43F5E)),
+            const SizedBox(width: 12),
             Text(
-              'Connection Failed',
-              style: TextStyle(color: Color(0xFF1E293B)),
+              AppStrings.of(context).connectionFailed,
+              style: const TextStyle(color: Color(0xFF1E293B)),
             ),
           ],
         ),
@@ -112,7 +113,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
             ),
-            child: const Text('OK'),
+            child: Text(AppStrings.of(context).ok),
           ),
         ],
       ),
@@ -198,8 +199,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Welcome Back!",
+                    Text(
+                      AppStrings.of(context).welcomeBack,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -208,7 +209,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "Select a router to connect",
+                      AppStrings.of(context).selectRouter,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -233,14 +234,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             color: primaryColor.withValues(alpha: 0.3),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_rounded,
+                            const Icon(Icons.add_rounded,
                                 color: primaryColor, size: 22),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
-                              "Connect to New Router",
+                              AppStrings.of(context).connectNewRouter,
                               style: TextStyle(
                                 color: primaryColor,
                                 fontSize: 14,
@@ -256,7 +257,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       child: TextButton(
                         onPressed: () => context.go('/main/dashboard'),
                         child: Text(
-                          "ENTER APP",
+                          AppStrings.of(context).enterApp,
                           style: TextStyle(
                             color: Colors.grey[400],
                             letterSpacing: 2,
@@ -295,8 +296,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   color: Colors.amber,
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'My Routers',
+                Text(
+                  AppStrings.of(context).myRouters,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -305,7 +306,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  '${connections.length} saved',
+                  '${connections.length} ${AppStrings.of(context).saved.toLowerCase()}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[500],
@@ -352,7 +353,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            "No routers saved yet",
+            AppStrings.of(context).noRoutersSaved,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -361,7 +362,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            "Tap below to connect your first router",
+            AppStrings.of(context).tapToConnectFirstRouter,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[500],
@@ -574,7 +575,7 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Connect'),
+          child: Text(AppStrings.of(context).connect),
         ),
       ],
     );

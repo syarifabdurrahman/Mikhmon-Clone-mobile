@@ -5,6 +5,7 @@ import '../../utils/validators.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../services/onboarding_service.dart';
+import '../../l10n/translations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -277,8 +278,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onFieldSubmitted: (_) =>
                                   _portFocusNode.requestFocus(),
                               decoration: InputDecoration(
-                                labelText: 'Router IP',
-                                hintText: '192.168.88.1',
+                                labelText: AppStrings.of(context).routerIP,
+                                hintText: AppStrings.of(context).hostHint,
                                 prefixIcon:
                                     const Icon(Icons.router_rounded, size: 20),
                                 border: OutlineInputBorder(
@@ -302,8 +303,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onFieldSubmitted: (_) =>
                                   _usernameFocusNode.requestFocus(),
                               decoration: InputDecoration(
-                                labelText: 'Port',
-                                hintText: '8728',
+                                labelText: AppStrings.of(context).port,
+                                hintText: AppStrings.of(context).portHint,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -326,8 +327,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onFieldSubmitted: (_) =>
                             _passwordFocusNode.requestFocus(),
                         decoration: InputDecoration(
-                          labelText: 'Username',
-                          hintText: 'admin',
+                          labelText: AppStrings.of(context).usernameField,
+                          hintText: AppStrings.of(context).usernameHint,
                           prefixIcon:
                               const Icon(Icons.person_rounded, size: 20),
                           border: OutlineInputBorder(
@@ -346,8 +347,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         focusNode: _passwordFocusNode,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Optional',
+                          labelText: AppStrings.of(context).password,
+                          hintText: AppStrings.of(context).optional,
                           prefixIcon: const Icon(Icons.lock_rounded, size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -650,7 +651,7 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
             controller: _passwordController,
             obscureText: true,
             decoration: InputDecoration(
-              labelText: 'Password',
+              labelText: AppStrings.of(context).password,
               prefixIcon: const Icon(Icons.lock_rounded, size: 20),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -671,7 +672,8 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          child: Text(AppStrings.of(context).cancel,
+              style: TextStyle(color: Colors.grey[600])),
         ),
         ElevatedButton(
           onPressed: () {
@@ -682,7 +684,7 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Connect'),
+          child: Text(AppStrings.of(context).connect),
         ),
       ],
     );

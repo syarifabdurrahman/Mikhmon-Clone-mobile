@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/onboarding_service.dart';
 import '../../services/cache_service.dart';
+import '../../l10n/translations.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -84,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     );
                   },
                   child: Text(
-                    'Skip',
+                    AppStrings.of(context).skip,
                     style: TextStyle(
                       color: context.appOnSurface.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w500,
@@ -180,13 +181,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 40),
           Text(
-            'Welcome to\n\u03A9MMON',
+            AppStrings.of(context).onboardingWelcome,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
               color: context.appOnSurface,
               height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            AppStrings.of(context).onboardingSubtitle,
+            style: TextStyle(
+              fontSize: 16,
+              color: context.appOnSurface.withValues(alpha: 0.6),
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 16),
@@ -200,7 +210,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Monitor and manage your MikroTik hotspot from your phone. Generate vouchers, track users, and view real-time statistics.',
+            AppStrings.of(context).onboardingDescription,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
@@ -220,7 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'What You Can Do',
+            AppStrings.of(context).whatYouCanDo,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -230,28 +240,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 32),
           _buildFeatureItem(
             Icons.people_rounded,
-            'Manage Users',
-            'View, add, enable/disable hotspot users',
+            AppStrings.of(context).featureManageUsers,
+            AppStrings.of(context).featureManageUsersDesc,
           ),
           _buildFeatureItem(
             Icons.confirmation_number_rounded,
-            'Generate Vouchers',
-            'Create printable vouchers in bulk',
+            AppStrings.of(context).featureGenerateVouchers,
+            AppStrings.of(context).featureGenerateVouchersDesc,
           ),
           _buildFeatureItem(
             Icons.speed_rounded,
-            'Real-time Monitor',
-            'Track CPU, memory, and traffic live',
+            AppStrings.of(context).featureRealTimeMonitor,
+            AppStrings.of(context).featureRealTimeMonitorDesc,
           ),
           _buildFeatureItem(
             Icons.bar_chart_rounded,
-            'Revenue Tracking',
-            'Log and view sales transactions',
+            AppStrings.of(context).featureRevenueTracking,
+            AppStrings.of(context).featureRevenueTrackingDesc,
           ),
           _buildFeatureItem(
             Icons.dns_rounded,
-            'Multi-Router',
-            'Connect and switch between routers',
+            AppStrings.of(context).featureMultiRouter,
+            AppStrings.of(context).featureMultiRouterDesc,
           ),
         ],
       ),
@@ -323,7 +333,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Important Notice',
+            AppStrings.of(context).importantNotice,
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -335,28 +345,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Warning items
           _buildWarningItem(
             Icons.backup_rounded,
-            'Backup First',
-            'Always backup your MikroTik configuration before using this app. '
-                'This app creates hotspot users and may modify your router settings.',
+            AppStrings.of(context).backupFirst,
+            AppStrings.of(context).backupFirstDesc,
           ),
           _buildWarningItem(
             Icons.cleaning_services_rounded,
-            'Fresh Install Recommended',
-            'For best results, use this app with a fresh MikroTik setup or a router '
-                'that hasn\'t had custom hotspot scripts. Existing scripts may conflict '
-                'with the users and profiles created by this app.',
+            AppStrings.of(context).freshInstallRecommended,
+            AppStrings.of(context).freshInstallDesc,
           ),
           _buildWarningItem(
             Icons.bug_report_rounded,
-            'Beta Software',
-            'This app is under active development. Some features may not work '
-                'as expected. Always verify changes directly on your router.',
+            AppStrings.of(context).betaSoftware,
+            AppStrings.of(context).betaSoftwareDesc,
           ),
           _buildWarningItem(
             Icons.lock_rounded,
-            'Your Data Stays Local',
-            'All data is stored locally on your device. We do not collect or '
-                'transmit your router credentials or personal information.',
+            AppStrings.of(context).yourDataStaysLocal,
+            AppStrings.of(context).yourDataStaysLocalDesc,
           ),
 
           const SizedBox(height: 20),
@@ -423,7 +428,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Ready to Start!',
+            AppStrings.of(context).readyToStart,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -432,7 +437,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Connect your MikroTik router or try the app with demo data first.',
+            AppStrings.of(context).connectDescription,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 15,
@@ -477,7 +482,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'I have backed up my router and understand the risks',
+                      AppStrings.of(context).agreeBackup,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -509,14 +514,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.login_rounded),
-                  SizedBox(width: 8),
+                  const Icon(Icons.login_rounded),
+                  const SizedBox(width: 8),
                   Text(
-                    'Connect to Router',
-                    style: TextStyle(
+                    AppStrings.of(context).connectToRouter,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -542,14 +547,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.visibility_rounded),
-                  SizedBox(width: 8),
+                  const Icon(Icons.visibility_rounded),
+                  const SizedBox(width: 8),
                   Text(
-                    'Try with Demo Data',
-                    style: TextStyle(
+                    AppStrings.of(context).tryDemoData,
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -562,7 +567,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
           if (!_agreedToTerms)
             Text(
-              'Accept the agreement above to connect a real router',
+              AppStrings.of(context).acceptAgreementToConnect,
               style: TextStyle(
                 fontSize: 12,
                 color: context.appOnSurface.withValues(alpha: 0.4),
@@ -594,7 +599,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Back'),
+              child: Text(AppStrings.of(context).back),
             ),
           ),
         if (_currentPage > 0) const SizedBox(width: 12),
@@ -611,7 +616,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             child: Text(
-              _currentPage == 2 ? 'Continue' : 'Next',
+              _currentPage == 2
+                  ? AppStrings.of(context).continue_
+                  : AppStrings.of(context).next,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),

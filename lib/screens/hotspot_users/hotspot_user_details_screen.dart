@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../services/routeros_service.dart';
+import '../../l10n/translations.dart';
 import 'edit_hotspot_user_screen.dart';
 
 class HotspotUserDetailsScreen extends StatefulWidget {
@@ -11,7 +12,8 @@ class HotspotUserDetailsScreen extends StatefulWidget {
   const HotspotUserDetailsScreen({super.key, required this.user});
 
   @override
-  State<HotspotUserDetailsScreen> createState() => _HotspotUserDetailsScreenState();
+  State<HotspotUserDetailsScreen> createState() =>
+      _HotspotUserDetailsScreenState();
 }
 
 class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
@@ -49,7 +51,9 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to refresh: $e'),
+              content: Text(AppStrings.of(context)
+                  .failedToRefresh
+                  .replaceAll('%s', e.toString())),
               backgroundColor: context.appError,
             ),
           );
@@ -85,47 +89,48 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
           ),
           actions: [
             IconButton(
-            icon: Icon(Icons.refresh_rounded),
-            onPressed: _isLoading ? null : _refreshUserData,
-          ),
-          IconButton(
-            icon: Icon(Icons.edit_rounded),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditHotspotUserScreen(user: _user.toMap()),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildUserHeader(),
-                  SizedBox(height: 16),
-                  _buildStatusCard(),
-                  SizedBox(height: 16),
-                  _buildInfoSection(),
-                  SizedBox(height: 16),
-                  _buildStatsSection(),
-                  SizedBox(height: 16),
-                  _buildActionsSection(),
-                ],
-              ),
+              icon: Icon(Icons.refresh_rounded),
+              onPressed: _isLoading ? null : _refreshUserData,
             ),
-          ),
-        );
+            IconButton(
+              icon: Icon(Icons.edit_rounded),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        EditHotspotUserScreen(user: _user.toMap()),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+                ),
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildUserHeader(),
+                    SizedBox(height: 16),
+                    _buildStatusCard(),
+                    SizedBox(height: 16),
+                    _buildInfoSection(),
+                    SizedBox(height: 16),
+                    _buildStatsSection(),
+                    SizedBox(height: 16),
+                    _buildActionsSection(),
+                  ],
+                ),
+              ),
+      ),
+    );
   }
 
   Widget _buildUserHeader() {
@@ -209,7 +214,9 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
           children: [
             Icon(
               _user.active ? Icons.check_circle_rounded : Icons.cancel_rounded,
-              color: _user.active ? context.appPrimary : context.appOnSurface.withValues(alpha: 0.5),
+              color: _user.active
+                  ? context.appPrimary
+                  : context.appOnSurface.withValues(alpha: 0.5),
               size: 32,
             ),
             SizedBox(width: 16),
@@ -227,7 +234,9 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                   Text(
                     _user.active ? 'Active' : 'Inactive',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: _user.active ? context.appPrimary : context.appOnSurface,
+                          color: _user.active
+                              ? context.appPrimary
+                              : context.appOnSurface,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
@@ -236,7 +245,8 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
             ),
             if (_user.active && _user.uptime != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: context.appSurface,
                   borderRadius: BorderRadius.circular(8),
@@ -359,7 +369,8 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                 _user.dataUsed,
                 context.appPrimary,
               ),
-              if (_user.limitBytesIn != null || _user.limitBytesOut != null) ...[
+              if (_user.limitBytesIn != null ||
+                  _user.limitBytesOut != null) ...[
                 Divider(
                   height: 1,
                   color: context.appOnSurface.withValues(alpha: 0.1),
@@ -405,13 +416,14 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                   Icons.edit_rounded,
                   color: context.appPrimary,
                 ),
-                title: Text('Edit User'),
+                title: Text(AppStrings.of(context).editUserTitle),
                 trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditHotspotUserScreen(user: _user.toMap()),
+                      builder: (context) =>
+                          EditHotspotUserScreen(user: _user.toMap()),
                     ),
                   );
                 },
@@ -425,11 +437,15 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                   Icons.wifi_rounded,
                   color: context.appPrimary,
                 ),
-                title: Text(_user.active ? 'Remove User from Hotspot' : 'Add User to Hotspot'),
+                title: Text(_user.active
+                    ? 'Remove User from Hotspot'
+                    : 'Add User to Hotspot'),
                 trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${_user.active ? "Remove" : "Add"} functionality coming soon')),
+                    SnackBar(
+                        content: Text(
+                            '${_user.active ? "Remove" : "Add"} functionality coming soon')),
                   );
                 },
               ),
@@ -442,7 +458,7 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
                   Icons.delete_rounded,
                   color: context.appError,
                 ),
-                title: Text('Delete User'),
+                title: Text(AppStrings.of(context).deleteUser),
                 trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16),
                 onTap: () {
                   _confirmDeleteUser();
@@ -479,7 +495,8 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
     );
   }
 
-  Widget _buildStatTile(IconData icon, String label, String value, Color color) {
+  Widget _buildStatTile(
+      IconData icon, String label, String value, Color color) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Icon(
@@ -507,7 +524,8 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
     if (bytes == null) return 'N/A';
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
     return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 
@@ -515,12 +533,14 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete User'),
-        content: Text('Are you sure you want to delete user "${_user.name}"? This action cannot be undone.'),
+        title: Text(AppStrings.of(context).deleteUser),
+        content: Text(AppStrings.of(context)
+            .deleteUserConfirmation
+            .replaceAll('%s', _user.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: Text(AppStrings.of(context).cancel),
           ),
           TextButton(
             onPressed: () {
@@ -530,7 +550,7 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
             style: TextButton.styleFrom(
               foregroundColor: context.appError,
             ),
-            child: Text('Delete'),
+            child: Text(AppStrings.of(context).delete),
           ),
         ],
       ),
@@ -545,7 +565,7 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('User "${_user.name}" deleted successfully'),
+              content: Text(AppStrings.of(context).userDeletedMsg(_user.name)),
               backgroundColor: context.appSuccess,
             ),
           );
@@ -557,7 +577,9 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to delete user: $e'),
+            content: Text(AppStrings.of(context)
+                .failedToDeleteUser
+                .replaceAll('%s', e.toString())),
             backgroundColor: context.appError,
           ),
         );

@@ -5,6 +5,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../l10n/translations.dart';
 
 enum HostFilter {
   all,
@@ -83,7 +84,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
             onPressed: () => context.go('/main'),
             tooltip: 'Back',
           ),
-          title: Text('Hotspot Hosts'),
+          title: Text(AppStrings.of(context).hotspotHosts),
         ),
         body: RefreshIndicator(
           onRefresh: () async {
