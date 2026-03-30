@@ -16,11 +16,13 @@ import '../../l10n/translations.dart';
 class VoucherPreviewScreen extends ConsumerStatefulWidget {
   final List<Voucher> vouchers;
   final String profileName;
+  final String? companyName;
 
   const VoucherPreviewScreen({
     super.key,
     required this.vouchers,
     required this.profileName,
+    this.companyName,
   });
 
   @override
@@ -90,6 +92,7 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
                     voucher: widget.vouchers[index],
                     onCopy: () => _copyVoucher(widget.vouchers[index]),
                     onShare: () => _shareSingleVoucher(widget.vouchers[index]),
+                    companyName: widget.companyName,
                   );
                 },
               ),
@@ -499,11 +502,13 @@ class _VoucherCard extends StatelessWidget {
   final Voucher voucher;
   final VoidCallback onCopy;
   final VoidCallback onShare;
+  final String? companyName;
 
   const _VoucherCard({
     required this.voucher,
     required this.onCopy,
     required this.onShare,
+    this.companyName,
   });
 
   @override
@@ -536,6 +541,28 @@ class _VoucherCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Company Name (if set)
+          if (companyName != null && companyName!.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                color: context.appPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Text(
+                companyName!,
+                style: TextStyle(
+                  color: context.appPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
           // QR Code Section (always visible)
           InkWell(
             onTap: () => _showFullScreenQR(context),

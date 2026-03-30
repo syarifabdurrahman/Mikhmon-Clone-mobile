@@ -6,6 +6,7 @@ import '../../providers/app_providers.dart';
 import '../../utils/validity_parser.dart';
 import '../../services/models/voucher.dart';
 import '../../services/log_service.dart';
+import '../../services/cache_service.dart';
 import '../../l10n/translations.dart';
 import 'voucher_preview_screen.dart';
 
@@ -277,12 +278,17 @@ class _VoucherGenerationScreenState
 
       // Navigate to voucher preview screen
       if (mounted) {
+        final cache = CacheService();
+        final settings = cache.getAppSettings();
+        final companyName = settings?['companyName'] as String?;
+
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VoucherPreviewScreen(
               vouchers: _generatedVouchers,
               profileName: _selectedProfile ?? 'default',
+              companyName: companyName,
             ),
           ),
         );

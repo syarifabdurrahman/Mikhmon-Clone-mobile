@@ -159,19 +159,11 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
             _navigateToTab(index);
           },
           items: [
-            TabItem(
-                icon: Icons.dashboard_rounded,
-                title: AppStrings.of(context).dashboardNav),
-            TabItem(
-                icon: Icons.people_rounded,
-                title: AppStrings.of(context).usersNav),
-            TabItem(icon: Icons.add_rounded, title: ''),
-            TabItem(
-                icon: Icons.router_rounded,
-                title: AppStrings.of(context).hostsNav),
-            TabItem(
-                icon: Icons.settings_rounded,
-                title: AppStrings.of(context).settingsNav),
+            TabItem(icon: Icons.dashboard_rounded),
+            TabItem(icon: Icons.people_rounded),
+            TabItem(icon: Icons.add_rounded),
+            TabItem(icon: Icons.router_rounded),
+            TabItem(icon: Icons.settings_rounded),
           ],
         ),
       ),

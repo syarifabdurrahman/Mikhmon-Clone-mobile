@@ -439,21 +439,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onPressed: () {
               ref.read(localeProvider.notifier).setLocale(Locale(e.key));
               Navigator.pop(ctx);
-              // Show restart confirmation
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${AppStrings.of(context).languageChanged} ${e.value}. ${AppStrings.of(context).restartToApply}',
-                    ),
-                    duration: const Duration(seconds: 4),
-                    action: SnackBarAction(
-                      label: AppStrings.of(context).ok,
-                      onPressed: () {},
-                    ),
-                  ),
-                );
-              }
             },
             child: Row(
               children: [
