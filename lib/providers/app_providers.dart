@@ -433,24 +433,28 @@ class PaginatedUsers {
   final bool hasMore;
   final int currentPage;
   final int pageSize;
+  final Set<String> activeUsernames; // usernames found in hotspot/active
 
   PaginatedUsers({
     required this.users,
     this.hasMore = true,
     this.currentPage = 1,
     this.pageSize = 20,
+    this.activeUsernames = const {},
   });
 
   PaginatedUsers copyWith({
     List<Map<String, dynamic>>? users,
     bool? hasMore,
     int? currentPage,
+    Set<String>? activeUsernames,
   }) {
     return PaginatedUsers(
       users: users ?? this.users,
       hasMore: hasMore ?? this.hasMore,
       currentPage: currentPage ?? this.currentPage,
       pageSize: pageSize,
+      activeUsernames: activeUsernames ?? this.activeUsernames,
     );
   }
 }
@@ -458,9 +462,13 @@ class PaginatedUsers {
 class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   int _currentPage = 1;
   final int _pageSize = 20;
+  bool _timerStarted = false;
+  // Track recorded connections to avoid duplicate revenue entries
+  // Key: "username|loginTime" to uniquely identify each session
+  final Set<String> _recordedConnections = {};
 
   PaginatedUsers _paginateUsers(List<Map<String, dynamic>> allUsers,
-      {required int page}) {
+      {required int page, Set<String> activeUsernames = const {}}) {
     // Filter out system/default users like "trial"
     final systemUserNames = {'trial'};
     final filteredUsers = allUsers.where((user) {
@@ -481,6 +489,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       hasMore: hasMore,
       currentPage: page,
       pageSize: _pageSize,
+      activeUsernames: activeUsernames,
     );
   }
 
@@ -496,14 +505,18 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   @override
   Future<PaginatedUsers> build() async {
     _currentPage = 1;
-    // Try cache first
-    final cache = ref.read(cacheServiceProvider);
-    final cachedUsers = cache.getHotspotUsers();
-    if (cachedUsers != null && cachedUsers.isNotEmpty) {
-      return _paginateUsers(cachedUsers, page: 1);
-    }
-    // No cache, fetch from API
-    return await _loadUsers(page: 1);
+    // Always fetch fresh data to get active users status
+    final data = await _loadUsers(page: 1);
+    _startAutoRefresh();
+    return data;
+  }
+
+  void _startAutoRefresh() {
+    if (_timerStarted) return;
+    _timerStarted = true;
+    Timer.periodic(const Duration(seconds: 10), (timer) {
+      silentRefresh();
+    });
   }
 
   Future<PaginatedUsers> _loadUsers({required int page}) async {
@@ -515,18 +528,220 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       final cache = ref.read(cacheServiceProvider);
       final cachedUsers = cache.getHotspotUsers();
       if (cachedUsers != null) {
-        return _paginateUsers(cachedUsers, page: page);
+        return _paginateUsers(cachedUsers, page: 1);
       }
       return _emptyPaginatedUsers();
     }
 
+    // Fetch hotspot users first (critical data)
     final allUsers = await client.getHotspotUsersList();
+
+    // Fetch active users separately (non-critical - don't fail the whole load)
+    List<Map<String, dynamic>> activeUsers = [];
+    try {
+      activeUsers = await client.getHotspotActiveUsers();
+    } catch (_) {
+      // Active users fetch failed - continue without active status
+    }
+
+    // Extract active usernames
+    final activeUsernames = activeUsers
+        .map((u) => u['user'] as String? ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet();
+
+    // Auto-record revenue for new connections
+    if (activeUsers.isNotEmpty) {
+      _autoRecordRevenue(activeUsers);
+    }
+
+    // Track session time for vouchers
+    await _trackSessionTime(activeUsers);
 
     // Cache the users
     final cache = ref.read(cacheServiceProvider);
     await cache.saveHotspotUsers(allUsers);
 
-    return _paginateUsers(allUsers, page: page);
+    return _paginateUsers(allUsers,
+        page: page, activeUsernames: activeUsernames);
+  }
+
+  /// Auto-record revenue when a voucher connects to the hotspot.
+  /// Checks each active user against recorded connections and records
+  /// a sale based on the user's profile price.
+  void _autoRecordRevenue(List<Map<String, dynamic>> activeUsers) {
+    try {
+      // Get cached profiles with prices
+      final profilesAsync = ref.read(userProfileProvider);
+      final profiles = profilesAsync.valueOrNull;
+      if (profiles == null || profiles.isEmpty) return;
+
+      // Build a map of profile name -> price
+      final profilePrices = <String, double>{};
+      for (final profile in profiles) {
+        if (profile.price != null && profile.price! > 0) {
+          profilePrices[profile.name.toLowerCase()] = profile.price!;
+        }
+      }
+
+      if (profilePrices.isEmpty) return;
+
+      for (final activeUser in activeUsers) {
+        final username = activeUser['user'] as String? ?? '';
+        final loginTime = activeUser['login-time'] as String? ?? '';
+        final profileName = activeUser['profile'] as String? ?? '';
+
+        if (username.isEmpty || loginTime.isEmpty) continue;
+
+        // Create unique key for this session
+        final connectionKey = '$username|$loginTime';
+
+        // Skip if already recorded
+        if (_recordedConnections.contains(connectionKey)) continue;
+
+        // Check if this profile has a price
+        final price = profilePrices[profileName.toLowerCase()];
+        if (price == null || price <= 0) continue;
+
+        // Mark as recorded before async call to prevent duplicates
+        _recordedConnections.add(connectionKey);
+
+        // Record the sale asynchronously
+        ref.read(incomeProvider.notifier).recordSale(
+              username: username,
+              profile: profileName,
+              price: price,
+              comment: 'Auto: voucher connected',
+            );
+      }
+    } catch (_) {
+      // Silent fail - don't block user list loading
+    }
+  }
+
+  /// Track session time for active voucher users.
+  /// Decreases remainingSeconds while connected, marks session start/end,
+  /// and disables vouchers on the router when time runs out.
+  Future<void> _trackSessionTime(List<Map<String, dynamic>> activeUsers) async {
+    try {
+      final cache = ref.read(cacheServiceProvider);
+      final vouchersData = cache.getVouchers();
+      if (vouchersData == null || vouchersData.isEmpty) return;
+
+      final now = DateTime.now();
+      final activeUsernames =
+          activeUsers.map((u) => u['user'] as String? ?? '').toSet();
+
+      // Build map of active users with their login times
+      final activeUserMap = <String, Map<String, dynamic>>{};
+      for (final u in activeUsers) {
+        final name = u['user'] as String? ?? '';
+        if (name.isNotEmpty) activeUserMap[name] = u;
+      }
+
+      for (final vData in vouchersData) {
+        final voucher = Voucher.fromJson(vData);
+        final username = voucher.username;
+
+        // Skip unlimited vouchers
+        if (voucher.validity == null ||
+            voucher.validity == 'unlimited' ||
+            voucher.remainingSeconds == null) {
+          continue;
+        }
+
+        final isActive = activeUsernames.contains(username);
+
+        if (isActive) {
+          // User is currently connected
+          final remaining = voucher.remainingSeconds!;
+          if (remaining <= 0) continue;
+
+          if (voucher.sessionStartedAt != null) {
+            // Ongoing session - calculate elapsed time since last check
+            final elapsed = now.difference(voucher.sessionStartedAt!).inSeconds;
+            final newRemaining = (remaining - elapsed).clamp(0, remaining);
+
+            if (newRemaining <= 0) {
+              // Time expired - disable on router
+              await _disableVoucherOnRouter(username);
+              await cache.updateVoucher(username, {
+                'remainingSeconds': 0,
+                'sessionStartedAt': null,
+              });
+            } else {
+              // Update remaining, keep session going
+              await cache.updateVoucher(username, {
+                'remainingSeconds': newRemaining,
+                'sessionStartedAt': now.toIso8601String(),
+              });
+            }
+          } else {
+            // New session starting - mark session start
+            await cache.updateVoucher(username, {
+              'sessionStartedAt': now.toIso8601String(),
+            });
+          }
+        } else {
+          // User is NOT connected (disconnected or never connected)
+          if (voucher.sessionStartedAt != null) {
+            // Was in session, now disconnected - finalize time used
+            final elapsed = now.difference(voucher.sessionStartedAt!).inSeconds;
+            final remaining = voucher.remainingSeconds!;
+            final newRemaining = (remaining - elapsed).clamp(0, remaining);
+
+            if (newRemaining <= 0) {
+              // Time expired during session - disable on router
+              await _disableVoucherOnRouter(username);
+            }
+
+            // Save remaining time and clear session
+            await cache.updateVoucher(username, {
+              'remainingSeconds': newRemaining,
+              'sessionStartedAt': null,
+            });
+          }
+          // If sessionStartedAt is null, nothing to do (already offline)
+        }
+      }
+
+      // Refresh vouchers provider to reflect changes
+      ref.invalidate(vouchersProvider);
+    } catch (_) {
+      // Silent fail - don't block user list loading
+    }
+  }
+
+  /// Disable a voucher (hotspot user) on the router when time expires
+  Future<void> _disableVoucherOnRouter(String username) async {
+    try {
+      final service = ref.read(routerOSServiceProvider);
+      final client = service.client;
+      if (client == null) return;
+
+      // Find the user on the router by name
+      final users = await client.getHotspotUsersList();
+      final user = users.firstWhere(
+        (u) => u['name'] == username,
+        orElse: () => {},
+      );
+      if (user.isEmpty) return;
+
+      final userId = user['.id'] as String? ?? '';
+      if (userId.isEmpty) return;
+
+      // Disable the user on the router
+      await client.setHotspotUserStatus(id: userId, disabled: true);
+
+      // Also log them out if still active
+      try {
+        await client.logoutHotspotUser(userId);
+      } catch (_) {
+        // User might not be active, that's OK
+      }
+    } catch (_) {
+      // Silent fail
+    }
   }
 
   Future<void> loadMore() async {
@@ -541,13 +756,20 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       hasMore: nextPageData.hasMore,
       currentPage: nextPageData.currentPage,
       pageSize: _pageSize,
+      activeUsernames: nextPageData.activeUsernames.isNotEmpty
+          ? nextPageData.activeUsernames
+          : currentState.activeUsernames,
     ));
   }
 
   Future<void> refresh() async {
     _currentPage = 1;
     state = const AsyncValue.loading();
-    state = AsyncValue.data(await _loadUsers(page: 1));
+    try {
+      state = AsyncValue.data(await _loadUsers(page: 1));
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
   Future<void> addUser({

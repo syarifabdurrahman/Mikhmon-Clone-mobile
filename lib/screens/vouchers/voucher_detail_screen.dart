@@ -264,6 +264,18 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
                       value:
                           '${widget.voucher.expiresAt!.day}/${widget.voucher.expiresAt!.month}/${widget.voucher.expiresAt!.year}',
                     ),
+                  if (widget.voucher.remainingSeconds != null)
+                    _DetailRow(
+                      icon: Icons.timer_outlined,
+                      label: 'Remaining',
+                      value: widget.voucher.remainingTimeDisplay,
+                    ),
+                  if (widget.voucher.isInSession)
+                    _DetailRow(
+                      icon: Icons.wifi_rounded,
+                      label: 'Session',
+                      value: 'Active',
+                    ),
                   _DetailRow(
                     icon: Icons.schedule_rounded,
                     label: 'Created',

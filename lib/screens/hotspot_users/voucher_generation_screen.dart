@@ -224,6 +224,10 @@ class _VoucherGenerationScreenState
           expiresAt = ValidityParser.parseValidity(validity);
         }
 
+        // Calculate initial remaining seconds from validity
+        final remainingSeconds =
+            Voucher.validityToSeconds(validity.isEmpty ? null : validity);
+
         // Create voucher object
         final voucher = Voucher(
           username: username,
@@ -234,6 +238,7 @@ class _VoucherGenerationScreenState
           comment: comment.isEmpty ? null : comment,
           createdAt: DateTime.now(),
           expiresAt: expiresAt,
+          remainingSeconds: remainingSeconds,
         );
 
         // Add user via RouterOS API

@@ -753,6 +753,12 @@ class _VoucherCard extends StatelessWidget {
                           value:
                               '${voucher.expiresAt!.day}/${voucher.expiresAt!.month}/${voucher.expiresAt!.year}',
                         ),
+                      if (voucher.remainingSeconds != null)
+                        _DetailRow(
+                          icon: Icons.timer_outlined,
+                          label: 'Remaining',
+                          value: voucher.remainingTimeDisplay,
+                        ),
                     ],
                   ),
                 ),

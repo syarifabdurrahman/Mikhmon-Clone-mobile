@@ -407,15 +407,17 @@ class HotspotUser {
     this.comment,
   });
 
-  factory HotspotUser.fromJson(Map<String, dynamic> json) {
-    // Sync active field with disabled field
-    // Active when: (disabled is not 'true') OR (active is 'true')
-    final isDisabled = json['disabled'] == 'true';
-    final isActive = json['active'] == 'true' || !isDisabled;
+  factory HotspotUser.fromJson(Map<String, dynamic> json,
+      {Set<String>? activeUsernames}) {
+    // Active only if username exists in the hotspot/active list
+    final name = json['name'] ?? '';
+    final isActive = activeUsernames != null
+        ? activeUsernames.contains(name)
+        : json['active'] == 'true';
 
     return HotspotUser(
       id: json['.id'] ?? '',
-      name: json['name'] ?? '',
+      name: name,
       profile: json['profile'] ?? 'default',
       active: isActive,
       uptime: json['uptime'],

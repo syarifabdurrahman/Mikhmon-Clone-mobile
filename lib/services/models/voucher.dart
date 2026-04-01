@@ -7,6 +7,8 @@ class Voucher {
   final String? comment;
   final DateTime createdAt;
   final DateTime? expiresAt;
+  final int? remainingSeconds; // remaining session time in seconds
+  final DateTime? sessionStartedAt; // when current session started
 
   Voucher({
     required this.username,
@@ -17,6 +19,8 @@ class Voucher {
     this.comment,
     required this.createdAt,
     this.expiresAt,
+    this.remainingSeconds,
+    this.sessionStartedAt,
   });
 
   // Get display text for voucher
@@ -41,12 +45,71 @@ class Voucher {
 
   // Check if voucher is expired
   bool get isExpired {
+    // Use remainingSeconds if tracked, otherwise fall back to expiresAt
+    if (remainingSeconds != null && remainingSeconds! <= 0) return true;
     if (expiresAt == null) return false;
     return DateTime.now().isAfter(expiresAt!);
   }
 
   // Check if voucher is active
   bool get isActive => !isExpired;
+
+  // Get total validity in seconds from the validity string
+  static int? validityToSeconds(String? validity) {
+    if (validity == null || validity.isEmpty || validity == 'unlimited') {
+      return null;
+    }
+    final match = RegExp(r'^(\d+)\s*([a-z]+)$', caseSensitive: false)
+        .firstMatch(validity);
+    if (match == null) return null;
+    final value = int.tryParse(match.group(1) ?? '');
+    final unit = match.group(2)?.toLowerCase() ?? '';
+    if (value == null) return null;
+    switch (unit) {
+      case 's':
+      case 'sec':
+        return value;
+      case 'm':
+      case 'min':
+        return value * 60;
+      case 'h':
+      case 'hr':
+        return value * 3600;
+      case 'd':
+      case 'day':
+        return value * 86400;
+      case 'w':
+      case 'week':
+        return value * 604800;
+      default:
+        return null;
+    }
+  }
+
+  // Format remaining time as human-readable string
+  String get remainingTimeDisplay {
+    final secs = remainingSeconds;
+    if (secs == null || secs <= 0) return 'Expired';
+    if (secs >= 86400) {
+      final d = secs ~/ 86400;
+      final h = (secs % 86400) ~/ 3600;
+      return '${d}d${h}h';
+    }
+    if (secs >= 3600) {
+      final h = secs ~/ 3600;
+      final m = (secs % 3600) ~/ 60;
+      return '${h}h${m}m';
+    }
+    final m = secs ~/ 60;
+    final s = secs % 60;
+    return '${m}m${s}s';
+  }
+
+  // Check if currently in an active session (connected)
+  bool get isInSession =>
+      sessionStartedAt != null &&
+      remainingSeconds != null &&
+      remainingSeconds! > 0;
 
   Map<String, dynamic> toJson() {
     return {
@@ -58,6 +121,8 @@ class Voucher {
       'comment': comment,
       'createdAt': createdAt.toIso8601String(),
       'expiresAt': expiresAt?.toIso8601String(),
+      'remainingSeconds': remainingSeconds,
+      'sessionStartedAt': sessionStartedAt?.toIso8601String(),
     };
   }
 
@@ -73,6 +138,10 @@ class Voucher {
       expiresAt: json['expiresAt'] != null
           ? DateTime.parse(json['expiresAt'] as String)
           : null,
+      remainingSeconds: json['remainingSeconds'] as int?,
+      sessionStartedAt: json['sessionStartedAt'] != null
+          ? DateTime.parse(json['sessionStartedAt'] as String)
+          : null,
     );
   }
 
@@ -85,6 +154,8 @@ class Voucher {
     String? comment,
     DateTime? createdAt,
     DateTime? expiresAt,
+    int? remainingSeconds,
+    DateTime? sessionStartedAt,
   }) {
     return Voucher(
       username: username ?? this.username,
@@ -95,6 +166,8 @@ class Voucher {
       comment: comment ?? this.comment,
       createdAt: createdAt ?? this.createdAt,
       expiresAt: expiresAt ?? this.expiresAt,
+      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      sessionStartedAt: sessionStartedAt ?? this.sessionStartedAt,
     );
   }
 }

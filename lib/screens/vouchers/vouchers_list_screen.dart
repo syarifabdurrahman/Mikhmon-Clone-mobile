@@ -821,6 +821,22 @@ class _VoucherGridCard extends StatelessWidget {
                             horizontal: 6, vertical: 3),
                       ),
                       const Spacer(),
+                      // Remaining time
+                      if (voucher.remainingSeconds != null &&
+                          voucher.remainingSeconds! > 0) ...[
+                        Icon(Icons.timer_outlined,
+                            size: 12, color: context.appPrimary),
+                        const SizedBox(width: 2),
+                        Text(
+                          voucher.remainingTimeDisplay,
+                          style: TextStyle(
+                            color: context.appPrimary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Icon(Icons.arrow_forward_ios_rounded,
                           size: 12,
                           color: context.appOnSurface.withValues(alpha: 0.3)),

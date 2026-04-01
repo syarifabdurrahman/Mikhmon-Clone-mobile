@@ -140,7 +140,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
                   data: (paginatedUsers) {
                     // Convert Map data to HotspotUser objects
                     final users = paginatedUsers.users
-                        .map((data) => HotspotUser.fromJson(data))
+                        .map((data) => HotspotUser.fromJson(data,
+                            activeUsernames: paginatedUsers.activeUsernames))
                         .toList();
                     final filteredUsers = _filterUsers(users);
 
@@ -336,8 +337,10 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final users =
-        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final users = usersAsync.users
+        .map((data) => HotspotUser.fromJson(data,
+            activeUsernames: usersAsync.activeUsernames))
+        .toList();
     final filteredUsers = _filterUsers(users);
 
     setState(() {
@@ -587,8 +590,10 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final allUsers =
-        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final allUsers = usersAsync.users
+        .map((data) => HotspotUser.fromJson(data,
+            activeUsernames: usersAsync.activeUsernames))
+        .toList();
     int successCount = 0;
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
@@ -662,8 +667,10 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final allUsers =
-        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final allUsers = usersAsync.users
+        .map((data) => HotspotUser.fromJson(data,
+            activeUsernames: usersAsync.activeUsernames))
+        .toList();
     int successCount = 0;
     int failCount = 0;
     final totalUsers = _selectedUserIds.length;
@@ -838,8 +845,10 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     final usersAsync = ref.read(hotspotUsersProvider).value;
     if (usersAsync == null) return;
 
-    final allUsers =
-        usersAsync.users.map((data) => HotspotUser.fromJson(data)).toList();
+    final allUsers = usersAsync.users
+        .map((data) => HotspotUser.fromJson(data,
+            activeUsernames: usersAsync.activeUsernames))
+        .toList();
     int successCount = 0;
     int failCount = 0;
 

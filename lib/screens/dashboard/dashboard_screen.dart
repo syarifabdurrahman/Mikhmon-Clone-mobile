@@ -674,7 +674,8 @@ class _UserSearchDelegate extends SearchDelegate<String> {
     return usersAsync.when(
       data: (paginatedUsers) {
         final users = paginatedUsers.users
-            .map((data) => HotspotUser.fromJson(data))
+            .map((data) => HotspotUser.fromJson(data,
+                activeUsernames: paginatedUsers.activeUsernames))
             .where((user) =>
                 user.name.toLowerCase().contains(query.toLowerCase()) ||
                 user.id.toLowerCase().contains(query.toLowerCase()))

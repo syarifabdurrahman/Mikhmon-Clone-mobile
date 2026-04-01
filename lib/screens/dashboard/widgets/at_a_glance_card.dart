@@ -89,7 +89,8 @@ class AtAGlanceCard extends ConsumerWidget {
                 value: usersAsync.when(
                   data: (paginatedUsers) {
                     final online = paginatedUsers.users.where((u) {
-                      final user = HotspotUser.fromJson(u);
+                      final user = HotspotUser.fromJson(u,
+                          activeUsernames: paginatedUsers.activeUsernames);
                       return user.uptime != null &&
                           user.uptime != '0s' &&
                           user.uptime != '00:00:00';

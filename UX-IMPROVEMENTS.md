@@ -200,3 +200,6 @@
 ---
 
 *Last updated: 2026-03-28*
+
+- dhcp lease - actual device
+- option lock device on user profiles, option 1 can all device so can login with other device, and option 2 cant login with all device because lock 

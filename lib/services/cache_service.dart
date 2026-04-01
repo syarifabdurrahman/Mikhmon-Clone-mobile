@@ -401,6 +401,23 @@ class CacheService {
     }
   }
 
+  /// Update specific fields of a voucher by username
+  Future<void> updateVoucher(
+      String username, Map<String, dynamic> updates) async {
+    try {
+      final vouchers = getVouchers();
+      if (vouchers == null) return;
+
+      final index = vouchers.indexWhere((v) => v['username'] == username);
+      if (index == -1) return;
+
+      vouchers[index] = {...vouchers[index], ...updates};
+      await _cacheBox.put(_vouchersKey, vouchers);
+    } catch (e) {
+      // Error updating
+    }
+  }
+
   /// Clear all vouchers from cache
   Future<void> clearVouchers() async {
     await clearEntry(_vouchersKey);
