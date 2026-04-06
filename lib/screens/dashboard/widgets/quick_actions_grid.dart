@@ -93,6 +93,12 @@ class QuickActionsGrid extends StatelessWidget {
         onTap: () => context.go('/main/hosts'),
       ),
       QuickActionItem(
+        icon: Icons.devices_rounded,
+        label: 'DHCP',
+        color: const Color(0xFFEF4444), // Red
+        onTap: () => context.go('/main/dhcp-leases'),
+      ),
+      QuickActionItem(
         icon: Icons.payments_rounded,
         label: 'Revenue',
         color: const Color(0xFFEC4899), // Pink

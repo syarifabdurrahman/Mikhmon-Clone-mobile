@@ -96,6 +96,12 @@ class GlobalSearchActions {
         icon: Icons.lan_rounded,
       ),
       SearchAction(
+        title: 'DHCP Leases',
+        subtitle: 'View device leases',
+        route: '/main/dhcp-leases',
+        icon: Icons.devices_rounded,
+      ),
+      SearchAction(
         title: 'Active Users',
         subtitle: 'View active sessions',
         route: '/main/active',

@@ -23,6 +23,7 @@ import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/hotspot_active_users_screen.dart';
 import '../screens/hotspot_users/hotspot_hosts_screen.dart';
 import '../screens/hotspot_users/hotspot_host_details_screen.dart';
+import '../screens/hotspot_users/dhcp_leases_screen.dart';
 import '../screens/hotspot_users/add_hotspot_user_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/voucher_generation_screen.dart';
@@ -375,6 +376,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 },
               ),
             ],
+          ),
+          GoRoute(
+            path: '/main/dhcp-leases',
+            name: 'dhcp_leases',
+            builder: (context, state) => const DhcpLeasesScreen(),
           ),
           GoRoute(
             path: '/main/settings',
@@ -1604,4 +1610,54 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
   }
 
   // Note: AsyncNotifier doesn't have dispose, timer will be cancelled when provider is disposed
+}
+
+// DHCP Leases Provider
+final dhcpLeasesProvider =
+    AsyncNotifierProvider<DhcpLeasesNotifier, List<DhcpLease>>(() {
+  return DhcpLeasesNotifier();
+});
+
+class DhcpLeasesNotifier extends AsyncNotifier<List<DhcpLease>> {
+  bool _timerStarted = false;
+
+  @override
+  Future<List<DhcpLease>> build() async {
+    final leases = await _fetchLeases();
+    _startAutoRefresh();
+    return leases;
+  }
+
+  Future<List<DhcpLease>> _fetchLeases() async {
+    final service = ref.read(routerOSServiceProvider);
+
+    final client = service.client;
+    if (client == null) {
+      return [];
+    }
+
+    try {
+      final leasesData = await client.getDhcpLeases();
+      return leasesData.map((data) => DhcpLease.fromJson(data)).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  void _startAutoRefresh() {
+    if (_timerStarted) return;
+    _timerStarted = true;
+    Timer.periodic(const Duration(seconds: 10), (timer) {
+      silentRefresh();
+    });
+  }
+
+  Future<void> silentRefresh() async {
+    try {
+      final leases = await _fetchLeases();
+      state = AsyncValue.data(leases);
+    } catch (e) {
+      // Silent refresh failed
+    }
+  }
 }

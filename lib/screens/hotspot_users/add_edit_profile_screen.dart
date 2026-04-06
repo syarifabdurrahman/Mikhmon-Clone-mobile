@@ -33,6 +33,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
   bool _unlimitedValidity = true;
   bool _unlimitedSharedUsers = true;
   bool _isLoading = false;
+  bool _lockDevice = false;
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
     _priceController.text = profile.price?.toString() ?? '0.0';
     _sharedUsersController.text = profile.sharedUsers?.toString() ?? '1';
     _autologout = profile.autologout ?? true;
+    _lockDevice = profile.lockDevice;
 
     _unlimitedRateLimit =
         profile.rateLimitUpload == null && profile.rateLimitDownload == null;
@@ -101,6 +103,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             ? null
             : int.tryParse(_sharedUsersController.text) ?? 1,
         autologout: _autologout,
+        lockDevice: _lockDevice,
       );
 
       if (widget.profile == null) {
@@ -186,6 +189,8 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                   _buildSharedUsersSection(),
                   SizedBox(height: 16),
                   _buildAutologoutSwitch(),
+                  SizedBox(height: 16),
+                  _buildLockDeviceSwitch(),
                   SizedBox(height: 24),
                   _buildSubmitButton(isEditing),
                 ],
@@ -553,6 +558,62 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             },
             activeTrackColor: context.appPrimary.withValues(alpha: 0.5),
             activeThumbColor: context.appPrimary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLockDeviceSwitch() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.appOnSurface.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _lockDevice ? Icons.phone_android_rounded : Icons.devices_rounded,
+            color: _lockDevice ? Colors.red : context.appPrimary,
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lock Device',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: context.appOnSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  _lockDevice
+                      ? 'User can only login from one device'
+                      : 'User can login from any device',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.appOnSurface.withValues(alpha: 0.6),
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _lockDevice,
+            onChanged: (value) {
+              setState(() {
+                _lockDevice = value;
+              });
+            },
+            activeTrackColor: Colors.red.withValues(alpha: 0.5),
+            activeThumbColor: Colors.red,
           ),
         ],
       ),

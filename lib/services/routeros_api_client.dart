@@ -642,6 +642,20 @@ class RouterOSClient {
     }
   }
 
+  /// Get all DHCP leases (contains device hostname)
+  Future<List<Map<String, dynamic>>> getDhcpLeases() async {
+    try {
+      _ensureConnected();
+      _writeWord('/ip/dhcp-server/lease/print');
+      _writeWord(''); // Empty word to terminate sentence
+      final response = await _readResponse();
+      _log('Got ${response.length} DHCP leases');
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch DHCP leases: $e');
+    }
+  }
+
   Future<void> disconnect() async {
     _awaitingDone = false;
     if (_responseCompleter != null && !_responseCompleter!.isCompleted) {

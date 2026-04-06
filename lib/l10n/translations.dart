@@ -278,6 +278,8 @@ class AppStrings {
       {'en': 'Active Users', 'id': 'Pengguna Aktif', 'ms': 'Pengguna Aktif'});
   String get hotspotHosts =>
       _get({'en': 'Hotspot Hosts', 'id': 'Host Hotspot', 'ms': 'Host Hotspot'});
+  String get dhcpLeases =>
+      _get({'en': 'DHCP Leases', 'id': 'Lease DHCP', 'ms': 'Lease DHCP'});
   String get userProfiles => _get({
         'en': 'User Profiles',
         'id': 'Profil Pengguna',

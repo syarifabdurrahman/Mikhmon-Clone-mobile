@@ -123,6 +123,7 @@ class UserProfile {
   final int? sharedUsers; // number of shared users (0 = unlimited)
   final bool? autologout; // auto logout when limit reached
   final DateTime? expiresAt; // expire date/time
+  final bool lockDevice; // 0 = all devices allowed, 1 = locked to one device
 
   UserProfile({
     required this.id,
@@ -134,6 +135,7 @@ class UserProfile {
     this.sharedUsers,
     this.autologout,
     this.expiresAt,
+    this.lockDevice = false,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -153,6 +155,7 @@ class UserProfile {
       expiresAt: json['expires-at'] != null
           ? DateTime.tryParse(json['expires-at'])
           : null,
+      lockDevice: json['lock-device'] == 'true' || json['lock-device'] == true,
     );
   }
 
@@ -167,6 +170,7 @@ class UserProfile {
       'shared-users': sharedUsers?.toString(),
       'autologout': autologout?.toString() ?? 'false',
       'expires-at': expiresAt?.toIso8601String(),
+      'lock-device': lockDevice.toString(),
     };
   }
 
@@ -179,6 +183,7 @@ class UserProfile {
       'price': price?.toString(),
       'shared-users': sharedUsers?.toString(),
       'autologout': autologout?.toString() ?? 'false',
+      'lock-device': lockDevice.toString(),
     };
   }
 
@@ -922,4 +927,79 @@ class HotspotHost {
 
   @override
   int get hashCode => id.hashCode;
+}
+
+/// DHCP Lease Model - Contains device hostname info
+class DhcpLease {
+  final String id;
+  final String? address; // IP address
+  final String? macAddress;
+  final String? hostname; // Device name (e.g., OPPO, Samsung)
+  final String? status; // bound, freed, waiting
+  final String? server; // DHCP server
+  final bool isDynamic; // Dynamic vs static lease
+  final String? comment;
+  final String? expiresAt;
+  final int? bytesIn;
+  final int? bytesOut;
+
+  DhcpLease({
+    required this.id,
+    this.address,
+    this.macAddress,
+    this.hostname,
+    this.status,
+    this.server,
+    required this.isDynamic,
+    this.comment,
+    this.expiresAt,
+    this.bytesIn,
+    this.bytesOut,
+  });
+
+  factory DhcpLease.fromJson(Map<String, dynamic> json) {
+    return DhcpLease(
+      id: json['.id'] ?? json['id'] ?? '',
+      address: json['address'] as String?,
+      macAddress: json['mac-address'] as String?,
+      hostname: json['host-name'] as String? ?? json['hostname'] as String?,
+      status: json['status'] as String?,
+      server: json['server'] as String?,
+      isDynamic: json['dynamic'] == 'true' || json['dynamic'] == true,
+      comment: json['comment'] as String?,
+      expiresAt:
+          json['expires-after'] as String? ?? json['expires-at'] as String?,
+      bytesIn: _parseInt(json['bytes-in']),
+      bytesOut: _parseInt(json['bytes-out']),
+    );
+  }
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  String get displayName {
+    if (hostname != null && hostname!.isNotEmpty) return hostname!;
+    if (macAddress != null && macAddress!.isNotEmpty) return macAddress!;
+    if (address != null && address!.isNotEmpty) return address!;
+    return 'Unknown Device';
+  }
+
+  String get statusDisplay {
+    switch (status?.toLowerCase()) {
+      case 'bound':
+        return 'Active';
+      case 'waiting':
+        return 'Waiting';
+      case 'offered':
+        return 'Offered';
+      case 'freed':
+        return 'Freed';
+      default:
+        return status ?? 'Unknown';
+    }
+  }
 }

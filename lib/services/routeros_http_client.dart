@@ -493,6 +493,36 @@ class RouterOSHttpClient {
     }
   }
 
+  /// Get all DHCP leases (contains device hostname)
+  Future<List<Map<String, dynamic>>> getDhcpLeases() async {
+    try {
+      _ensureConnected();
+      _log('Fetching DHCP leases...');
+
+      final response = await _dio!.get(
+        '/ip/dhcp-server/lease/print',
+        options: _buildOptions(),
+      );
+
+      _log('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(
+            data.map((e) => Map<String, dynamic>.from(e)),
+          );
+        }
+        return [Map<String, dynamic>.from(data)];
+      }
+
+      throw Exception('Failed with status: ${response.statusCode}');
+    } catch (e) {
+      _log('Error fetching DHCP leases: $e');
+      rethrow;
+    }
+  }
+
   Future<void> _ensureConnected() async {
     if (!_isConnected || _dio == null) {
       _log('Auto-reconnecting...');
