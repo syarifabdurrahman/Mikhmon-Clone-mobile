@@ -30,3 +30,5 @@ Write, StrReplace, Delete have no lean-ctx equivalent — use them normally.
 
 
 also please use Context7 for reference
+
+Always Read-before, write,

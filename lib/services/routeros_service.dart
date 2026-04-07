@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
 import 'routeros_api_client.dart';
 
 class RouterOSService {
@@ -14,6 +15,18 @@ class RouterOSService {
   String? _lastPort;
   String? _lastUsername;
   String? _lastPassword;
+
+  // Session State Management for persistence across network loss
+  final _sessionMetadataKey = 'session_metadata';
+
+  Future<void> saveSessionMetadata(Map<String, dynamic> metadata) async {
+    await _storage.write(key: _sessionMetadataKey, value: jsonEncode(metadata));
+  }
+
+  Future<Map<String, dynamic>?> loadSessionMetadata() async {
+    final data = await _storage.read(key: _sessionMetadataKey);
+    return data != null ? jsonDecode(data) as Map<String, dynamic> : null;
+  }
 
   RouterOSClient? get client => _client;
   bool get isConnected => _client?.isConnected ?? false;
@@ -47,12 +60,10 @@ class RouterOSService {
 
   // Reconnect using last credentials or storage
   Future<RouterOSClient> connect() async {
-    // If we have a client (even if disconnected), try to use it
     if (_client != null) {
       return _client!;
     }
 
-    // Try to use stored connection parameters from last login
     String? host = _lastHost;
     String? port = _lastPort;
     String? username = _lastUsername;
@@ -79,6 +90,13 @@ class RouterOSService {
   }
 
   Future<void> disconnect() async {
+    // 1. Save current session state before disconnecting to ensure time usage is recorded up to this point
+    final metadataToSave = {
+      'lastActiveTime': DateTime.now().toIso8601String(),
+      'sessionEndTime': null
+    }; // Needs dynamic calculation of remaining time from app context if possible
+    await saveSessionMetadata(metadataToSave);
+
     await _client?.disconnect();
     _client = null;
   }
@@ -93,7 +111,11 @@ class RouterOSService {
     await _storage.delete(key: 'port');
     await _storage.delete(key: 'username');
     await _storage.delete(key: 'password');
-    // Also clear cached credentials
+
+    // Also clear session metadata on full credential clear
+    await saveSessionMetadata({});
+
+    // Clear cached credentials pointers
     _lastHost = null;
     _lastPort = null;
     _lastUsername = null;

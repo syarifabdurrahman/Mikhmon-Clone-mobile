@@ -167,15 +167,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       );
 
       // Pre-fetch system resources during login
-      Map<String, dynamic>? resources;
-      try {
-        resources = await client.getSystemResources();
+      final resources = await client.getSystemResources();
 
-        final cache = ref.read(cacheServiceProvider);
-        await cache.saveSystemResources(resources);
-      } catch (e) {
-        // Silently handle pre-fetch failure - dashboard will load on demand
-      }
+      final cache = ref.read(cacheServiceProvider);
+      await cache.saveSystemResources(resources);
 
       // Log successful login
       await LogService.logLogin(username, '$host:$port');
@@ -840,19 +835,25 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
         hasMore: currentState.hasMore,
         currentPage: currentState.currentPage,
         pageSize: currentState.pageSize,
+        activeUsernames: currentState.activeUsernames,
       ));
     }
 
-    // Then refresh in background to ensure data is accurate
-    silentRefresh();
+    // Wait a moment for router to process deletion, then refresh
+    await Future.delayed(const Duration(milliseconds: 500));
+    await silentRefresh();
   }
 
   Future<void> silentRefresh() async {
+    final previousState = state.value;
     try {
       final newData = await _loadUsers(page: 1);
       state = AsyncValue.data(newData);
     } catch (e) {
-      // Silent refresh failed - will retry on next access
+      // If refresh fails, try to preserve the previous state
+      if (previousState != null) {
+        state = AsyncValue.data(previousState);
+      }
     }
   }
 

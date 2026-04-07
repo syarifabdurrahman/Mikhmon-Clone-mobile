@@ -24,71 +24,83 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Icon with background
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: (iconColor ?? context.appPrimary).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: iconSize ?? 48,
-                color: (iconColor ?? context.appPrimary).withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Title
-            Text(
-              title,
-              style: TextStyle(
-                color: context.appOnSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-
-            // Description
-            Text(
-              description,
-              style: TextStyle(
-                color: context.appOnSurface.withValues(alpha: 0.6),
-                fontSize: 14,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-            ),
-
-            // Action button
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: onAction,
-                icon: Icon(_getActionIcon()),
-                label: Text(actionLabel!),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: context.appPrimary,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+    return SingleChildScrollView(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon with background
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color:
+                      (iconColor ?? context.appPrimary).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: iconSize ?? 40,
+                  color:
+                      (iconColor ?? context.appPrimary).withValues(alpha: 0.6),
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // Title
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: context.appOnSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Description
+              Flexible(
+                child: Text(
+                  description,
+                  style: TextStyle(
+                    color: context.appOnSurface.withValues(alpha: 0.6),
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              // Action button
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: onAction,
+                  icon: Icon(_getActionIcon()),
+                  label: Text(actionLabel!),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.appPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

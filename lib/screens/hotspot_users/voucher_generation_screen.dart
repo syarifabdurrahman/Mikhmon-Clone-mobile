@@ -1012,13 +1012,30 @@ class _VoucherGenerationScreenState
   }) {
     return DropdownButtonFormField<T>(
       initialValue: value,
-      items: items,
+      items: items.map((item) {
+        String text;
+        if (item.child is Text) {
+          text = (item.child as Text).data ?? '';
+        } else {
+          text = item.value?.toString() ?? '';
+        }
+        return DropdownMenuItem<T>(
+          value: item.value,
+          child: Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        );
+      }).toList(),
       onChanged: onChanged,
       hint: hint,
       validator: validator,
       iconEnabledColor: context.appPrimary,
       dropdownColor: context.appSurface,
       style: TextStyle(color: context.appOnSurface),
+      isExpanded: true,
+      menuMaxHeight: 200,
       decoration: InputDecoration(
         labelText: label,
         labelStyle:
