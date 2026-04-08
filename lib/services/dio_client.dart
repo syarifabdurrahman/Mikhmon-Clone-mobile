@@ -199,6 +199,7 @@ class RouterOSDioClient {
     String? comment,
     String? validity, // For limit-uptime (e.g., "5m", "1h", "1d")
     String? dataLimit, // For limit-bytes-total (e.g., "1G", "500M")
+    String? sessionTimeout, // Session timeout (e.g., "30m", "1h")
   }) async {
     try {
       final response = await dio.post(
@@ -214,6 +215,10 @@ class RouterOSDioClient {
             'limit-uptime': validity,
           if (dataLimit != null && dataLimit.isNotEmpty)
             'limit-bytes-total': dataLimit,
+          if (sessionTimeout != null &&
+              sessionTimeout.isNotEmpty &&
+              sessionTimeout != 'unlimited')
+            'session-timeout': sessionTimeout,
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,

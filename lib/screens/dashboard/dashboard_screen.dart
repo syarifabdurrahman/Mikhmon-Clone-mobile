@@ -30,6 +30,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Timer? _refreshTimer;
   bool _isFetching = false;
 
+  bool _highPriorityLoaded = false;
+  bool _mediumPriorityLoaded = false;
+  bool _lowPriorityLoaded = false;
+
+  static const _staleDuration = Duration(seconds: 30);
+  DateTime? _lastHotspotUsersRefresh;
+  DateTime? _lastUserProfilesRefresh;
+
   @override
   void initState() {
     super.initState();
@@ -54,31 +62,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _loadInitialData() {
     if (!mounted) return;
 
-    // Check if we have cached data before showing loading state
     final cache = ref.read(cacheServiceProvider);
     final hasCachedData = cache.getSystemResources() != null ||
         ref.read(authStateProvider).value?.systemResources != null;
 
-    // Don't show loading if we have cached data (seamless navigation)
-    _loadDashboardData(showLoading: !hasCachedData);
+    _loadHighPriorityData(hasCachedData);
+    _loadMediumPriorityData();
+    _loadLowPriorityData();
+  }
 
-    // Refresh hotspot users and profiles for AtAGlance card
-    _refreshHotspotUsers();
-    _refreshUserProfiles();
+  void _loadHighPriorityData(bool hasCachedData) {
+    _refreshHotspotUsersIfStale();
+    _refreshUserProfilesIfStale();
+    _highPriorityLoaded = true;
 
+    if (!hasCachedData) {
+      _loadDashboardData(showLoading: false);
+    }
     _startPeriodicRefresh();
   }
 
-  void _refreshHotspotUsers() {
-    Future.microtask(() {
-      ref.invalidate(hotspotUsersProvider);
+  void _loadMediumPriorityData() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _mediumPriorityLoaded = true;
+        });
+      }
     });
   }
 
-  void _refreshUserProfiles() {
-    Future.microtask(() {
-      ref.invalidate(userProfileProvider);
+  void _loadLowPriorityData() {
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _lowPriorityLoaded = true;
+        });
+      }
     });
+  }
+
+  void _refreshHotspotUsersIfStale() {
+    final now = DateTime.now();
+    if (_lastHotspotUsersRefresh == null ||
+        now.difference(_lastHotspotUsersRefresh!) > _staleDuration) {
+      Future.microtask(() {
+        ref.read(hotspotUsersProvider.notifier).refresh();
+      });
+      _lastHotspotUsersRefresh = now;
+    }
+  }
+
+  void _refreshUserProfilesIfStale() {
+    final now = DateTime.now();
+    if (_lastUserProfilesRefresh == null ||
+        now.difference(_lastUserProfilesRefresh!) > _staleDuration) {
+      Future.microtask(() {
+        ref.read(userProfileProvider.notifier).refresh();
+      });
+      _lastUserProfilesRefresh = now;
+    }
   }
 
   @override
@@ -349,12 +392,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildBody() {
-    // Show skeleton loading for initial load
-    if (_isInitialLoad && _isLoading) {
+    // Show full skeleton on initial load when no cached data
+    final cache = ref.read(cacheServiceProvider);
+    final hasCachedData = cache.getSystemResources() != null ||
+        ref.read(authStateProvider).value?.systemResources != null;
+
+    if (_isInitialLoad && _isLoading && !hasCachedData) {
       return _buildDashboardSkeleton();
     }
 
-    if (_errorMessage != null) {
+    if (_errorMessage != null && _resources == null) {
       return SafeArea(
         child: SingleChildScrollView(
           child: ConstrainedBox(
@@ -410,17 +457,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
     }
 
-    if (_resources == null) {
-      return Center(
-        child: Text(
-          'No data available',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: context.appOnBackground,
-              ),
-        ),
-      );
-    }
-
     return RefreshIndicator(
       onRefresh: () => _loadDashboardData(showLoading: false),
       color: context.appPrimary,
@@ -432,22 +468,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // At a Glance summary
-                const AtAGlanceCard(),
+                // At a Glance summary (High priority - always show with skeleton fallback)
+                if (_highPriorityLoaded)
+                  const AtAGlanceCard()
+                else
+                  SkeletonLoaders.card(height: 100),
                 SizedBox(height: isSmallScreen ? 12 : 16),
-                // System alerts (shown only when there are issues)
-                _buildAlertsSection(),
-                // System info card
-                _buildSystemInfoCard(),
-                SizedBox(height: isSmallScreen ? 12 : 16),
-                // Expandable resource chart
-                _buildResourceChart(),
-                SizedBox(height: isSmallScreen ? 12 : 16),
-                // Traffic monitor
-                const TrafficMonitorCard(),
-                SizedBox(height: isSmallScreen ? 16 : 20),
-                // Quick actions grid
-                const QuickActionsGrid(),
+                // System alerts (High priority)
+                if (_highPriorityLoaded)
+                  _buildAlertsSection()
+                else
+                  SkeletonLoaders.card(height: 80),
+                // System info card (Low priority)
+                if (_lowPriorityLoaded && _resources != null) ...[
+                  _buildSystemInfoCard(),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                ] else
+                  SkeletonLoaders.card(height: 180),
+                // Expandable resource chart (Low priority)
+                if (_lowPriorityLoaded && _resources != null) ...[
+                  _buildResourceChart(),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                ] else
+                  SkeletonLoaders.chart(height: 250),
+                // Traffic monitor (Medium priority)
+                if (_mediumPriorityLoaded) ...[
+                  const TrafficMonitorCard(),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                ] else
+                  SkeletonLoaders.card(height: 150),
+                // Quick actions grid (Medium priority)
+                if (_mediumPriorityLoaded)
+                  const QuickActionsGrid()
+                else
+                  SkeletonLoaders.card(height: 200),
               ],
             ),
           );

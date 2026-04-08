@@ -250,6 +250,7 @@ class RouterOSHttpClient {
     String? comment,
     String? validity, // For limit-uptime (e.g., "5m", "1h", "1d")
     String? dataLimit, // For limit-bytes-total (e.g., "1G", "500M")
+    String? sessionTimeout, // Session timeout (e.g., "30m", "1h")
   }) async {
     try {
       _ensureConnected();
@@ -265,10 +266,14 @@ class RouterOSHttpClient {
       }
       if (validity != null && validity.isNotEmpty && validity != 'unlimited') {
         data['limit-uptime'] = validity;
-        data['session-timeout'] = validity;
       }
       if (dataLimit != null && dataLimit.isNotEmpty) {
         data['limit-bytes-total'] = dataLimit;
+      }
+      if (sessionTimeout != null &&
+          sessionTimeout.isNotEmpty &&
+          sessionTimeout != 'unlimited') {
+        data['session-timeout'] = sessionTimeout;
       }
 
       final response = await _dio!.put(

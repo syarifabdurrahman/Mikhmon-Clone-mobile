@@ -119,6 +119,7 @@ class UserProfile {
   final String? rateLimitUpload; // in kbps (e.g., "512k" or "unlimited")
   final String? rateLimitDownload; // in kbps
   final String? validity; // time duration (e.g., "1h", "1d", "unlimited")
+  final String? sessionTimeout; // session-timeout (e.g., "30m", "1h")
   final double? price; // selling price
   final int? sharedUsers; // number of shared users (0 = unlimited)
   final bool? autologout; // auto logout when limit reached
@@ -132,6 +133,7 @@ class UserProfile {
     this.rateLimitUpload,
     this.rateLimitDownload,
     this.validity,
+    this.sessionTimeout,
     this.price,
     this.sharedUsers,
     this.autologout,
@@ -147,6 +149,7 @@ class UserProfile {
       rateLimitUpload: json['rate-limit-upload'],
       rateLimitDownload: json['rate-limit-download'],
       validity: json['validity'],
+      sessionTimeout: json['session-timeout'],
       price: json['price'] != null
           ? double.tryParse(json['price'].toString())
           : null,
@@ -169,6 +172,7 @@ class UserProfile {
       'rate-limit-upload': rateLimitUpload,
       'rate-limit-download': rateLimitDownload,
       'validity': validity,
+      'session-timeout': sessionTimeout,
       'price': price?.toString(),
       'shared-users': sharedUsers?.toString(),
       'autologout': autologout?.toString() ?? 'false',
@@ -184,6 +188,7 @@ class UserProfile {
       'rate-limit-upload': rateLimitUpload,
       'rate-limit-download': rateLimitDownload,
       'validity': validity,
+      'session-timeout': sessionTimeout,
       'price': price?.toString(),
       'shared-users': sharedUsers?.toString(),
       'autologout': autologout?.toString() ?? 'false',
@@ -209,6 +214,15 @@ class UserProfile {
     return validity!;
   }
 
+  String get sessionTimeoutDisplay {
+    if (sessionTimeout == null ||
+        sessionTimeout == '0' ||
+        sessionTimeout == 'unlimited') {
+      return 'None';
+    }
+    return sessionTimeout!;
+  }
+
   String get priceDisplay {
     if (price == null || price == 0) {
       return 'Free';
@@ -229,10 +243,13 @@ class UserProfile {
     String? rateLimitUpload,
     String? rateLimitDownload,
     String? validity,
+    String? sessionTimeout,
     double? price,
     int? sharedUsers,
     bool? autologout,
     DateTime? expiresAt,
+    bool? lockDevice,
+    String? onLoginScript,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -240,10 +257,13 @@ class UserProfile {
       rateLimitUpload: rateLimitUpload ?? this.rateLimitUpload,
       rateLimitDownload: rateLimitDownload ?? this.rateLimitDownload,
       validity: validity ?? this.validity,
+      sessionTimeout: sessionTimeout ?? this.sessionTimeout,
       price: price ?? this.price,
       sharedUsers: sharedUsers ?? this.sharedUsers,
       autologout: autologout ?? this.autologout,
       expiresAt: expiresAt ?? this.expiresAt,
+      lockDevice: lockDevice ?? this.lockDevice,
+      onLoginScript: onLoginScript ?? this.onLoginScript,
     );
   }
 }

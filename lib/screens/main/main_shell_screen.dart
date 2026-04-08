@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/global_search.dart';
 import '../../l10n/translations.dart';
 import '../../services/onboarding_service.dart';
+import '../../services/cache_service.dart';
 
 final isDemoModeProvider = FutureProvider<bool>((ref) async {
   return await OnboardingService.isDemoMode();
@@ -186,6 +187,9 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
               Navigator.pop(context);
               await OnboardingService.setDemoMode(false);
               await OnboardingService.clearAll();
+              // Clear demo data from cache
+              final cache = CacheService();
+              await cache.clearAllDemoData();
               if (context.mounted) {
                 context.go('/');
               }

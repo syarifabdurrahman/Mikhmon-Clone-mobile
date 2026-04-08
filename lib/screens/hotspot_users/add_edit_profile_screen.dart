@@ -25,12 +25,14 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
   final _rateLimitUploadController = TextEditingController();
   final _rateLimitDownloadController = TextEditingController();
   final _validityController = TextEditingController();
+  final _sessionTimeoutController = TextEditingController();
   final _priceController = TextEditingController();
   final _sharedUsersController = TextEditingController();
 
   bool _autologout = true;
   bool _unlimitedRateLimit = true;
   bool _unlimitedValidity = true;
+  bool _unlimitedSessionTimeout = true;
   bool _unlimitedSharedUsers = true;
   bool _isLoading = false;
   bool _lockDevice = false;
@@ -45,6 +47,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
       _rateLimitUploadController.text = 'unlimited';
       _rateLimitDownloadController.text = 'unlimited';
       _validityController.text = 'unlimited';
+      _sessionTimeoutController.text = 'unlimited';
       _sharedUsersController.text = '1';
     }
   }
@@ -55,6 +58,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
     _rateLimitDownloadController.text =
         profile.rateLimitDownload ?? 'unlimited';
     _validityController.text = profile.validity ?? 'unlimited';
+    _sessionTimeoutController.text = profile.sessionTimeout ?? 'unlimited';
     _priceController.text = profile.price?.toString() ?? '0.0';
     _sharedUsersController.text = profile.sharedUsers?.toString() ?? '1';
     _autologout = profile.autologout ?? true;
@@ -64,6 +68,8 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
         profile.rateLimitUpload == null && profile.rateLimitDownload == null;
     _unlimitedValidity =
         profile.validity == null || profile.validity == 'unlimited';
+    _unlimitedSessionTimeout =
+        profile.sessionTimeout == null || profile.sessionTimeout == 'unlimited';
     _unlimitedSharedUsers =
         profile.sharedUsers == null || profile.sharedUsers == 0;
   }
@@ -74,6 +80,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
     _rateLimitUploadController.dispose();
     _rateLimitDownloadController.dispose();
     _validityController.dispose();
+    _sessionTimeoutController.dispose();
     _priceController.dispose();
     _sharedUsersController.dispose();
     super.dispose();
@@ -98,6 +105,9 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
             ? null
             : _rateLimitDownloadController.text.trim(),
         validity: _unlimitedValidity ? null : _validityController.text.trim(),
+        sessionTimeout: _unlimitedSessionTimeout
+            ? null
+            : _sessionTimeoutController.text.trim(),
         price: double.tryParse(_priceController.text) ?? 0.0,
         sharedUsers: _unlimitedSharedUsers
             ? null
@@ -446,6 +456,60 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
                     },
             ),
           ),
+        ),
+        const SizedBox(height: 24),
+        // Session Timeout section
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Session Timeout (Limit Uptime)',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: context.appOnSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const Spacer(),
+                Switch(
+                  value: !_unlimitedSessionTimeout,
+                  onChanged: (value) {
+                    setState(() {
+                      _unlimitedSessionTimeout = !value;
+                      if (_unlimitedSessionTimeout) {
+                        _sessionTimeoutController.text = 'unlimited';
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Opacity(
+              opacity: _unlimitedSessionTimeout ? 0.5 : 1.0,
+              child: IgnorePointer(
+                ignoring: _unlimitedSessionTimeout,
+                child: TextFormField(
+                  controller: _sessionTimeoutController,
+                  decoration: InputDecoration(
+                    hintText: '30m',
+                    prefixIcon: Icon(Icons.timer_rounded),
+                    helperText:
+                        'Max session duration: 30m, 1h, 2h (resets on re-login)',
+                  ),
+                  validator: _unlimitedSessionTimeout
+                      ? null
+                      : (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Required';
+                          }
+                          return null;
+                        },
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

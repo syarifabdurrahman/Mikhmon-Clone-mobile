@@ -328,6 +328,17 @@ class CacheService {
     await clearEntry(_userProfilesKey);
   }
 
+  /// Clear all demo data and switch to real mode
+  Future<void> clearAllDemoData() async {
+    await clearEntry(_userProfilesKey);
+    await clearEntry(_hotspotUsersKey);
+    await clearEntry(_activeUsersKey);
+    await clearEntry(_interfaceTrafficKey);
+    await clearVouchers();
+    // ignore: avoid_print
+    print('All demo data cleared');
+  }
+
   /// Get generated vouchers from cache
   List<Map<String, dynamic>>? getVouchers() {
     try {

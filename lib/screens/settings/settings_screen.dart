@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
+import '../../services/cache_service.dart';
 import '../../services/models.dart';
 import '../../services/template_service.dart';
-import '../../services/cache_service.dart';
 import '../../services/onboarding_service.dart';
-import '../../l10n/locale_provider.dart';
 import '../../l10n/translations.dart';
+import '../../l10n/locale_provider.dart';
+import '../../utils/currency_formatter.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -523,26 +525,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _showCurrencyDialog(
       BuildContext context, WidgetRef ref, CacheService cache) {
+    final currencies = CurrencyData.allCurrencies;
+
     showDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
         backgroundColor: context.appSurface,
         title: Text(AppStrings.of(context).currency,
             style: TextStyle(color: context.appOnSurface)),
-        children: _currencies.entries.map((e) {
+        children: currencies.map((e) {
           return SimpleDialogOption(
             onPressed: () async {
+              // Update cache
               final current = cache.getAppSettings() ?? {};
               await cache.saveAppSettings(
                 country: current['country'] ?? '',
-                currency: e.key,
+                currency: e.code,
                 companyName: current['companyName'] ?? '',
               );
+
+              // Update currency provider
+              ref.read(currencyProvider.notifier).setCurrency(e.code);
+
               if (ctx.mounted) Navigator.pop(ctx);
               if (context.mounted) setState(() {});
             },
-            child: Text('${e.key} - ${e.value}',
-                style: TextStyle(color: context.appOnSurface)),
+            child: Row(
+              children: [
+                Text(e.symbol,
+                    style: TextStyle(
+                        color: context.appOnSurface,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('${e.code} - ${e.name}',
+                      style: TextStyle(color: context.appOnSurface)),
+                ),
+              ],
+            ),
           );
         }).toList(),
       ),
@@ -1077,6 +1097,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Navigator.pop(ctx);
               await ref.read(authStateProvider.notifier).logout();
               await OnboardingService.setDemoMode(false);
+              // Clear demo data from cache when logging out
+              final cache = CacheService();
+              await cache.clearAllDemoData();
               if (context.mounted) {
                 context.go('/');
               }

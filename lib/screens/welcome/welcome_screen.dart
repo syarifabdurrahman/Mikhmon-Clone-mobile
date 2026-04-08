@@ -333,38 +333,44 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               children: [
                 const Icon(
                   Icons.flash_on_rounded,
-                  size: 18,
+                  size: 16,
                   color: Colors.amber,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  AppStrings.of(context).myRouters,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    AppStrings.of(context).myRouters,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 4),
                 Text(
-                  '${connections.length} ${AppStrings.of(context).saved.toLowerCase()}',
+                  '${connections.length}',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     color: Colors.grey[500],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
                 padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
                 itemCount: connections.length,
                 itemBuilder: (context, index) {
                   return _buildConnectionTile(connections[index]);
                 },
               ),
             ),
+            const SizedBox(height: 8),
           ],
         );
       },

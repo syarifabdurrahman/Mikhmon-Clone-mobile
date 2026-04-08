@@ -5,6 +5,7 @@ import 'dart:math';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../utils/validity_parser.dart';
+import '../../services/models.dart';
 import '../../services/models/voucher.dart';
 import '../../services/log_service.dart';
 import '../../services/cache_service.dart';
@@ -179,6 +180,15 @@ class _VoucherGenerationScreenState
 
     final qty = int.tryParse(_qtyController.text) ?? 1;
 
+    // Get selected profile's session-timeout
+    final profilesAsync = ref.read(userProfileProvider);
+    final profiles = profilesAsync.valueOrNull ?? [];
+    final selectedProfileObj = profiles.firstWhere(
+      (p) => p.name == _selectedProfile,
+      orElse: () => UserProfile(id: '', name: _selectedProfile!),
+    );
+    final profileSessionTimeout = selectedProfileObj.sessionTimeout;
+
     // Real RouterOS API call
     final service = ref.read(routerOSServiceProvider);
     final client = service.client;
@@ -243,12 +253,15 @@ class _VoucherGenerationScreenState
         );
 
         // Add user via RouterOS API
+        // Use profile's session-timeout as limit-uptime
+        final limitUptime = profileSessionTimeout;
+
         await client.addHotspotUser(
           username: username,
           password: password,
           profile: _selectedProfile ?? 'default',
           comment: comment,
-          validity: validity.isEmpty ? null : validity,
+          validity: limitUptime,
           dataLimit: dataLimit,
         );
 

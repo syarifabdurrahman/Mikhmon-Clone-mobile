@@ -34,6 +34,9 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   final Debouncer _searchDebouncer =
       Debouncer(delay: const Duration(milliseconds: 300));
 
+  static const _staleDuration = Duration(seconds: 30);
+  DateTime? _lastRefreshTime;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -48,14 +51,22 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Only refresh once when screen becomes visible
     if (!_hasInitiallyLoaded) {
       _hasInitiallyLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ref.invalidate(hotspotUsersProvider);
-        }
+        _refreshIfStale();
       });
+    }
+  }
+
+  Future<void> _refreshIfStale() async {
+    if (!mounted) return;
+
+    final now = DateTime.now();
+    if (_lastRefreshTime == null ||
+        now.difference(_lastRefreshTime!) > _staleDuration) {
+      await ref.read(hotspotUsersProvider.notifier).refresh();
+      _lastRefreshTime = DateTime.now();
     }
   }
 

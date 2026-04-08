@@ -20,6 +20,7 @@ import '../screens/onboarding/setup_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../utils/on_login_script_generator.dart';
 import '../utils/async_lock.dart';
+import '../utils/currency_formatter.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/hotspot_active_users_screen.dart';
@@ -84,6 +85,49 @@ class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
   /// Get theme data for current mode
   ThemeData getThemeData() {
     return ThemeService.getThemeData(state);
+  }
+}
+
+// Currency Provider
+final currencyProvider =
+    StateNotifierProvider<CurrencyNotifier, CurrencyInfo>((ref) {
+  return CurrencyNotifier();
+});
+
+class CurrencyNotifier extends StateNotifier<CurrencyInfo> {
+  CurrencyNotifier() : super(CurrencyData.currencies['USD']!) {
+    _loadCurrency();
+  }
+
+  Future<void> _loadCurrency() async {
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    final savedCurrency = settings?['currency'] as String?;
+
+    if (savedCurrency != null &&
+        CurrencyData.currencies.containsKey(savedCurrency)) {
+      state = CurrencyData.currencies[savedCurrency]!;
+    } else {
+      // Default to device locale currency
+      final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+      state = CurrencyData.getCurrencyForLocale(deviceLocale.languageCode);
+    }
+  }
+
+  Future<void> setCurrency(String code) async {
+    if (CurrencyData.currencies.containsKey(code)) {
+      state = CurrencyData.currencies[code]!;
+
+      // Save to settings
+      final cache = CacheService();
+      final settings = cache.getAppSettings() ?? {};
+      settings['currency'] = code;
+      await cache.saveAppSettings(
+        country: settings['country'] ?? '',
+        currency: code,
+        companyName: settings['companyName'] ?? '',
+      );
+    }
   }
 }
 
@@ -782,6 +826,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     required String password,
     required String profile,
     String? comment,
+    String? sessionTimeout,
   }) async {
     final service = ref.read(routerOSServiceProvider);
     final client = service.client;
@@ -794,6 +839,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       password: password,
       profile: profile,
       comment: comment,
+      sessionTimeout: sessionTimeout,
     );
 
     ref.invalidate(hotspotUsersProvider);
@@ -1042,9 +1088,11 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   }
 
   Future<void> refresh() async {
-    _currentPage = 1;
-    state = const AsyncValue.loading();
-    state = AsyncValue.data(await _loadActiveUsers(page: 1));
+    return refreshLock.synchronizedRefresh('hotspotActiveUsers', () async {
+      _currentPage = 1;
+      state = const AsyncValue.loading();
+      state = AsyncValue.data(await _loadActiveUsers(page: 1));
+    });
   }
 
   Future<void> loadMore() async {
@@ -1090,6 +1138,35 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
   // System profiles to filter out
   static const Set<String> _systemProfileNames = {'trial', 'default'};
 
+  // Fields that indicate this is actually a user, not a profile
+  static const Set<String> _userOnlyFields = {'password', 'server'};
+
+  bool _isProfileData(Map<String, dynamic> data) {
+    // User profiles should NOT have password or server fields
+    // If these fields exist, it's likely a user, not a profile
+    for (final field in _userOnlyFields) {
+      if (data.containsKey(field)) {
+        return false;
+      }
+    }
+    // Profile should have at least one profile-specific field
+    final profileFields = [
+      'shared-users',
+      'rate-limit',
+      'keepalive-timeout',
+      'session-timeout'
+    ];
+    for (final field in profileFields) {
+      if (data.containsKey(field)) {
+        return true;
+      }
+    }
+    // If no profile-specific fields, might be a user - check name pattern
+    final name = data['name']?.toString().toLowerCase() ?? '';
+    // Users often have more complex names, profiles are usually simpler
+    return name.isNotEmpty && !name.contains('@');
+  }
+
   @override
   Future<List<UserProfile>> build() async {
     // Always fetch from API to ensure fresh data
@@ -1107,6 +1184,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       return cachedProfiles
           .where((p) => !_systemProfileNames
               .contains(p['name']?.toString().toLowerCase()))
+          .where((p) => _isProfileData(p))
           .map((data) => UserProfile.fromJson(data))
           .toList();
     }
@@ -1123,14 +1201,17 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     try {
-      final profilesData = await client.getUserProfiles();
+      var profilesData = await client.getUserProfiles();
 
-      // Filter out system profiles
-      final profiles = profilesData
+      // Filter out system profiles AND any user data that leaked in
+      profilesData = profilesData
           .where((p) => !_systemProfileNames
               .contains(p['name']?.toString().toLowerCase()))
-          .map((data) => UserProfile.fromJson(data))
+          .where((p) => _isProfileData(p))
           .toList();
+
+      final profiles =
+          profilesData.map((data) => UserProfile.fromJson(data)).toList();
 
       // Cache the profiles (cache original data, filtering is applied on load)
       await cache.saveUserProfiles(profilesData);
@@ -1184,7 +1265,8 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       onLogin: onLoginScript,
     );
 
-    await silentRefresh();
+    // Force refresh from MikroTik to get updated data
+    ref.invalidate(userProfileProvider);
   }
 
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -1218,7 +1300,8 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       onLogin: onLoginScript,
     );
 
-    await silentRefresh();
+    // Force refresh from MikroTik to get updated data
+    ref.invalidate(userProfileProvider);
   }
 
   Future<void> deleteProfile(String id) async {
@@ -1230,8 +1313,8 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
     await client.removeUserProfile(id);
 
-    // Refresh using silent method (no loading state)
-    await silentRefresh();
+    // Force refresh from MikroTik
+    ref.invalidate(userProfileProvider);
   }
 }
 
@@ -1308,19 +1391,21 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
 
   /// Refresh vouchers from cache
   Future<void> refresh() async {
-    try {
-      final cache = ref.read(cacheServiceProvider);
-      final cachedVouchers = cache.getVouchers();
+    return refreshLock.synchronizedRefresh('vouchers', () async {
+      try {
+        final cache = ref.read(cacheServiceProvider);
+        final cachedVouchers = cache.getVouchers();
 
-      if (cachedVouchers != null) {
-        state = AsyncValue.data(
-            cachedVouchers.map((data) => Voucher.fromJson(data)).toList());
-      } else {
-        state = const AsyncValue.data([]);
+        if (cachedVouchers != null) {
+          state = AsyncValue.data(
+              cachedVouchers.map((data) => Voucher.fromJson(data)).toList());
+        } else {
+          state = const AsyncValue.data([]);
+        }
+      } catch (e) {
+        // Refresh failed silently
       }
-    } catch (e) {
-      // Refresh failed silently
-    }
+    });
   }
 
   /// Sort vouchers by specified criteria
@@ -1432,8 +1517,10 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
   }
 
   Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => build());
+    return refreshLock.synchronizedRefresh('income', () async {
+      state = const AsyncValue.loading();
+      state = await AsyncValue.guard(() => build());
+    });
   }
 }
 
@@ -1768,11 +1855,13 @@ class DhcpLeasesNotifier extends AsyncNotifier<List<DhcpLease>> {
   }
 
   Future<void> silentRefresh() async {
-    try {
-      final leases = await _fetchLeases();
-      state = AsyncValue.data(leases);
-    } catch (e) {
-      // Silent refresh failed
-    }
+    return refreshLock.synchronizedRefresh('dhcpLeases', () async {
+      try {
+        final leases = await _fetchLeases();
+        state = AsyncValue.data(leases);
+      } catch (e) {
+        // Silent refresh failed
+      }
+    });
   }
 }

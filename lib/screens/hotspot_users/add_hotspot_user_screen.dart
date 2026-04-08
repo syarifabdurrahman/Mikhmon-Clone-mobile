@@ -95,10 +95,14 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
       }
 
       // Create user on RouterOS
-      // Get validity from selected profile
+      // Get validity and session-timeout from selected profile
       final validity = ValidityParser.formatValidityForMikroTik(
         selectedProfile.validity ?? 'unlimited',
       );
+
+      // Use profile's session-timeout as limit-uptime
+      // This is the "Limit Uptime" setting in MikroTik
+      final limitUptime = selectedProfile.sessionTimeout;
 
       await client.addHotspotUser(
         username: _usernameController.text.trim(),
@@ -108,6 +112,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
             ? null
             : _commentController.text.trim(),
         validity: validity == 'unlimited' ? null : validity,
+        sessionTimeout: limitUptime,
       );
 
       // Also add to local state for immediate UI update
@@ -118,6 +123,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         comment: _commentController.text.trim().isEmpty
             ? null
             : _commentController.text.trim(),
+        sessionTimeout: limitUptime,
       );
 
       if (mounted) {
