@@ -18,6 +18,8 @@ import '../screens/welcome/welcome_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/onboarding/setup_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../utils/on_login_script_generator.dart';
+import '../utils/async_lock.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/hotspot_active_users_screen.dart';
@@ -764,13 +766,15 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   }
 
   Future<void> refresh() async {
-    _currentPage = 1;
-    state = const AsyncValue.loading();
-    try {
-      state = AsyncValue.data(await _loadUsers(page: 1));
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    return refreshLock.synchronizedRefresh('hotspotUsers', () async {
+      _currentPage = 1;
+      state = const AsyncValue.loading();
+      try {
+        state = AsyncValue.data(await _loadUsers(page: 1));
+      } catch (e, st) {
+        state = AsyncValue.error(e, st);
+      }
+    });
   }
 
   Future<void> addUser({
@@ -845,16 +849,17 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   }
 
   Future<void> silentRefresh() async {
-    final previousState = state.value;
-    try {
-      final newData = await _loadUsers(page: 1);
-      state = AsyncValue.data(newData);
-    } catch (e) {
-      // If refresh fails, try to preserve the previous state
-      if (previousState != null) {
-        state = AsyncValue.data(previousState);
+    return refreshLock.synchronizedRefresh('hotspotUsers', () async {
+      final previousState = state.value;
+      try {
+        final newData = await _loadUsers(page: 1);
+        state = AsyncValue.data(newData);
+      } catch (e) {
+        if (previousState != null) {
+          state = AsyncValue.data(previousState);
+        }
       }
-    }
+    });
   }
 
   Future<void> updateUser({
@@ -1164,10 +1169,19 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         ? null
         : '${profile.rateLimitUpload ?? 'unlimited'}/${profile.rateLimitDownload ?? 'unlimited'}';
 
+    // Generate on-login script for auto-expiry if validity is set
+    String? onLoginScript;
+    if (profile.validity != null &&
+        profile.validity!.toLowerCase() != 'unlimited' &&
+        profile.validity!.isNotEmpty) {
+      onLoginScript = OnLoginScriptGenerator.generate();
+    }
+
     await client.addUserProfile(
       name: profile.name,
       rateLimit: rateLimit,
       sessionTimeout: profile.validity,
+      onLogin: onLoginScript,
     );
 
     await silentRefresh();
@@ -1188,11 +1202,20 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         ? null
         : '${updatedProfile.rateLimitUpload ?? 'unlimited'}/${updatedProfile.rateLimitDownload ?? 'unlimited'}';
 
+    // Generate on-login script for auto-expiry if validity is set
+    String? onLoginScript;
+    if (updatedProfile.validity != null &&
+        updatedProfile.validity!.toLowerCase() != 'unlimited' &&
+        updatedProfile.validity!.isNotEmpty) {
+      onLoginScript = OnLoginScriptGenerator.generate();
+    }
+
     await client.updateUserProfile(
       id: updatedProfile.id,
       name: updatedProfile.name,
       rateLimit: rateLimit,
       sessionTimeout: updatedProfile.validity,
+      onLogin: onLoginScript,
     );
 
     await silentRefresh();
@@ -1639,9 +1662,100 @@ class DhcpLeasesNotifier extends AsyncNotifier<List<DhcpLease>> {
 
     try {
       final leasesData = await client.getDhcpLeases();
-      return leasesData.map((data) => DhcpLease.fromJson(data)).toList();
+      var leases = leasesData.map((data) => DhcpLease.fromJson(data)).toList();
+
+      // Get hotspot hosts to get actual device names (OPPO, Samsung, etc)
+      try {
+        final hostsData = await client.getHotspotHosts();
+        final macToDeviceName = <String, String>{};
+
+        for (final host in hostsData) {
+          final mac = host['mac-address'] as String? ?? '';
+          final deviceName =
+              host['device'] as String? ?? host['host-name'] as String? ?? '';
+          if (mac.isNotEmpty && deviceName.isNotEmpty) {
+            macToDeviceName[mac.toUpperCase()] = deviceName;
+          }
+        }
+
+        // Update leases with device name from hotspot hosts
+        if (macToDeviceName.isNotEmpty) {
+          leases = leases.map((lease) {
+            if (lease.macAddress != null) {
+              final macKey = lease.macAddress!.toUpperCase();
+              if (macToDeviceName.containsKey(macKey)) {
+                return DhcpLease(
+                  id: lease.id,
+                  address: lease.address,
+                  macAddress: lease.macAddress,
+                  hostname: macToDeviceName[macKey],
+                  status: lease.status,
+                  server: lease.server,
+                  isDynamic: lease.isDynamic,
+                  comment: lease.comment,
+                  expiresAt: lease.expiresAt,
+                  bytesIn: lease.bytesIn,
+                  bytesOut: lease.bytesOut,
+                );
+              }
+            }
+            return lease;
+          }).toList();
+        }
+      } catch (e) {
+        // If getting hotspot hosts fails, continue with DHCP leases only
+      }
+
+      // Also try to match with active hotspot users for username display
+      leases = await _matchWithActiveUsers(leases);
+
+      return leases;
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<List<DhcpLease>> _matchWithActiveUsers(List<DhcpLease> leases) async {
+    try {
+      // Get active hotspot users to match by IP
+      final activeUsersAsync = ref.read(hotspotActiveUsersProvider);
+      final activeUsers = activeUsersAsync.valueOrNull;
+
+      if (activeUsers == null || activeUsers.users.isEmpty) {
+        return leases;
+      }
+
+      // Build a map of IP -> username from raw Map data
+      final ipToUsername = <String, String>{};
+      for (final userMap in activeUsers.users) {
+        final address = userMap['address'] as String? ?? '';
+        final username = userMap['user'] as String? ?? '';
+        if (address.isNotEmpty && username.isNotEmpty) {
+          ipToUsername[address] = username;
+        }
+      }
+
+      // Update leases with hotspot username if matched
+      return leases.map((lease) {
+        if (lease.address != null && ipToUsername.containsKey(lease.address)) {
+          return DhcpLease(
+            id: lease.id,
+            address: lease.address,
+            macAddress: lease.macAddress,
+            hostname: ipToUsername[lease.address],
+            status: lease.status,
+            server: lease.server,
+            isDynamic: lease.isDynamic,
+            comment: lease.comment,
+            expiresAt: lease.expiresAt,
+            bytesIn: lease.bytesIn,
+            bytesOut: lease.bytesOut,
+          );
+        }
+        return lease;
+      }).toList();
+    } catch (e) {
+      return leases;
     }
   }
 

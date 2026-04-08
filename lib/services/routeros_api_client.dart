@@ -419,6 +419,7 @@ class RouterOSClient {
       }
       if (validity != null && validity.isNotEmpty && validity != 'unlimited') {
         _writeWord('=limit-uptime=$validity');
+        _writeWord('=session-timeout=$validity');
       }
       if (dataLimit != null && dataLimit.isNotEmpty) {
         _writeWord('=limit-bytes-total=$dataLimit');
@@ -557,7 +558,7 @@ class RouterOSClient {
         _writeWord('=session-timeout=$sessionTimeout');
       }
       if (onLogin != null) {
-        _writeWord('=on-login=$onLogin');
+        _writeWord('=on-login=' + onLogin.replaceAll('\n', '\\n'));
       }
       if (onLogout != null) {
         _writeWord('=on-logout=$onLogout');
@@ -578,6 +579,7 @@ class RouterOSClient {
     String? name,
     String? rateLimit,
     String? sessionTimeout,
+    String? onLogin,
   }) async {
     try {
       _ensureConnected();
@@ -591,6 +593,9 @@ class RouterOSClient {
       }
       if (sessionTimeout != null) {
         _writeWord('=session-timeout=$sessionTimeout');
+      }
+      if (onLogin != null) {
+        _writeWord('=on-login=' + onLogin.replaceAll('\n', '\\n'));
       }
       _writeWord(''); // Empty word to terminate sentence
 

@@ -124,6 +124,7 @@ class UserProfile {
   final bool? autologout; // auto logout when limit reached
   final DateTime? expiresAt; // expire date/time
   final bool lockDevice; // 0 = all devices allowed, 1 = locked to one device
+  final String? onLoginScript; // MikroTik on-login script for auto-expiry
 
   UserProfile({
     required this.id,
@@ -136,6 +137,7 @@ class UserProfile {
     this.autologout,
     this.expiresAt,
     this.lockDevice = false,
+    this.onLoginScript,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -156,6 +158,7 @@ class UserProfile {
           ? DateTime.tryParse(json['expires-at'])
           : null,
       lockDevice: json['lock-device'] == 'true' || json['lock-device'] == true,
+      onLoginScript: json['on-login'],
     );
   }
 
@@ -171,6 +174,7 @@ class UserProfile {
       'autologout': autologout?.toString() ?? 'false',
       'expires-at': expiresAt?.toIso8601String(),
       'lock-device': lockDevice.toString(),
+      'on-login': onLoginScript,
     };
   }
 
@@ -184,6 +188,7 @@ class UserProfile {
       'shared-users': sharedUsers?.toString(),
       'autologout': autologout?.toString() ?? 'false',
       'lock-device': lockDevice.toString(),
+      'on-login': onLoginScript,
     };
   }
 

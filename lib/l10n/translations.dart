@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 
 class AppStrings {
-  final Locale locale;
+  Locale locale;
 
   AppStrings(this.locale);
 
   static AppStrings of(BuildContext context) {
-    return Localizations.of<AppStrings>(context, AppStrings) ??
-        AppStrings(const Locale('en'));
+    final localizations = Localizations.of<AppStrings>(context, AppStrings);
+    if (localizations != null) {
+      return localizations;
+    }
+    // Fallback for uninitialized locale - use device locale or default to English
+    final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+    if (deviceLocale.languageCode == 'id' ||
+        deviceLocale.languageCode == 'ms') {
+      return AppStrings(deviceLocale);
+    }
+    return AppStrings(const Locale('en'));
   }
 
   String get languageCode => locale.languageCode;

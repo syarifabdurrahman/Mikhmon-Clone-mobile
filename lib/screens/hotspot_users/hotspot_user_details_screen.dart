@@ -4,6 +4,8 @@ import '../../theme/app_theme.dart';
 import '../../services/models.dart';
 import '../../services/routeros_service.dart';
 import '../../l10n/translations.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../utils/show_feedback.dart';
 import 'edit_hotspot_user_screen.dart';
 
 class HotspotUserDetailsScreen extends StatefulWidget {
@@ -529,32 +531,15 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
     return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 
-  void _confirmDeleteUser() {
-    showDialog(
+  void _confirmDeleteUser() async {
+    final confirmed = await ConfirmationDialog.showDelete(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppStrings.of(context).deleteUser),
-        content: Text(AppStrings.of(context)
-            .deleteUserConfirmation
-            .replaceAll('%s', _user.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppStrings.of(context).cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteUser();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: context.appError,
-            ),
-            child: Text(AppStrings.of(context).delete),
-          ),
-        ],
-      ),
+      itemName: _user.name,
+      itemType: 'user',
     );
+    if (confirmed) {
+      _deleteUser();
+    }
   }
 
   Future<void> _deleteUser() async {
@@ -563,25 +548,20 @@ class _HotspotUserDetailsScreenState extends State<HotspotUserDetailsScreen> {
       if (client != null) {
         await client.removeHotspotUser(_user.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppStrings.of(context).userDeletedMsg(_user.name)),
-              backgroundColor: context.appSuccess,
-            ),
+          FeedbackUtils.showSuccess(
+            context,
+            AppStrings.of(context).userDeletedMsg(_user.name),
           );
-          // Dialog is already closed, just pop the details screen
           Navigator.pop(context);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppStrings.of(context)
-                .failedToDeleteUser
-                .replaceAll('%s', e.toString())),
-            backgroundColor: context.appError,
-          ),
+        FeedbackUtils.showError(
+          context,
+          AppStrings.of(context)
+              .failedToDeleteUser
+              .replaceAll('%s', e.toString()),
         );
       }
     }

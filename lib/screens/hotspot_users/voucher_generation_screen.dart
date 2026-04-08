@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../utils/validity_parser.dart';
@@ -321,10 +322,11 @@ class _VoucherGenerationScreenState
   // Generate random username based on settings
   String _generateUsername(int index) {
     final prefix = _prefixController.text;
-    final random = DateTime.now().millisecondsSinceEpoch + index;
+    final seed = DateTime.now().millisecondsSinceEpoch + index;
+    final random = Random(seed);
     final chars = _getCharacters();
     final namePart = List.generate(_nameLength, (i) {
-      return chars[(random + i) % chars.length];
+      return chars[random.nextInt(chars.length)];
     }).join();
 
     return '$prefix$namePart';
@@ -332,10 +334,10 @@ class _VoucherGenerationScreenState
 
   // Generate random password (for up mode)
   String _generatePassword() {
-    final random = DateTime.now().millisecondsSinceEpoch;
-    final nums = '0123456789';
+    final random = Random(DateTime.now().millisecondsSinceEpoch);
+    const nums = '0123456789';
     return List.generate(_nameLength, (i) {
-      return nums[(random + i * 2) % nums.length];
+      return nums[random.nextInt(nums.length)];
     }).join();
   }
 

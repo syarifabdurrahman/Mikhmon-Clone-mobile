@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../utils/filter_utils.dart';
+import '../../utils/show_feedback.dart';
 import '../../l10n/translations.dart';
 
 class RevenueScreen extends ConsumerStatefulWidget {
@@ -41,12 +42,8 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
     final income = incomeAsync.valueOrNull;
 
     if (income == null || income.transactions.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(AppStrings.of(context).noTransactionsToExport)),
-        );
-      }
+      FeedbackUtils.showInfo(
+          context, AppStrings.of(context).noTransactionsToExport);
       return;
     }
 
@@ -76,18 +73,13 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
           text:
               'Sales Report - ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
         );
+        FeedbackUtils.showSuccess(context, 'Report exported successfully!');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppStrings.of(context)
-                .failedToExport
-                .replaceAll('%s', e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      FeedbackUtils.showError(
+        context,
+        AppStrings.of(context).failedToExport.replaceAll('%s', e.toString()),
+      );
     }
   }
 

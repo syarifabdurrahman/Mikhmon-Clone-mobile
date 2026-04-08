@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/validators.dart';
 import '../../utils/validity_parser.dart';
+import '../../utils/show_feedback.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
 import '../../l10n/translations.dart';
@@ -64,18 +65,13 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
       );
 
       if (profiles.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  AppStrings.of(context).noProfilesAvailableCreateProfileFirst),
-              backgroundColor: context.appError,
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        FeedbackUtils.showError(
+          context,
+          AppStrings.of(context).noProfilesAvailableCreateProfileFirst,
+        );
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
 
@@ -88,17 +84,13 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
       final service = ref.read(routerOSServiceProvider);
       final client = service.client;
       if (client == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppStrings.of(context).notConnectedLoginFirst),
-              backgroundColor: context.appError,
-            ),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        FeedbackUtils.showError(
+          context,
+          AppStrings.of(context).notConnectedLoginFirst,
+        );
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
 
@@ -129,29 +121,22 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'User "${_usernameController.text}" created successfully on RouterOS'),
-            backgroundColor: context.appSuccess,
-          ),
+        FeedbackUtils.showSuccess(
+          context,
+          'User "${_usernameController.text}" created successfully on RouterOS',
         );
         context.pop(true); // Return true to indicate success
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppStrings.of(context)
-                .failedToCreateUser
-                .replaceAll('%s', e.toString())),
-            backgroundColor: context.appError,
-          ),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      FeedbackUtils.showError(
+        context,
+        AppStrings.of(context)
+            .failedToCreateUser
+            .replaceAll('%s', e.toString()),
+      );
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 

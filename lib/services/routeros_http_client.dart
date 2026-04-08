@@ -265,6 +265,7 @@ class RouterOSHttpClient {
       }
       if (validity != null && validity.isNotEmpty && validity != 'unlimited') {
         data['limit-uptime'] = validity;
+        data['session-timeout'] = validity;
       }
       if (dataLimit != null && dataLimit.isNotEmpty) {
         data['limit-bytes-total'] = dataLimit;
@@ -402,8 +403,8 @@ class RouterOSHttpClient {
   Future<void> addUserProfile({
     required String name,
     String? rateLimit,
-    String? uptimeLimit,
-    String? dataLimit,
+    String? sessionTimeout,
+    String? onLogin,
   }) async {
     try {
       _ensureConnected();
@@ -413,11 +414,13 @@ class RouterOSHttpClient {
       if (rateLimit != null) {
         data['rate-limit'] = rateLimit;
       }
-      if (uptimeLimit != null) {
-        data['on-logout'] = uptimeLimit;
+      if (sessionTimeout != null &&
+          sessionTimeout.isNotEmpty &&
+          sessionTimeout.toLowerCase() != 'unlimited') {
+        data['session-timeout'] = sessionTimeout;
       }
-      if (dataLimit != null) {
-        data['on-login'] = dataLimit;
+      if (onLogin != null) {
+        data['on-login'] = onLogin.replaceAll('\n', '\\n');
       }
 
       final response = await _dio!.put(
@@ -441,6 +444,8 @@ class RouterOSHttpClient {
     required String id,
     String? name,
     String? rateLimit,
+    String? sessionTimeout,
+    String? onLogin,
   }) async {
     try {
       _ensureConnected();
@@ -452,6 +457,12 @@ class RouterOSHttpClient {
       }
       if (rateLimit != null) {
         data['rate-limit'] = rateLimit;
+      }
+      if (sessionTimeout != null) {
+        data['session-timeout'] = sessionTimeout;
+      }
+      if (onLogin != null) {
+        data['on-login'] = onLogin.replaceAll('\n', '\\n');
       }
 
       final response = await _dio!.post(
@@ -519,6 +530,36 @@ class RouterOSHttpClient {
       throw Exception('Failed with status: ${response.statusCode}');
     } catch (e) {
       _log('Error fetching DHCP leases: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all hotspot hosts (contains device names like OPPO, Samsung, etc)
+  Future<List<Map<String, dynamic>>> getHotspotHosts() async {
+    try {
+      _ensureConnected();
+      _log('Fetching hotspot hosts...');
+
+      final response = await _dio!.get(
+        '/ip/hotspot/host/print',
+        options: _buildOptions(),
+      );
+
+      _log('Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(
+            data.map((e) => Map<String, dynamic>.from(e)),
+          );
+        }
+        return [Map<String, dynamic>.from(data)];
+      }
+
+      throw Exception('Failed with status: ${response.statusCode}');
+    } catch (e) {
+      _log('Error fetching hotspot hosts: $e');
       rethrow;
     }
   }

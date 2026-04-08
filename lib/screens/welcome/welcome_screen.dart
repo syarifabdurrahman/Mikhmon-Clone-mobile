@@ -327,6 +327,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
