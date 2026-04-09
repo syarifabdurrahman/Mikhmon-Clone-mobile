@@ -49,7 +49,7 @@ class HotspotHostDetailsScreen extends ConsumerWidget {
               icon: Icon(Icons.refresh_rounded),
               onPressed: () async {
                 // Trigger refresh of hotspot hosts data
-                await ref.read(hotspotHostsProvider.notifier).silentRefresh();
+                await ref.read(hotspotHostsProvider.notifier).refresh();
                 // Navigate back to show refreshed data
                 if (context.mounted) {
                   context.go('/main/hosts');

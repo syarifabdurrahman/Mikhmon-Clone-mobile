@@ -154,55 +154,52 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final topPadding = MediaQuery.of(context).padding.top;
 
     return Scaffold(
       backgroundColor: primaryColor,
       body: Column(
         children: [
           // Header
-          SafeArea(
-            bottom: false,
-            child: SizedBox(
-              width: double.infinity,
-              height: size.height * 0.18,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.router_rounded,
-                      size: 50,
-                      color: Colors.white,
-                    ),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(top: topPadding + 16, bottom: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "\u03A9MMON",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
+                  child: const Icon(
+                    Icons.router_rounded,
+                    size: 50,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    AppStrings.of(context).onboardingSubtitle,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 11,
-                      letterSpacing: 0.5,
-                    ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "\u03A9MMON",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.of(context).onboardingSubtitle,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
           ),
           // Content
@@ -216,97 +213,97 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   topRight: Radius.circular(40),
                 ),
               ),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(30, 30, 30, bottomPadding + 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppStrings.of(context).welcomeBack,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      AppStrings.of(context).selectRouter,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Saved connections
-                    Expanded(
-                      child: _buildSavedConnectionsSection(),
-                    ),
-                    const SizedBox(height: 12),
-                    // Connect to new router button
-                    GestureDetector(
-                      onTap: () => context.push('/login'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: primaryColor.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.add_rounded,
-                                color: primaryColor, size: 22),
-                            const SizedBox(width: 12),
-                            Text(
-                              AppStrings.of(context).connectNewRouter,
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Demo mode button - always available
-                    TextButton(
-                      onPressed: () => _enableDemoMode(),
-                      child: Text(
-                        AppStrings.of(context).tryDemoData,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(30, 30, 30, bottomPadding + 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.of(context).welcomeBack,
                         style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
                         ),
                       ),
-                    ),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final service = ref.watch(routerOSServiceProvider);
-                        if (!service.isConnected) {
-                          return const SizedBox.shrink();
-                        }
-                        return Center(
-                          child: TextButton(
-                            onPressed: () => context.go('/main/dashboard'),
-                            child: Text(
-                              AppStrings.of(context).enterApp,
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                letterSpacing: 2,
-                                fontWeight: FontWeight.w600,
-                              ),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppStrings.of(context).selectRouter,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Saved connections
+                      _buildSavedConnectionsSection(),
+                      const SizedBox(height: 12),
+                      // Connect to new router button
+                      GestureDetector(
+                        onTap: () => context.push('/login'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: primaryColor.withValues(alpha: 0.3),
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ],
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.add_rounded,
+                                  color: primaryColor, size: 22),
+                              const SizedBox(width: 12),
+                              Text(
+                                AppStrings.of(context).connectNewRouter,
+                                style: TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Demo mode button - always available
+                      TextButton(
+                        onPressed: () => _enableDemoMode(),
+                        child: Text(
+                          AppStrings.of(context).tryDemoData,
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final service = ref.watch(routerOSServiceProvider);
+                          if (!service.isConnected) {
+                            return const SizedBox.shrink();
+                          }
+                          return Center(
+                            child: TextButton(
+                              onPressed: () => context.go('/main/dashboard'),
+                              child: Text(
+                                AppStrings.of(context).enterApp,
+                                style: TextStyle(
+                                  color: Colors.grey[400],
+                                  letterSpacing: 2,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -359,11 +356,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Expanded(
+            SizedBox(
+              height: 180,
               child: ListView.builder(
                 padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                physics: const ClampingScrollPhysics(),
                 itemCount: connections.length,
                 itemBuilder: (context, index) {
                   return _buildConnectionTile(connections[index]);

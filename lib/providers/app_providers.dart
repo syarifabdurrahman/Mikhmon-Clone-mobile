@@ -218,6 +218,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final cache = ref.read(cacheServiceProvider);
       await cache.saveSystemResources(resources);
 
+      // Pre-fetch hotspot users and profiles in background for faster screen loads
+      _prefetchHotspotData(client, cache);
+
       // Log successful login
       await LogService.logLogin(username, '$host:$port');
 
@@ -235,6 +238,20 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         systemResources: resources,
       );
     });
+  }
+
+  Future<void> _prefetchHotspotData(client, CacheService cache) async {
+    try {
+      // Pre-fetch user profiles
+      final profiles = await client.getUserProfiles();
+      await cache.saveUserProfiles(profiles);
+    } catch (_) {}
+
+    try {
+      // Pre-fetch hotspot users
+      final users = await client.getHotspotUsersList();
+      await cache.saveHotspotUsers(users);
+    } catch (_) {}
   }
 
   Future<void> logout() async {
@@ -510,17 +527,31 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   int _currentPage = 1;
   final int _pageSize = 20;
   bool _timerStarted = false;
+  bool _isRefreshing = false;
   // Track recorded connections to avoid duplicate revenue entries
   // Key: "username|loginTime" to uniquely identify each session
   final Set<String> _recordedConnections = {};
 
+  bool _isUserData(Map<String, dynamic> data) {
+    // Users should have a name
+    final name = data['name'] as String? ?? '';
+    if (name.isEmpty) return false;
+    // Users typically don't have profile-specific fields only
+    // But they DO have password field
+    return data.containsKey('password');
+  }
+
   PaginatedUsers _paginateUsers(List<Map<String, dynamic>> allUsers,
       {required int page, Set<String> activeUsernames = const {}}) {
-    // Filter out system/default users like "trial"
+    // Filter out system/default users like "trial" and non-user data
     final systemUserNames = {'trial'};
     final filteredUsers = allUsers.where((user) {
       final userName = user['name'] as String? ?? '';
       if (systemUserNames.contains(userName.toLowerCase())) {
+        return false;
+      }
+      // Only include actual users (must have password field)
+      if (!_isUserData(user)) {
         return false;
       }
       return true;
@@ -552,7 +583,24 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   @override
   Future<PaginatedUsers> build() async {
     _currentPage = 1;
-    // Always fetch fresh data to get active users status
+
+    // Try to load from cache first for instant display
+    final cache = ref.read(cacheServiceProvider);
+    final cachedUsers = cache.getHotspotUsers();
+
+    // If we have cached data, show it immediately and refresh in background
+    if (cachedUsers != null && cachedUsers.isNotEmpty) {
+      // Return cached data first (instant)
+      final cachedData = _paginateUsers(cachedUsers, page: 1);
+
+      // Start background refresh
+      _startAutoRefresh();
+      silentRefresh();
+
+      return cachedData;
+    }
+
+    // No cache - fetch from API
     final data = await _loadUsers(page: 1);
     _startAutoRefresh();
     return data;
@@ -1138,58 +1186,51 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
   // System profiles to filter out
   static const Set<String> _systemProfileNames = {'trial', 'default'};
 
-  // Fields that indicate this is actually a user, not a profile
-  static const Set<String> _userOnlyFields = {'password', 'server'};
-
   bool _isProfileData(Map<String, dynamic> data) {
-    // User profiles should NOT have password or server fields
-    // If these fields exist, it's likely a user, not a profile
-    for (final field in _userOnlyFields) {
-      if (data.containsKey(field)) {
-        return false;
-      }
-    }
-    // Profile should have at least one profile-specific field
-    final profileFields = [
-      'shared-users',
-      'rate-limit',
-      'keepalive-timeout',
-      'session-timeout'
-    ];
-    for (final field in profileFields) {
-      if (data.containsKey(field)) {
-        return true;
-      }
-    }
-    // If no profile-specific fields, might be a user - check name pattern
+    // User profiles from /ip/hotspot/user/profile/print
+    // Profiles typically have profile-specific fields like shared-users, rate-limit, session-timeout
+    // Users from /ip/hotspot/user/print have password field
+    final hasPassword = data.containsKey('password');
+    final hasSharedUsers = data.containsKey('shared-users');
+    final hasRateLimit = data.containsKey('rate-limit');
+    final hasSessionTimeout = data.containsKey('session-timeout');
+
+    // If it has password, it's definitely a user
+    if (hasPassword) return false;
+
+    // If it has any profile-specific field, it's a profile
+    if (hasSharedUsers || hasRateLimit || hasSessionTimeout) return true;
+
+    // If no clear indicators, check the name pattern
     final name = data['name']?.toString().toLowerCase() ?? '';
-    // Users often have more complex names, profiles are usually simpler
-    return name.isNotEmpty && !name.contains('@');
+    // System profiles like trial, default should be filtered out elsewhere
+    return name.isNotEmpty;
   }
 
   @override
   Future<List<UserProfile>> build() async {
-    // Always fetch from API to ensure fresh data
-    final profiles = await _fetchProfilesAndCache();
-
-    // If API returned data, use it
-    if (profiles.isNotEmpty) {
-      return profiles;
-    }
-
-    // API returned empty or failed - fall back to cache
+    // Try to load from cache first for instant display
     final cache = ref.read(cacheServiceProvider);
     final cachedProfiles = cache.getUserProfiles();
+
+    // If we have cached data, show it immediately and refresh in background
     if (cachedProfiles != null && cachedProfiles.isNotEmpty) {
-      return cachedProfiles
+      final filteredProfiles = cachedProfiles
           .where((p) => !_systemProfileNames
               .contains(p['name']?.toString().toLowerCase()))
           .where((p) => _isProfileData(p))
           .map((data) => UserProfile.fromJson(data))
           .toList();
+
+      // Refresh in background
+      refresh();
+
+      return filteredProfiles;
     }
 
-    return [];
+    // No cache - fetch from API
+    final profiles = await _fetchProfilesAndCache();
+    return profiles;
   }
 
   Future<List<UserProfile>> _fetchProfilesAndCache() async {
@@ -1467,7 +1508,8 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
     final cachedSummary = cache.getIncomeSummary();
 
     if (cachedTransactions != null && cachedSummary != null) {
-      return IncomeState(
+      // Show cached data immediately
+      final cachedState = IncomeState(
         transactions: cachedTransactions
             .map((t) => SalesTransaction.fromJson(t))
             .toList(),
@@ -1478,18 +1520,89 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
           transactionsThisMonth: cachedSummary['transactionsThisMonth'] as int,
         ),
       );
+
+      // Refresh in background
+      refresh();
+
+      return cachedState;
     }
 
-    // Return empty state if no cache
-    return const IncomeState(
-      transactions: [],
-      summary: IncomeSummary(
-        todayIncome: 0.0,
-        thisMonthIncome: 0.0,
-        transactionsToday: 0,
-        transactionsThisMonth: 0,
-      ),
-    );
+    // No cache - fetch fresh data
+    return _fetchIncomeData();
+  }
+
+  Future<IncomeState> _fetchIncomeData() async {
+    final cache = ref.read(cacheServiceProvider);
+    final service = ref.read(routerOSServiceProvider);
+    final client = service.client;
+
+    if (client == null) {
+      return const IncomeState(
+        transactions: [],
+        summary: IncomeSummary(
+          todayIncome: 0.0,
+          thisMonthIncome: 0.0,
+          transactionsToday: 0,
+          transactionsThisMonth: 0,
+        ),
+      );
+    }
+
+    try {
+      // Get active users to calculate income
+      final activeUsers = await client.getHotspotActiveUsers();
+      final profilesAsync = ref.read(userProfileProvider);
+      final profiles = profilesAsync.valueOrNull ?? [];
+
+      // Build profile price map
+      final profilePrices = <String, double>{};
+      for (final profile in profiles) {
+        if (profile.price != null && profile.price! > 0) {
+          profilePrices[profile.name.toLowerCase()] = profile.price!;
+        }
+      }
+
+      // Calculate today's income from active users
+      double todayIncome = 0;
+      int transactionsToday = 0;
+
+      for (final user in activeUsers) {
+        final profileName = user['profile']?.toString().toLowerCase() ?? '';
+        final price = profilePrices[profileName];
+        if (price != null) {
+          todayIncome += price;
+          transactionsToday++;
+        }
+      }
+
+      // Save to cache
+      await cache.saveIncomeSummary({
+        'todayIncome': todayIncome,
+        'thisMonthIncome': todayIncome * 30, // Estimate
+        'transactionsToday': transactionsToday,
+        'transactionsThisMonth': transactionsToday * 30,
+      });
+
+      return IncomeState(
+        transactions: [],
+        summary: IncomeSummary(
+          todayIncome: todayIncome,
+          thisMonthIncome: todayIncome * 30,
+          transactionsToday: transactionsToday,
+          transactionsThisMonth: transactionsToday * 30,
+        ),
+      );
+    } catch (e) {
+      return const IncomeState(
+        transactions: [],
+        summary: IncomeSummary(
+          todayIncome: 0.0,
+          thisMonthIncome: 0.0,
+          transactionsToday: 0,
+          transactionsThisMonth: 0,
+        ),
+      );
+    }
   }
 
   Future<void> recordSale({
@@ -1706,21 +1819,15 @@ class HotspotHostsNotifier extends AsyncNotifier<List<HotspotHost>> {
   void _startAutoRefresh() {
     if (_timerStarted) return;
     _timerStarted = true;
-    Timer.periodic(const Duration(seconds: 5), (timer) {
-      silentRefresh();
+    Timer.periodic(const Duration(seconds: 15), (timer) {
+      refresh();
     });
   }
 
-  Future<void> silentRefresh() async {
-    try {
-      final hosts = await _fetchHosts();
-      state = AsyncValue.data(hosts);
-    } catch (e) {
-      // Silent refresh failed
-    }
+  Future<void> refresh() async {
+    state = AsyncValue.loading();
+    state = await AsyncValue.guard(() => _fetchHosts());
   }
-
-  // Note: AsyncNotifier doesn't have dispose, timer will be cancelled when provider is disposed
 }
 
 // DHCP Leases Provider

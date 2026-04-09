@@ -88,7 +88,7 @@ class _HotspotHostsScreenState extends ConsumerState<HotspotHostsScreen> {
         ),
         body: RefreshIndicator(
           onRefresh: () async {
-            await ref.read(hotspotHostsProvider.notifier).silentRefresh();
+            await ref.read(hotspotHostsProvider.notifier).refresh();
           },
           child: Column(
             children: [

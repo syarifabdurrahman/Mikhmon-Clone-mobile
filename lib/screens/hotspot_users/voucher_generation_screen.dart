@@ -73,7 +73,6 @@ class _VoucherGenerationScreenState
   // Form controllers
   final _qtyController = TextEditingController(text: '1');
   final _prefixController = TextEditingController();
-  final _timeLimitController = TextEditingController();
   final _dataLimitController = TextEditingController();
   final _commentController = TextEditingController();
 
@@ -97,13 +96,9 @@ class _VoucherGenerationScreenState
     super.initState();
     // Trigger profile load if not already loaded
     Future.microtask(() {
-      final profilesAsync = ref.read(userProfileProvider);
-      // Refresh if no value, loading, or has error
-      if (!profilesAsync.hasValue ||
-          profilesAsync.isLoading ||
-          profilesAsync.hasError) {
-        ref.read(userProfileProvider.notifier).refresh();
-      }
+      final profilesNotifier = ref.read(userProfileProvider.notifier);
+      // Force refresh to ensure we get latest data from API
+      profilesNotifier.refresh();
     });
   }
 
@@ -111,7 +106,6 @@ class _VoucherGenerationScreenState
   void dispose() {
     _qtyController.dispose();
     _prefixController.dispose();
-    _timeLimitController.dispose();
     _dataLimitController.dispose();
     _commentController.dispose();
     super.dispose();
@@ -147,7 +141,6 @@ class _VoucherGenerationScreenState
     setState(() {
       _qtyController.text = '1';
       _prefixController.clear();
-      _timeLimitController.clear();
       _dataLimitController.clear();
       _commentController.clear();
       _selectedServer = 'all';
@@ -225,13 +218,13 @@ class _VoucherGenerationScreenState
             _userMode == UserMode.vc ? username : _generatePassword();
         final comment = _buildComment();
 
-        // Parse validity and data limit
-        final validity = _timeLimitController.text.trim();
+        // Get validity from selected profile's session-timeout
+        final validity = profileSessionTimeout ?? '';
         final dataLimit = _parseDataLimit(_dataLimitController.text.trim());
 
         // Calculate expiration date
         DateTime? expiresAt;
-        if (validity.isNotEmpty) {
+        if (validity.isNotEmpty && validity != 'unlimited') {
           expiresAt = ValidityParser.parseValidity(validity);
         }
 
@@ -380,8 +373,19 @@ class _VoucherGenerationScreenState
   // Build comment string with expiry date
   String _buildComment() {
     final mode = _userMode == UserMode.up ? 'up' : 'vc';
-    final validity = _timeLimitController.text.trim();
     final comment = _commentController.text.trim();
+
+    // Use profile's session-timeout for comment
+    final profilesAsync = ref.read(userProfileProvider);
+    final profiles = profilesAsync.valueOrNull ?? [];
+    String validity = '';
+    if (_selectedProfile != null) {
+      final selectedProfileObj = profiles.firstWhere(
+        (p) => p.name == _selectedProfile,
+        orElse: () => UserProfile(id: '', name: _selectedProfile!),
+      );
+      validity = selectedProfileObj.sessionTimeout ?? '';
+    }
 
     return ValidityParser.buildCommentWithExpiry(
       mode: mode,
@@ -663,18 +667,6 @@ class _VoucherGenerationScreenState
                   icon: Icons.speed,
                   child: Column(
                     children: [
-                      // Time Limit
-                      _buildTextField(
-                        label: 'Time Limit',
-                        controller: _timeLimitController,
-                        icon: Icons.access_time,
-                        helperText:
-                            'e.g., 5s (sec), 5m (min), 1h (hour), 1d (day), 1mo (month)',
-                        textCapitalization: TextCapitalization.none,
-                      ),
-
-                      SizedBox(height: 16),
-
                       // Data Limit
                       _buildTextField(
                         label: 'Data Limit',

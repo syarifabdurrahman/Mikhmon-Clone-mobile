@@ -247,9 +247,9 @@ class SkeletonLoaders {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 for (var i = 0; i < 7; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Expanded(
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: i < 6 ? 8 : 0),
                       child: Skeleton(
                         width: 30,
                         height: 40 + (i % 3) * 30.0,
@@ -384,33 +384,13 @@ class SkeletonLoaders {
 
   // Table row skeleton
   static Widget tableRow({bool showHeader = false}) {
-    return Column(
+    return Row(
       children: [
-        if (showHeader)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Expanded(flex: 3, child: Skeleton(height: 14)),
-                const SizedBox(width: 8),
-                Expanded(flex: 2, child: Skeleton(height: 14)),
-                const SizedBox(width: 8),
-                Expanded(flex: 2, child: Skeleton(height: 14)),
-              ],
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Expanded(flex: 3, child: Skeleton(height: 16)),
-              const SizedBox(width: 8),
-              Expanded(flex: 2, child: Skeleton(height: 16)),
-              const SizedBox(width: 8),
-              Expanded(flex: 2, child: Skeleton(height: 16)),
-            ],
-          ),
-        ),
+        Expanded(flex: 3, child: Skeleton(height: showHeader ? 14 : 16)),
+        const SizedBox(width: 8),
+        Expanded(flex: 2, child: Skeleton(height: showHeader ? 14 : 16)),
+        const SizedBox(width: 8),
+        Expanded(flex: 2, child: Skeleton(height: showHeader ? 14 : 16)),
       ],
     );
   }

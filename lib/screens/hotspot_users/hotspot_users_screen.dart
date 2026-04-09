@@ -145,6 +145,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
               child: RefreshIndicator(
                 onRefresh: () async {
                   await ref.read(hotspotUsersProvider.notifier).refresh();
+                  // Wait for refresh to complete before returning
+                  await Future.delayed(const Duration(milliseconds: 300));
                 },
                 color: context.appPrimary,
                 child: usersAsync.when(

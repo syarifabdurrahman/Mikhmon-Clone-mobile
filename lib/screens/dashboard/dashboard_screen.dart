@@ -62,44 +62,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _loadInitialData() {
     if (!mounted) return;
 
+    // Mark all priorities as loaded immediately to show cached data
+    setState(() {
+      _highPriorityLoaded = true;
+      _mediumPriorityLoaded = true;
+      _lowPriorityLoaded = true;
+    });
+
     final cache = ref.read(cacheServiceProvider);
     final hasCachedData = cache.getSystemResources() != null ||
         ref.read(authStateProvider).value?.systemResources != null;
 
-    _loadHighPriorityData(hasCachedData);
-    _loadMediumPriorityData();
-    _loadLowPriorityData();
-  }
-
-  void _loadHighPriorityData(bool hasCachedData) {
-    _refreshHotspotUsersIfStale();
-    _refreshUserProfilesIfStale();
-    _highPriorityLoaded = true;
-
+    // Load system resources in background (if no cache)
     if (!hasCachedData) {
       _loadDashboardData(showLoading: false);
     }
+
+    // Start periodic refresh for system resources
     _startPeriodicRefresh();
-  }
 
-  void _loadMediumPriorityData() {
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() {
-          _mediumPriorityLoaded = true;
-        });
-      }
-    });
-  }
-
-  void _loadLowPriorityData() {
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _lowPriorityLoaded = true;
-        });
-      }
-    });
+    // Refresh hotspot users and profiles in background (they show cached data instantly)
+    _refreshHotspotUsersIfStale();
+    _refreshUserProfilesIfStale();
   }
 
   void _refreshHotspotUsersIfStale() {
