@@ -532,6 +532,38 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   // Key: "username|loginTime" to uniquely identify each session
   final Set<String> _recordedConnections = {};
 
+  @override
+  Future<PaginatedUsers> build() async {
+    _currentPage = 1;
+
+    // Load recorded connections from cache on first build
+    if (_recordedConnections.isEmpty) {
+      final cache = ref.read(cacheServiceProvider);
+      _recordedConnections.addAll(cache.getRecordedConnections());
+    }
+
+    // Try to load from cache first for instant display
+    final cache = ref.read(cacheServiceProvider);
+    final cachedUsers = cache.getHotspotUsers();
+
+    // If we have cached data, show it immediately and refresh in background
+    if (cachedUsers != null && cachedUsers.isNotEmpty) {
+      // Return cached data first (instant)
+      final cachedData = _paginateUsers(cachedUsers, page: 1);
+
+      // Start background refresh - fire and forget, don't await
+      _startAutoRefresh();
+      Future.microtask(() => silentRefresh());
+
+      return cachedData;
+    }
+
+    // No cache - fetch from API
+    final data = await _loadUsers(page: 1);
+    _startAutoRefresh();
+    return data;
+  }
+
   bool _isUserData(Map<String, dynamic> data) {
     // Users should have a name
     final name = data['name'] as String? ?? '';
@@ -580,37 +612,12 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     );
   }
 
-  @override
-  Future<PaginatedUsers> build() async {
-    _currentPage = 1;
-
-    // Try to load from cache first for instant display
-    final cache = ref.read(cacheServiceProvider);
-    final cachedUsers = cache.getHotspotUsers();
-
-    // If we have cached data, show it immediately and refresh in background
-    if (cachedUsers != null && cachedUsers.isNotEmpty) {
-      // Return cached data first (instant)
-      final cachedData = _paginateUsers(cachedUsers, page: 1);
-
-      // Start background refresh
-      _startAutoRefresh();
-      silentRefresh();
-
-      return cachedData;
-    }
-
-    // No cache - fetch from API
-    final data = await _loadUsers(page: 1);
-    _startAutoRefresh();
-    return data;
-  }
-
   void _startAutoRefresh() {
     if (_timerStarted) return;
     _timerStarted = true;
+    // Use Future.microtask to avoid blocking
     Timer.periodic(const Duration(seconds: 10), (timer) {
-      silentRefresh();
+      Future.microtask(() => silentRefresh());
     });
   }
 
@@ -647,7 +654,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
     // Auto-record revenue for new connections
     if (activeUsers.isNotEmpty) {
-      _autoRecordRevenue(activeUsers);
+      await _autoRecordRevenue(activeUsers);
     }
 
     // Track session time for vouchers
@@ -664,7 +671,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   /// Auto-record revenue when a voucher connects to the hotspot.
   /// Checks each active user against recorded connections and records
   /// a sale based on the user's profile price.
-  void _autoRecordRevenue(List<Map<String, dynamic>> activeUsers) {
+  Future<void> _autoRecordRevenue(
+      List<Map<String, dynamic>> activeUsers) async {
     try {
       // Get cached profiles with prices
       final profilesAsync = ref.read(userProfileProvider);
@@ -700,6 +708,10 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
         // Mark as recorded before async call to prevent duplicates
         _recordedConnections.add(connectionKey);
+
+        // Save to cache for persistence
+        final cache = ref.read(cacheServiceProvider);
+        await cache.saveRecordedConnections(_recordedConnections);
 
         // Record the sale asynchronously
         ref.read(incomeProvider.notifier).recordSale(
@@ -943,17 +955,17 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   }
 
   Future<void> silentRefresh() async {
-    return refreshLock.synchronizedRefresh('hotspotUsers', () async {
-      final previousState = state.value;
-      try {
-        final newData = await _loadUsers(page: 1);
+    // Don't use lock - run independently to avoid blocking
+    final previousState = state.value;
+    try {
+      final newData = await _loadUsers(page: 1);
+      // Only update if we got data
+      if (newData.users.isNotEmpty) {
         state = AsyncValue.data(newData);
-      } catch (e) {
-        if (previousState != null) {
-          state = AsyncValue.data(previousState);
-        }
       }
-    });
+    } catch (e) {
+      // Keep previous state on error
+    }
   }
 
   Future<void> updateUser({
@@ -1111,7 +1123,43 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   @override
   Future<PaginatedUsers> build() async {
     _currentPage = 1;
+
+    // Try to load from cache first for instant display
+    final cache = ref.read(cacheServiceProvider);
+    final cachedUsers = cache.getHotspotUsers();
+
+    // If we have cached data, return it immediately and refresh in background
+    if (cachedUsers != null && cachedUsers.isNotEmpty) {
+      // Filter only active users from cache (users with 'active' in their data)
+      final activeUsers = cachedUsers
+          .where((u) => u['disabled'] != 'true' || !u.containsKey('disabled'))
+          .toList();
+
+      final cachedData = _paginateActiveUsers(activeUsers, page: 1);
+
+      // Refresh in background
+      Future.microtask(() => refresh());
+
+      return cachedData;
+    }
+
+    // No cache - fetch from API
     return await _loadActiveUsers(page: 1);
+  }
+
+  PaginatedUsers _paginateActiveUsers(List<Map<String, dynamic>> allUsers,
+      {required int page}) {
+    final startIndex = (page - 1) * _pageSize;
+    final endIndex = startIndex + _pageSize;
+    final hasMore = endIndex < allUsers.length;
+    final users = allUsers.skip(startIndex).take(_pageSize).toList();
+
+    return PaginatedUsers(
+      users: users,
+      hasMore: hasMore,
+      currentPage: page,
+      pageSize: _pageSize,
+    );
   }
 
   Future<PaginatedUsers> _loadActiveUsers({required int page}) async {

@@ -329,6 +329,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onTap: () => _showCompanyDialog(context, ref, cache),
             ),
             Divider(color: context.appOnSurface.withValues(alpha: 0.08)),
+            // Login URL
+            _buildSettingsTile(
+              context,
+              icon: Icons.link_rounded,
+              title: 'Login URL',
+              subtitle: (settings?['loginUrl'] as String?)?.isNotEmpty == true
+                  ? settings!['loginUrl']
+                  : 'http://wifi.local',
+              onTap: () => _showLoginUrlDialog(context, ref, cache),
+            ),
+            Divider(color: context.appOnSurface.withValues(alpha: 0.08)),
             // Reset Onboarding
             _buildSettingsTile(
               context,
@@ -592,6 +603,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void _showLoginUrlDialog(
+      BuildContext context, WidgetRef ref, CacheService cache) {
+    final controller = TextEditingController(
+      text: cache.getAppSettings()?['loginUrl'] ?? 'http://wifi.local',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => _LoginUrlDialog(
+        controller: controller,
+        onSave: () async {
+          final current = cache.getAppSettings() ?? {};
+          await cache.saveAppSettings(
+            country: current['country'] ?? '',
+            currency: current['currency'] ?? 'USD',
+            companyName: current['companyName'] ?? '',
+            loginUrl: controller.text.trim(),
+          );
+          if (ctx.mounted) Navigator.pop(ctx);
+          if (context.mounted) setState(() {});
+        },
+      ),
+    );
+  }
+
   Widget _buildTemplateCard(BuildContext context, WidgetRef ref) {
     final currentTemplate = ref.watch(voucherTemplateProvider);
 
@@ -639,6 +674,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: 'Simple design with QR and credentials only',
             color: const Color(0xFF10B981),
             template: VoucherTemplate.minimal,
+            currentTemplate: currentTemplate,
+          ),
+          Divider(
+            height: 1,
+            color: context.appOnSurface.withValues(alpha: 0.1),
+          ),
+          _buildTemplateOption(
+            context,
+            ref,
+            icon: Icons.style_rounded,
+            title: 'Classic',
+            subtitle: 'Traditional layout with price on side',
+            color: const Color(0xFFF59E0B),
+            template: VoucherTemplate.classic,
+            currentTemplate: currentTemplate,
+          ),
+          Divider(
+            height: 1,
+            color: context.appOnSurface.withValues(alpha: 0.1),
+          ),
+          _buildTemplateOption(
+            context,
+            ref,
+            icon: Icons.auto_awesome_rounded,
+            title: 'Modern',
+            subtitle: 'Colorful design with price badge',
+            color: const Color(0xFFEC4899),
+            template: VoucherTemplate.modern,
+            currentTemplate: currentTemplate,
+          ),
+          Divider(
+            height: 1,
+            color: context.appOnSurface.withValues(alpha: 0.1),
+          ),
+          _buildTemplateOption(
+            context,
+            ref,
+            icon: Icons.view_agenda_rounded,
+            title: 'Compact Alt',
+            subtitle: 'Compact list style voucher',
+            color: const Color(0xFF6366F1),
+            template: VoucherTemplate.compactAlt,
             currentTemplate: currentTemplate,
           ),
         ],
@@ -1835,6 +1912,63 @@ class _CompanyNameDialogState extends State<_CompanyNameDialog> {
         autofocus: true,
         decoration: InputDecoration(
           hintText: AppStrings.of(context).businessNameHint,
+          filled: true,
+          fillColor: context.appBackground,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        style: TextStyle(color: context.appOnSurface),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(AppStrings.of(context).cancel),
+        ),
+        ElevatedButton(
+          onPressed: widget.onSave,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: context.appPrimary,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(AppStrings.of(context).save),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoginUrlDialog extends StatefulWidget {
+  final TextEditingController controller;
+  final VoidCallback onSave;
+
+  const _LoginUrlDialog({
+    required this.controller,
+    required this.onSave,
+  });
+
+  @override
+  State<_LoginUrlDialog> createState() => _LoginUrlDialogState();
+}
+
+class _LoginUrlDialogState extends State<_LoginUrlDialog> {
+  @override
+  void dispose() {
+    widget.controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: context.appSurface,
+      title: Text('Login URL', style: TextStyle(color: context.appOnSurface)),
+      content: TextField(
+        controller: widget.controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'http://wifi.local',
+          helperText: 'Hotspot server DNS name (e.g., http://wifi.local)',
           filled: true,
           fillColor: context.appBackground,
           border: OutlineInputBorder(

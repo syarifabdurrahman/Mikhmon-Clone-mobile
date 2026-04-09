@@ -487,6 +487,36 @@ class HotspotUser {
     return uptime!.replaceAll(' ', '').replaceAll('s', '');
   }
 
+  /// Parse expiry date from comment field (format: "MM/DD/YY HH:MM:SS")
+  DateTime? get expiresAt {
+    if (comment == null) return null;
+    try {
+      final commentStr = comment!.toString();
+      // Look for date pattern in format MM/DD/YY HH:MM:SS
+      final match = RegExp(r'(\d{2})/(\d{2})/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})')
+          .firstMatch(commentStr);
+      if (match != null) {
+        final month = int.parse(match.group(1)!);
+        final day = int.parse(match.group(2)!);
+        final year = int.parse(match.group(3)!) + 2000;
+        final hour = int.parse(match.group(4)!);
+        final minute = int.parse(match.group(5)!);
+        final second = int.parse(match.group(6)!);
+        return DateTime(year, month, day, hour, minute, second);
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    return null;
+  }
+
+  /// Check if this voucher is expired based on expiry date
+  bool get isExpired {
+    final expiry = expiresAt;
+    if (expiry == null) return false;
+    return DateTime.now().isAfter(expiry);
+  }
+
   Map<String, dynamic> toMap() {
     // Keep disabled in sync with active
     final disabledValue = (!active).toString();

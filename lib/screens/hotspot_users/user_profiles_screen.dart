@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../services/cache_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../l10n/translations.dart';
 import 'add_edit_profile_screen.dart';
@@ -301,6 +303,17 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
 }
 
 // Extracted as separate widget for better performance with RepaintBoundary
+String _formatPrice(double? price) {
+  if (price == null || price == 0) {
+    return 'Free';
+  }
+  final cache = CacheService();
+  final settings = cache.getAppSettings();
+  final currency = settings?['currency'] as String? ?? 'USD';
+  final symbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
+  return '$symbol${price.toStringAsFixed(0)}';
+}
+
 class _ProfileCard extends ConsumerWidget {
   final UserProfile profile;
   final VoidCallback onTap;
@@ -391,7 +404,7 @@ class _ProfileCard extends ConsumerWidget {
         ),
         SizedBox(height: 4),
         Text(
-          profile.priceDisplay,
+          _formatPrice(profile.price),
           style: TextStyle(
             color: context.appPrimary,
             fontWeight: FontWeight.w600,
@@ -593,7 +606,7 @@ class _ProfileDetailsSheet extends StatelessWidget {
               ),
               SizedBox(height: 4),
               Text(
-                profile.priceDisplay,
+                _formatPrice(profile.price),
                 style: TextStyle(
                   color: context.appPrimary,
                   fontWeight: FontWeight.w600,

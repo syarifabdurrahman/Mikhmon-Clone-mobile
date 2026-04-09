@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
+import '../../services/cache_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/cached_qr_image.dart';
@@ -356,9 +358,23 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
     Share.share(text);
   }
 
-  void _printVoucher() {
+  void _printVoucher() async {
     final template = ref.read(voucherTemplateProvider);
-    VoucherPrinter.printVoucher(context, widget.voucher, template: template);
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    final companyName = settings?['companyName'] as String? ?? 'WiFi';
+    final loginUrl = settings?['loginUrl'] as String? ?? 'http://wifi.local';
+    final currency = settings?['currency'] as String? ?? 'USD';
+    final currencySymbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
+
+    VoucherPrinter.printVoucher(
+      context,
+      widget.voucher,
+      template: template,
+      companyName: companyName,
+      loginUrl: loginUrl,
+      currencySymbol: currencySymbol,
+    );
   }
 }
 

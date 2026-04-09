@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../widgets/cached_qr_image.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
+import '../../services/cache_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import '../../utils/filter_utils.dart';
@@ -52,6 +54,82 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
     ref.read(vouchersProvider.notifier).sortVouchers(sort);
   }
 
+  List<Widget> _buildNormalActions(AsyncValue<List<Voucher>> vouchersAsync) {
+    return [
+      IconButton(
+        icon: Icon(Icons.refresh_rounded),
+        onPressed: vouchersAsync.isLoading ? null : _refreshVouchers,
+        tooltip: 'Refresh',
+      ),
+      IconButton(
+        icon: Icon(Icons.print_rounded),
+        onPressed: vouchersAsync.isLoading ? null : _printAllVouchers,
+        tooltip: 'Print All',
+      ),
+      IconButton(
+        icon: Icon(Icons.checklist_rounded),
+        onPressed: _toggleSelectionMode,
+        tooltip: 'Select multiple',
+      ),
+      PopupMenuButton<VoucherSort>(
+        icon: Icon(Icons.sort_rounded),
+        onSelected: _applySort,
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: VoucherSort.newest,
+            child: Row(
+              children: [
+                if (_currentSort == VoucherSort.newest)
+                  Icon(Icons.check, size: 18, color: context.appPrimary),
+                SizedBox(width: _currentSort == VoucherSort.newest ? 8 : 24),
+                Text(AppStrings.of(context).newestFirst),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: VoucherSort.oldest,
+            child: Row(
+              children: [
+                if (_currentSort == VoucherSort.oldest)
+                  Icon(Icons.check, size: 18, color: context.appPrimary),
+                SizedBox(width: _currentSort == VoucherSort.oldest ? 8 : 24),
+                Text(AppStrings.of(context).oldestFirst),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: VoucherSort.az,
+            child: Row(
+              children: [
+                if (_currentSort == VoucherSort.az)
+                  Icon(Icons.check, size: 18, color: context.appPrimary),
+                SizedBox(width: _currentSort == VoucherSort.az ? 8 : 24),
+                Text(AppStrings.of(context).aToZ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _buildSelectionModeActions(
+      AsyncValue<List<Voucher>> vouchersAsync) {
+    return [
+      if (vouchersAsync.valueOrNull != null)
+        IconButton(
+          icon: Icon(Icons.print_rounded),
+          onPressed: vouchersAsync.isLoading ? null : _printAllVouchers,
+          tooltip: 'Print All',
+        ),
+      IconButton(
+        icon: Icon(Icons.checklist_rounded),
+        onPressed: _toggleSelectionMode,
+        tooltip: 'Select multiple',
+      ),
+    ];
+  }
+
   Future<void> _refreshVouchers() async {
     await ref.read(vouchersProvider.notifier).refresh();
   }
@@ -67,8 +145,22 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
       return;
     }
     final template = ref.read(voucherTemplateProvider);
-    await VoucherPrinter.printBulkVouchers(context, filtered,
-        template: template);
+    print('DEBUG: template = $template');
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    final companyName = settings?['companyName'] as String? ?? 'WiFi';
+    final loginUrl = settings?['loginUrl'] as String? ?? 'http://wifi.local';
+    final currency = settings?['currency'] as String? ?? 'USD';
+    final currencySymbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
+
+    await VoucherPrinter.printBulkVouchers(
+      context,
+      filtered,
+      template: template,
+      companyName: companyName,
+      loginUrl: loginUrl,
+      currencySymbol: currencySymbol,
+    );
   }
 
   void _toggleSelectionMode() {
@@ -238,93 +330,8 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                   .replaceFirst('%d', _selectedVoucherIds.length.toString()))
               : _buildTitleWithBadge(context, vouchersAsync),
           actions: _isSelectionMode
-              ? [
-                  if (vouchersAsync.valueOrNull != null)
-                    IconButton(
-                      icon: Icon(Icons.select_all_rounded),
-                      onPressed: () {
-                        final filtered =
-                            _filterVouchers(vouchersAsync.valueOrNull!);
-                        _selectAllVisible(
-                            filtered.map((v) => v.username).toList());
-                      },
-                      tooltip: 'Select all',
-                    ),
-                  IconButton(
-                    icon: Icon(Icons.delete_rounded),
-                    onPressed:
-                        _selectedVoucherIds.isEmpty ? null : _confirmBulkDelete,
-                    tooltip: 'Delete selected',
-                    color: Colors.red,
-                  ),
-                ]
-              : [
-                  IconButton(
-                    icon: Icon(Icons.refresh_rounded),
-                    onPressed:
-                        vouchersAsync.isLoading ? null : _refreshVouchers,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.print_rounded),
-                    onPressed:
-                        vouchersAsync.isLoading ? null : _printAllVouchers,
-                    tooltip: 'Print All',
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.checklist_rounded),
-                    onPressed: _toggleSelectionMode,
-                    tooltip: 'Select multiple',
-                  ),
-                  PopupMenuButton<VoucherSort>(
-                    icon: Icon(Icons.sort_rounded),
-                    onSelected: _applySort,
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: VoucherSort.newest,
-                        child: Row(
-                          children: [
-                            if (_currentSort == VoucherSort.newest)
-                              Icon(Icons.check,
-                                  size: 18, color: context.appPrimary),
-                            SizedBox(
-                                width: _currentSort == VoucherSort.newest
-                                    ? 8
-                                    : 24),
-                            Text(AppStrings.of(context).newestFirst),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: VoucherSort.oldest,
-                        child: Row(
-                          children: [
-                            if (_currentSort == VoucherSort.oldest)
-                              Icon(Icons.check,
-                                  size: 18, color: context.appPrimary),
-                            SizedBox(
-                                width: _currentSort == VoucherSort.oldest
-                                    ? 8
-                                    : 24),
-                            Text(AppStrings.of(context).oldestFirst),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: VoucherSort.az,
-                        child: Row(
-                          children: [
-                            if (_currentSort == VoucherSort.az)
-                              Icon(Icons.check,
-                                  size: 18, color: context.appPrimary),
-                            SizedBox(
-                                width: _currentSort == VoucherSort.az ? 8 : 24),
-                            Text(AppStrings.of(context).aToZ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              ? _buildSelectionModeActions(vouchersAsync)
+              : _buildNormalActions(vouchersAsync),
         ),
         body: RefreshIndicator(
           onRefresh: () async {

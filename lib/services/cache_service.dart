@@ -23,6 +23,7 @@ class CacheService {
   static const String _interfaceTrafficKey = 'interface_traffic';
   static const String _vouchersKey = 'generated_vouchers';
   static const String _appSettingsKey = 'app_settings';
+  static const String _recordedConnectionsKey = 'recorded_connections';
 
   /// Initialize Hive cache
   Future<void> init() async {
@@ -184,6 +185,28 @@ class CacheService {
   Future<void> saveIncomeSummary(Map<String, dynamic> summary) async {
     try {
       await _cacheBox.put(_incomeSummaryKey, summary);
+    } catch (e) {
+      // Error saving
+    }
+  }
+
+  /// Get recorded connections (for income tracking - only record once per session)
+  Set<String> getRecordedConnections() {
+    try {
+      final data = _cacheBox.get(_recordedConnectionsKey);
+      if (data != null && data is List) {
+        return data.map((e) => e.toString()).toSet();
+      }
+      return {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// Save recorded connections to cache
+  Future<void> saveRecordedConnections(Set<String> connections) async {
+    try {
+      await _cacheBox.put(_recordedConnectionsKey, connections.toList());
     } catch (e) {
       // Error saving
     }
@@ -452,12 +475,15 @@ class CacheService {
     required String country,
     required String currency,
     String? companyName,
+    String? loginUrl,
   }) async {
     try {
+      final current = getAppSettings() ?? {};
       await _cacheBox.put(_appSettingsKey, {
         'country': country,
         'currency': currency,
-        'companyName': companyName ?? '',
+        'companyName': companyName ?? current['companyName'] ?? '',
+        'loginUrl': loginUrl ?? current['loginUrl'] ?? 'http://wifi.local',
       });
     } catch (e) {
       // Error saving settings

@@ -7,7 +7,8 @@ import '../../../providers/app_providers.dart';
 /// User status types with color coding
 enum UserStatusType {
   connected, // Green - currently online
-  active, // Light green - enabled and connected
+  active, // Light green - enabled and not expired
+  expired, // Red - voucher expired
   idle, // Amber - enabled but no recent activity
   disabled; // Gray - disabled user
 }
@@ -79,7 +80,17 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
 
   UserStatusType _getUserStatusType(bool isConnected) {
     if (isConnected) return UserStatusType.connected;
-    if (!widget.user.active) return UserStatusType.disabled;
+    if (!widget.user.active) {
+      // Check if it's an expired voucher (has expiry date in comment)
+      if (widget.user.isVoucher && widget.user.isExpired) {
+        return UserStatusType.expired;
+      }
+      return UserStatusType.disabled;
+    }
+    // Check if voucher is expired
+    if (widget.user.isVoucher && widget.user.isExpired) {
+      return UserStatusType.expired;
+    }
     // Could add idle detection based on uptime here
     return UserStatusType.active;
   }
@@ -88,6 +99,7 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
     return switch (status) {
       UserStatusType.connected => const Color(0xFF10B981), // Green
       UserStatusType.active => const Color(0xFF22C55E), // Light green
+      UserStatusType.expired => const Color(0xFFEF4444), // Red
       UserStatusType.idle => const Color(0xFFF59E0B), // Amber
       UserStatusType.disabled => const Color(0xFF64748B), // Slate gray
     };
@@ -97,6 +109,7 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
     return switch (status) {
       UserStatusType.connected => 'Connected',
       UserStatusType.active => 'Active',
+      UserStatusType.expired => 'Expired',
       UserStatusType.idle => 'Idle',
       UserStatusType.disabled => 'Disabled',
     };

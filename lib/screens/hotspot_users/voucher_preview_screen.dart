@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
+import '../../services/cache_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/cached_qr_image.dart';
@@ -284,9 +286,22 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     });
 
     try {
+      final cache = CacheService();
+      final settings = cache.getAppSettings();
+      final companyName = settings?['companyName'] as String? ?? 'WiFi';
+      final loginUrl = settings?['loginUrl'] as String? ?? 'http://wifi.local';
+      final currency = settings?['currency'] as String? ?? 'USD';
+      final currencySymbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
+
       final template = ref.read(voucherTemplateProvider);
-      await VoucherPrinter.printBulkVouchers(context, widget.vouchers,
-          template: template);
+      await VoucherPrinter.printBulkVouchers(
+        context,
+        widget.vouchers,
+        template: template,
+        companyName: companyName,
+        loginUrl: loginUrl,
+        currencySymbol: currencySymbol,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

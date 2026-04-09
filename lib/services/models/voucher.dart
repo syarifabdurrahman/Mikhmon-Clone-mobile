@@ -7,8 +7,9 @@ class Voucher {
   final String? comment;
   final DateTime createdAt;
   final DateTime? expiresAt;
-  final int? remainingSeconds; // remaining session time in seconds
-  final DateTime? sessionStartedAt; // when current session started
+  final int? remainingSeconds;
+  final DateTime? sessionStartedAt;
+  final double? price;
 
   Voucher({
     required this.username,
@@ -21,6 +22,7 @@ class Voucher {
     this.expiresAt,
     this.remainingSeconds,
     this.sessionStartedAt,
+    this.price,
   });
 
   // Get display text for voucher
@@ -123,6 +125,7 @@ class Voucher {
       'expiresAt': expiresAt?.toIso8601String(),
       'remainingSeconds': remainingSeconds,
       'sessionStartedAt': sessionStartedAt?.toIso8601String(),
+      'price': price,
     };
   }
 
@@ -142,6 +145,7 @@ class Voucher {
       sessionStartedAt: json['sessionStartedAt'] != null
           ? DateTime.parse(json['sessionStartedAt'] as String)
           : null,
+      price: json['price'] != null ? (json['price'] as num).toDouble() : null,
     );
   }
 
@@ -156,6 +160,7 @@ class Voucher {
     DateTime? expiresAt,
     int? remainingSeconds,
     DateTime? sessionStartedAt,
+    double? price,
   }) {
     return Voucher(
       username: username ?? this.username,
@@ -168,6 +173,7 @@ class Voucher {
       expiresAt: expiresAt ?? this.expiresAt,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
       sessionStartedAt: sessionStartedAt ?? this.sessionStartedAt,
+      price: price ?? this.price,
     );
   }
 }
