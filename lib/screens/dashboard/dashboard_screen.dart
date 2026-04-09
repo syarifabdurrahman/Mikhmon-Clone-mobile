@@ -34,10 +34,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _mediumPriorityLoaded = false;
   bool _lowPriorityLoaded = false;
 
-  static const _staleDuration = Duration(seconds: 30);
-  DateTime? _lastHotspotUsersRefresh;
-  DateTime? _lastUserProfilesRefresh;
-
   @override
   void initState() {
     super.initState();
@@ -81,31 +77,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Start periodic refresh for system resources
     _startPeriodicRefresh();
 
-    // Refresh hotspot users and profiles in background (they show cached data instantly)
-    _refreshHotspotUsersIfStale();
-    _refreshUserProfilesIfStale();
-  }
-
-  void _refreshHotspotUsersIfStale() {
-    final now = DateTime.now();
-    if (_lastHotspotUsersRefresh == null ||
-        now.difference(_lastHotspotUsersRefresh!) > _staleDuration) {
-      Future.microtask(() {
-        ref.read(hotspotUsersProvider.notifier).refresh();
-      });
-      _lastHotspotUsersRefresh = now;
-    }
-  }
-
-  void _refreshUserProfilesIfStale() {
-    final now = DateTime.now();
-    if (_lastUserProfilesRefresh == null ||
-        now.difference(_lastUserProfilesRefresh!) > _staleDuration) {
-      Future.microtask(() {
-        ref.read(userProfileProvider.notifier).refresh();
-      });
-      _lastUserProfilesRefresh = now;
-    }
+    // Don't manually refresh hotspot users - data comes from cache via provider
+    // Auto-refresh in provider handles background updates
   }
 
   @override

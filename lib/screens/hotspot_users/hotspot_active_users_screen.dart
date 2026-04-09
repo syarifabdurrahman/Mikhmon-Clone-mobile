@@ -27,9 +27,6 @@ class _HotspotActiveUsersScreenState
   final Debouncer _searchDebouncer =
       Debouncer(delay: const Duration(milliseconds: 300));
 
-  static const _staleDuration = Duration(seconds: 30);
-  DateTime? _lastRefreshTime;
-
   @override
   void initState() {
     super.initState();
@@ -37,28 +34,10 @@ class _HotspotActiveUsersScreenState
     _startAutoRefresh();
   }
 
-  bool _hasInitiallyLoaded = false;
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_hasInitiallyLoaded) {
-      _hasInitiallyLoaded = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _refreshIfStale();
-      });
-    }
-  }
-
-  Future<void> _refreshIfStale() async {
-    if (!mounted) return;
-
-    final now = DateTime.now();
-    if (_lastRefreshTime == null ||
-        now.difference(_lastRefreshTime!) > _staleDuration) {
-      await ref.read(hotspotActiveUsersProvider.notifier).refresh();
-      _lastRefreshTime = DateTime.now();
-    }
+    // No manual refresh needed - rely on auto-refresh from provider
   }
 
   @override
