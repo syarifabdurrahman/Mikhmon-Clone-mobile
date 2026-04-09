@@ -425,7 +425,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // At a Glance summary (High priority - always show with skeleton fallback)
+                // System info card (Low priority) - FIRST
+                if (_lowPriorityLoaded && _resources != null) ...[
+                  _buildSystemInfoCard(),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                ] else
+                  SkeletonLoaders.card(height: 180),
+                // Expandable resource chart (Low priority) - SECOND
+                if (_lowPriorityLoaded && _resources != null) ...[
+                  _buildResourceChart(),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                ] else
+                  SkeletonLoaders.chart(height: 250),
+                // At a Glance summary (High priority) - THIRD
                 if (_highPriorityLoaded)
                   const AtAGlanceCard()
                 else
@@ -436,18 +448,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   _buildAlertsSection()
                 else
                   SkeletonLoaders.card(height: 80),
-                // System info card (Low priority)
-                if (_lowPriorityLoaded && _resources != null) ...[
-                  _buildSystemInfoCard(),
-                  SizedBox(height: isSmallScreen ? 12 : 16),
-                ] else
-                  SkeletonLoaders.card(height: 180),
-                // Expandable resource chart (Low priority)
-                if (_lowPriorityLoaded && _resources != null) ...[
-                  _buildResourceChart(),
-                  SizedBox(height: isSmallScreen ? 12 : 16),
-                ] else
-                  SkeletonLoaders.chart(height: 250),
+                SizedBox(height: isSmallScreen ? 12 : 16),
                 // Traffic monitor (Medium priority)
                 if (_mediumPriorityLoaded) ...[
                   const TrafficMonitorCard(),
