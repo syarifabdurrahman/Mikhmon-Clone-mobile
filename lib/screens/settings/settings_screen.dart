@@ -10,7 +10,6 @@ import '../../services/onboarding_service.dart';
 import '../../l10n/translations.dart';
 import '../../l10n/locale_provider.dart';
 import '../../utils/currency_formatter.dart';
-import '../../widgets/skeleton_loader.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -513,26 +512,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
-
-  static const _currencies = {
-    'IDR': 'Indonesian Rupiah',
-    'MYR': 'Malaysian Ringgit',
-    'PHP': 'Philippine Peso',
-    'THB': 'Thai Baht',
-    'VND': 'Vietnamese Dong',
-    'SGD': 'Singapore Dollar',
-    'KHR': 'Cambodian Riel',
-    'MMK': 'Myanmar Kyat',
-    'BDT': 'Bangladeshi Taka',
-    'INR': 'Indian Rupee',
-    'PKR': 'Pakistani Rupee',
-    'NGN': 'Nigerian Naira',
-    'KES': 'Kenyan Shilling',
-    'TZS': 'Tanzanian Shilling',
-    'ZAR': 'South African Rand',
-    'BRL': 'Brazilian Real',
-    'USD': 'US Dollar',
-  };
 
   void _showCurrencyDialog(
       BuildContext context, WidgetRef ref, CacheService cache) {

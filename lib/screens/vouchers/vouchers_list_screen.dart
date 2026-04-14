@@ -122,6 +122,12 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
           onPressed: vouchersAsync.isLoading ? null : _printAllVouchers,
           tooltip: 'Print All',
         ),
+      if (_selectedVoucherIds.isNotEmpty)
+        IconButton(
+          icon: Icon(Icons.delete_rounded, color: Colors.red),
+          onPressed: _confirmBulkDelete,
+          tooltip: 'Delete selected',
+        ),
       IconButton(
         icon: Icon(Icons.checklist_rounded),
         onPressed: _toggleSelectionMode,
@@ -145,7 +151,6 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
       return;
     }
     final template = ref.read(voucherTemplateProvider);
-    print('DEBUG: template = $template');
     final cache = CacheService();
     final settings = cache.getAppSettings();
     final companyName = settings?['companyName'] as String? ?? 'WiFi';
@@ -187,13 +192,6 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
       } else {
         _selectedVoucherIds.add(voucherId);
       }
-    });
-  }
-
-  void _selectAllVisible(List<String> voucherIds) {
-    setState(() {
-      _selectedVoucherIds.clear();
-      _selectedVoucherIds.addAll(voucherIds);
     });
   }
 

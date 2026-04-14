@@ -527,7 +527,6 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   int _currentPage = 1;
   final int _pageSize = 20;
   bool _timerStarted = false;
-  bool _isRefreshing = false;
   // Track recorded connections to avoid duplicate revenue entries
   // Key: "username|loginTime" to uniquely identify each session
   final Set<String> _recordedConnections = {};
@@ -956,7 +955,6 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
   Future<void> silentRefresh() async {
     // Don't use lock - run independently to avoid blocking
-    final previousState = state.value;
     try {
       final newData = await _loadUsers(page: 1);
       // Only update if we got data

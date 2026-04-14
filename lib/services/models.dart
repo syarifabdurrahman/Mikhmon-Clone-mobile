@@ -422,6 +422,7 @@ class HotspotUser {
   final int? bytesOut;
   final int? limitBytesIn;
   final int? limitBytesOut;
+  final String? limitUptime;
   final String? comment;
 
   HotspotUser({
@@ -434,6 +435,7 @@ class HotspotUser {
     this.bytesOut,
     this.limitBytesIn,
     this.limitBytesOut,
+    this.limitUptime,
     this.comment,
   });
 
@@ -455,6 +457,7 @@ class HotspotUser {
       bytesOut: int.tryParse(json['bytes-out'] ?? '0'),
       limitBytesIn: int.tryParse(json['limit-bytes-in'] ?? '0'),
       limitBytesOut: int.tryParse(json['limit-bytes-out'] ?? '0'),
+      limitUptime: json['limit-uptime'],
       comment: json['comment'],
     );
   }
@@ -510,11 +513,57 @@ class HotspotUser {
     return null;
   }
 
-  /// Check if this voucher is expired based on expiry date
+  /// Parse MikroTik time string to seconds (e.g., "1h5m30s" -> 4530)
+  int _parseTimeToSeconds(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return 0;
+    try {
+      int totalSeconds = 0;
+      final match = RegExp(r'(\d+)(\w)').allMatches(timeStr.toLowerCase());
+      for (final m in match) {
+        final value = int.parse(m.group(1)!);
+        final unit = m.group(2)!;
+        switch (unit) {
+          case 's':
+            totalSeconds += value;
+            break;
+          case 'm':
+            totalSeconds += value * 60;
+            break;
+          case 'h':
+            totalSeconds += value * 3600;
+            break;
+          case 'd':
+            totalSeconds += value * 86400;
+            break;
+          case 'w':
+            totalSeconds += value * 604800;
+            break;
+        }
+      }
+      return totalSeconds;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Check if this voucher/user is expired
+  /// Expired if: 1) past expiry date from comment, OR 2) uptime reached limit-uptime
   bool get isExpired {
+    // Check expiry date in comment
     final expiry = expiresAt;
-    if (expiry == null) return false;
-    return DateTime.now().isAfter(expiry);
+    if (expiry != null && DateTime.now().isAfter(expiry)) {
+      return true;
+    }
+    // Check if uptime has reached limit-uptime
+    if (limitUptime != null && uptime != null) {
+      final limitSeconds = _parseTimeToSeconds(limitUptime);
+      final uptimeSeconds = _parseTimeToSeconds(uptime);
+      // If limit is set and uptime has reached or exceeded it, user is expired
+      if (limitSeconds > 0 && uptimeSeconds >= limitSeconds) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Map<String, dynamic> toMap() {
