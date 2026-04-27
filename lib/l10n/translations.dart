@@ -294,6 +294,11 @@ class AppStrings {
         'id': 'Profil Pengguna',
         'ms': 'Profil Pengguna'
       });
+  String get files => _get({
+        'en': 'Files',
+        'id': 'Berkas',
+        'ms': 'Fail'
+      });
 
   // ─── Vouchers ───
   String get generateVouchers => _get(

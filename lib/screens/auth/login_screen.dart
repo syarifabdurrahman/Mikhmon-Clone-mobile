@@ -31,6 +31,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _saveConnection = true;
+  bool _useRestApi = false;
 
   static const Color primaryColor = Color(0xFF7B61FF);
 
@@ -130,6 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             username: username,
             password: password,
             rememberMe: false,
+            useRest: _useRestApi,
           );
 
       if (_saveConnection && savedConnection == null) {
@@ -399,6 +401,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         validator: Validators.validateOptionalPassword,
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _useRestApi
+                              ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _useRestApi
+                                ? const Color(0xFF10B981)
+                                : Colors.transparent,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _useRestApi
+                                  ? Icons.check_circle
+                                  : Icons.cloud_outlined,
+                              color: _useRestApi
+                                  ? const Color(0xFF10B981)
+                                  : Colors.grey[600],
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _useRestApi ? 'REST API (Active)' : 'Legacy API',
+                                    style: TextStyle(
+                                      color: Color(0xFF1E293B),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    _useRestApi
+                                        ? 'HTTP-based (faster, ROS7 recommended)'
+                                        : 'Socket-based (ROS6)',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: _useRestApi,
+                              onChanged: (value) {
+                                setState(() => _useRestApi = value);
+                                if (value) {
+                                  _portController.text = '80';
+                                } else {
+                                  _portController.text = '8728';
+                                }
+                              },
+                              activeThumbColor: const Color(0xFF10B981),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Row(

@@ -1,14 +1,19 @@
 /// Generates an on-login script for MikroTik Hotspot user profiles
 /// that automatically schedules user removal when their session timeout expires
 class OnLoginScriptGenerator {
-  static String generate() {
+  static String generate(String validity) {
     return ''':local user \$user
-:local limitUptime [/ip hotspot user get [find name=\$user] limit-uptime]
 :local comment [/ip hotspot user get [find name=\$user] comment]
 
-:if (\$comment = "" && \$limitUptime != nil) do={
-    /system scheduler add name=\$user interval=\$limitUptime on-event="/ip hotspot user remove [find name=\$user]; /ip hotspot active remove [find user=\$user]; /system scheduler remove [find name=\$user]"
-    /ip hotspot user set [find name=\$user] comment="Aktif"
+:if (\$comment = "" || \$comment = "Aktif") do={
+    :if ([:len [/system scheduler find name=\$user]] = 0) do={
+        /system scheduler add name=\$user interval=''' +
+        validity +
+        ''' on-event="/ip hotspot user remove [find name=\$user]; /ip hotspot active remove [find user=\$user]; /system scheduler remove [find name=\$user]"
+    }
+    :local date [/system clock get date]
+    :local time [/system clock get time]
+    /ip hotspot user set [find name=\$user] comment="Aktif \$date \$time"
 }''';
   }
 

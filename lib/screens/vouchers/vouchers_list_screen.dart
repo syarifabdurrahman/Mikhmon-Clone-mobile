@@ -15,6 +15,7 @@ import '../../widgets/skeleton_loader.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/back_to_top_fab.dart';
 import 'voucher_detail_screen.dart';
+import '../../providers/bulk_voucher_provider.dart';
 import '../../l10n/translations.dart';
 
 class VouchersListScreen extends ConsumerStatefulWidget {
@@ -72,7 +73,7 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
         tooltip: 'Select multiple',
       ),
       PopupMenuButton<VoucherSort>(
-        icon: Icon(Icons.sort_rounded),
+        icon: Icon(Icons.more_vert_rounded),
         onSelected: _applySort,
         itemBuilder: (context) => [
           PopupMenuItem(
@@ -105,6 +106,17 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
                   Icon(Icons.check, size: 18, color: context.appPrimary),
                 SizedBox(width: _currentSort == VoucherSort.az ? 8 : 24),
                 Text(AppStrings.of(context).aToZ),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: VoucherSort.az,
+            child: Row(
+              children: [
+                Icon(Icons.library_books_rounded, size: 18, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('Bulk Actions', style: TextStyle(color: Colors.orange)),
               ],
             ),
           ),
@@ -165,6 +177,22 @@ class _VouchersListScreenState extends ConsumerState<VouchersListScreen> {
       companyName: companyName,
       loginUrl: loginUrl,
       currencySymbol: currencySymbol,
+    );
+  }
+
+void _openBulkActions(List<Voucher> vouchers) {
+    if (vouchers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No vouchers available')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BulkActionsScreen(vouchers: vouchers),
+      ),
     );
   }
 

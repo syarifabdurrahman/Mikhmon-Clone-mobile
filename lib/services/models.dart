@@ -495,17 +495,52 @@ class HotspotUser {
     if (comment == null) return null;
     try {
       final commentStr = comment!.toString();
-      // Look for date pattern in format MM/DD/YY HH:MM:SS
-      final match = RegExp(r'(\d{2})/(\d{2})/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})')
-          .firstMatch(commentStr);
-      if (match != null) {
-        final month = int.parse(match.group(1)!);
-        final day = int.parse(match.group(2)!);
-        final year = int.parse(match.group(3)!) + 2000;
-        final hour = int.parse(match.group(4)!);
-        final minute = int.parse(match.group(5)!);
-        final second = int.parse(match.group(6)!);
+
+      // 1. Try standard MM/DD/YY HH:MM:SS format
+      final match1 =
+          RegExp(r'(\d{2})/(\d{2})/(\d{2,4})\s+(\d{2}):(\d{2}):(\d{2})')
+              .firstMatch(commentStr);
+      if (match1 != null) {
+        final month = int.parse(match1.group(1)!);
+        final day = int.parse(match1.group(2)!);
+        var year = int.parse(match1.group(3)!);
+        if (year < 100) year += 2000;
+        final hour = int.parse(match1.group(4)!);
+        final minute = int.parse(match1.group(5)!);
+        final second = int.parse(match1.group(6)!);
         return DateTime(year, month, day, hour, minute, second);
+      }
+
+      // 2. Try MikroTik format mmm/dd/yyyy HH:MM:SS (e.g. apr/14/2026 21:00:00)
+      final match2 = RegExp(
+              r'([a-z]{3})/(\d{2})/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})',
+              caseSensitive: false)
+          .firstMatch(commentStr);
+      if (match2 != null) {
+        final months = [
+          'jan',
+          'feb',
+          'mar',
+          'apr',
+          'may',
+          'jun',
+          'jul',
+          'aug',
+          'sep',
+          'oct',
+          'nov',
+          'dec'
+        ];
+        final monthStr = match2.group(1)!.toLowerCase();
+        final month = months.indexOf(monthStr) + 1;
+        if (month > 0) {
+          final day = int.parse(match2.group(2)!);
+          final year = int.parse(match2.group(3)!);
+          final hour = int.parse(match2.group(4)!);
+          final minute = int.parse(match2.group(5)!);
+          final second = int.parse(match2.group(6)!);
+          return DateTime(year, month, day, hour, minute, second);
+        }
       }
     } catch (e) {
       // Ignore parsing errors
@@ -809,6 +844,7 @@ class RouterConnection {
   final String host;
   final String port;
   final String username;
+  final bool useRest; // Whether to use ROS7 REST API (true) or Legacy API (false)
   final DateTime createdAt;
 
   RouterConnection({
@@ -817,6 +853,7 @@ class RouterConnection {
     required this.host,
     required this.port,
     required this.username,
+    this.useRest = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -827,6 +864,7 @@ class RouterConnection {
       host: json['host'] as String,
       port: json['port'] as String,
       username: json['username'] as String,
+      useRest: json['useRest'] as bool? ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
@@ -840,6 +878,7 @@ class RouterConnection {
       'host': host,
       'port': port,
       'username': username,
+      'useRest': useRest,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -853,6 +892,7 @@ class RouterConnection {
     String? host,
     String? port,
     String? username,
+    bool? useRest,
     DateTime? createdAt,
   }) {
     return RouterConnection(
@@ -861,6 +901,7 @@ class RouterConnection {
       host: host ?? this.host,
       port: port ?? this.port,
       username: username ?? this.username,
+      useRest: useRest ?? this.useRest,
       createdAt: createdAt ?? this.createdAt,
     );
   }

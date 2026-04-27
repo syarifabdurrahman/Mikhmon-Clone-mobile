@@ -31,10 +31,12 @@ import '../screens/hotspot_users/add_hotspot_user_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/voucher_generation_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/settings/voucher_template_editor_screen.dart';
 import '../screens/revenue/revenue_screen.dart';
 import '../screens/vouchers/vouchers_list_screen.dart';
 import '../screens/activity_logs/activity_logs_screen.dart';
 import '../screens/main/main_shell_screen.dart';
+import '../screens/files/files_screen.dart';
 
 // Secure Storage Provider
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
@@ -199,6 +201,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     required String username,
     required String password,
     required bool rememberMe,
+    bool useRest = false,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -210,6 +213,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         port: port,
         username: username,
         password: password,
+        useRest: useRest,
       );
 
       // Pre-fetch system resources during login
@@ -243,13 +247,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> _prefetchHotspotData(client, CacheService cache) async {
     try {
       // Pre-fetch user profiles
-      final profiles = await client.getUserProfiles();
+      final profiles = await client.getHotspotProfiles();
       await cache.saveUserProfiles(profiles);
     } catch (_) {}
 
     try {
       // Pre-fetch hotspot users
-      final users = await client.getHotspotUsersList();
+      final users = await client.getHotspotUsers();
       await cache.saveHotspotUsers(users);
     } catch (_) {}
   }
@@ -444,6 +448,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/main/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
+            routes: [
+              GoRoute(
+                path: 'voucher-template',
+                name: 'voucher_template_editor',
+                builder: (context, state) => const VoucherTemplateEditorScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/main/revenue',
@@ -466,6 +477,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/main/logs',
             name: 'activity_logs',
             builder: (context, state) => const ActivityLogsScreen(),
+          ),
+          GoRoute(
+            path: '/main/files',
+            name: 'files',
+            builder: (context, state) => const FilesScreen(),
           ),
         ],
       ),
@@ -635,7 +651,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     }
 
     // Fetch hotspot users first (critical data)
-    final allUsers = await client.getHotspotUsersList();
+    final allUsers = await client.getHotspotUsers();
 
     // Fetch active users separately (non-critical - don't fail the whole load)
     List<Map<String, dynamic>> activeUsers = [];
@@ -657,7 +673,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     }
 
     // Track session time for vouchers
-    await _trackSessionTime(activeUsers);
+    await _trackSessionTime(activeUsers, allUsers);
 
     // Cache the users
     final cache = ref.read(cacheServiceProvider);
@@ -728,7 +744,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   /// Track session time for active voucher users.
   /// Decreases remainingSeconds while connected, marks session start/end,
   /// and disables vouchers on the router when time runs out.
-  Future<void> _trackSessionTime(List<Map<String, dynamic>> activeUsers) async {
+  Future<void> _trackSessionTime(List<Map<String, dynamic>> activeUsers,
+      List<Map<String, dynamic>> allUsers) async {
     try {
       final cache = ref.read(cacheServiceProvider);
       final vouchersData = cache.getVouchers();
@@ -738,11 +755,11 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       final activeUsernames =
           activeUsers.map((u) => u['user'] as String? ?? '').toSet();
 
-      // Build map of active users with their login times
-      final activeUserMap = <String, Map<String, dynamic>>{};
-      for (final u in activeUsers) {
-        final name = u['user'] as String? ?? '';
-        if (name.isNotEmpty) activeUserMap[name] = u;
+      // Build map of all users from router for comment/expiration parsing
+      final routerUserMap = <String, Map<String, dynamic>>{};
+      for (final u in allUsers) {
+        final name = u['name'] as String? ?? '';
+        if (name.isNotEmpty) routerUserMap[name] = u;
       }
 
       for (final vData in vouchersData) {
@@ -752,16 +769,48 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
         // Skip unlimited vouchers
         if (voucher.validity == null ||
             voucher.validity == 'unlimited' ||
-            voucher.remainingSeconds == null) {
+            (voucher.remainingSeconds == null && voucher.expiresAt == null)) {
           continue;
+        }
+
+        // 1. Check if already expired by wall-clock (expiresAt)
+        if (voucher.expiresAt != null && now.isAfter(voucher.expiresAt!)) {
+          // Time expired - disable on router if not already
+          await _disableVoucherOnRouter(username);
+          await cache.updateVoucher(username, {
+            'remainingSeconds': 0,
+            'sessionStartedAt': null,
+          });
+          continue;
+        }
+
+        // 2. Check if router has updated info (e.g. activation date in comment)
+        final routerUserRaw = routerUserMap[username];
+        if (routerUserRaw != null && voucher.expiresAt == null) {
+          final hotspotUser = HotspotUser.fromJson(routerUserRaw);
+          final routerExpiresAt = hotspotUser.expiresAt;
+          if (routerExpiresAt != null) {
+            // Router has activation info - update local voucher
+            await cache.updateVoucher(username, {
+              'expiresAt': routerExpiresAt.toIso8601String(),
+            });
+            // Re-check expression with new info
+            if (now.isAfter(routerExpiresAt)) {
+              await _disableVoucherOnRouter(username);
+              await cache.updateVoucher(username, {
+                'remainingSeconds': 0,
+                'sessionStartedAt': null,
+              });
+              continue;
+            }
+          }
         }
 
         final isActive = activeUsernames.contains(username);
 
         if (isActive) {
           // User is currently connected
-          final remaining = voucher.remainingSeconds!;
-          if (remaining <= 0) continue;
+          final remaining = voucher.remainingSeconds ?? 0;
 
           if (voucher.sessionStartedAt != null) {
             // Ongoing session - calculate elapsed time since last check
@@ -769,7 +818,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
             final newRemaining = (remaining - elapsed).clamp(0, remaining);
 
             if (newRemaining <= 0) {
-              // Time expired - disable on router
+              // Uptime expired - disable on router
               await _disableVoucherOnRouter(username);
               await cache.updateVoucher(username, {
                 'remainingSeconds': 0,
@@ -784,20 +833,32 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
             }
           } else {
             // New session starting - mark session start
-            await cache.updateVoucher(username, {
+            final updates = <String, dynamic>{
               'sessionStartedAt': now.toIso8601String(),
-            });
+            };
+
+            // If this is the FIRST activation and we don't have expiresAt yet,
+            // calculate it from validity
+            if (voucher.expiresAt == null && voucher.validity != null) {
+              final validitySeconds =
+                  Voucher.validityToSeconds(voucher.validity);
+              if (validitySeconds != null) {
+                final expiresAt = now.add(Duration(seconds: validitySeconds));
+                updates['expiresAt'] = expiresAt.toIso8601String();
+              }
+            }
+
+            await cache.updateVoucher(username, updates);
           }
         } else {
-          // User is NOT connected (disconnected or never connected)
+          // User is NOT connected
           if (voucher.sessionStartedAt != null) {
             // Was in session, now disconnected - finalize time used
             final elapsed = now.difference(voucher.sessionStartedAt!).inSeconds;
-            final remaining = voucher.remainingSeconds!;
+            final remaining = voucher.remainingSeconds ?? 0;
             final newRemaining = (remaining - elapsed).clamp(0, remaining);
 
             if (newRemaining <= 0) {
-              // Time expired during session - disable on router
               await _disableVoucherOnRouter(username);
             }
 
@@ -807,15 +868,12 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
               'sessionStartedAt': null,
             });
           }
-          // If sessionStartedAt is null, nothing to do (already offline)
         }
       }
 
       // Refresh vouchers provider to reflect changes
       ref.invalidate(vouchersProvider);
-    } catch (_) {
-      // Silent fail - don't block user list loading
-    }
+    } catch (_) {}
   }
 
   /// Disable a voucher (hotspot user) on the router when time expires
@@ -826,7 +884,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       if (client == null) return;
 
       // Find the user on the router by name
-      final users = await client.getHotspotUsersList();
+      final users = await client.getHotspotUsers();
       final user = users.firstWhere(
         (u) => u['name'] == username,
         orElse: () => {},
@@ -837,7 +895,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       if (userId.isEmpty) return;
 
       // Disable the user on the router
-      await client.setHotspotUserStatus(id: userId, disabled: true);
+      await client.setHotspotUserStatus(userId, true);
 
       // Also log them out if still active
       try {
@@ -893,13 +951,13 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       throw Exception('Not connected to RouterOS');
     }
 
-    await client.addHotspotUser(
-      username: username,
-      password: password,
-      profile: profile,
-      comment: comment,
-      sessionTimeout: sessionTimeout,
-    );
+    await client.addUser({
+      'name': username,
+      'password': password,
+      'profile': profile,
+      if (comment != null) 'comment': comment,
+      if (sessionTimeout != null) 'session-timeout': sessionTimeout,
+    });
 
     ref.invalidate(hotspotUsersProvider);
   }
@@ -922,7 +980,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       usernameToDelete = userToDelete['name'] as String?;
     }
 
-    await client.removeHotspotUser(id);
+    await client.deleteUser(id);
 
     // Delete associated voucher if exists
     if (usernameToDelete != null) {
@@ -979,19 +1037,18 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
     }
 
     // Get current user data to preserve disabled status and password
-    final allUsers = await client.getHotspotUsersList();
+    final allUsers = await client.getHotspotUsers();
     final currentUser =
         allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
 
     // Update user using remove and re-add approach
-    await client.updateHotspotUser(
-      id: id,
-      username: username,
-      password: currentUser['password'] ?? username,
-      profile: profile,
-      comment: comment,
-      disabled: currentUser['disabled'] == 'true',
-    );
+    await client.updateUser(id, {
+      'name': username,
+      'password': currentUser['password'] ?? username,
+      'profile': profile,
+      'disabled': currentUser['disabled'] == 'true' ? 'yes' : 'no',
+      if (comment != null) 'comment': comment,
+    });
 
     // Refresh the list
     ref.invalidate(hotspotUsersProvider);
@@ -1032,9 +1089,9 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
       // Toggle the status on RouterOS
       try {
-        await client.setHotspotUserStatus(
-          id: id,
-          disabled: !isCurrentlyDisabled,
+        await client.toggleUserStatus(
+          id,
+          !isCurrentlyDisabled,
         );
       } catch (e) {
         // Revert UI change on error
@@ -1046,15 +1103,15 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       silentRefresh();
     } else {
       // Fallback if no current state
-      final allUsers = await client.getHotspotUsersList();
+      final allUsers = await client.getHotspotUsers();
       final currentUser =
           allUsers.firstWhere((u) => u['.id'] == id, orElse: () => {});
       final isCurrentlyDisabled =
           currentUser['disabled'] == 'true' || currentUser['disabled'] == 'yes';
 
-      await client.setHotspotUserStatus(
-        id: id,
-        disabled: !isCurrentlyDisabled,
+      await client.toggleUserStatus(
+        id,
+        !isCurrentlyDisabled,
       );
 
       ref.invalidate(hotspotUsersProvider);
@@ -1211,7 +1268,7 @@ class HotspotActiveUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       throw Exception('Not connected to RouterOS');
     }
 
-    await client.logoutHotspotUser(id);
+    await client.logoutUser(id);
     ref.invalidate(hotspotActiveUsersProvider);
   }
 }
@@ -1288,7 +1345,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     try {
-      var profilesData = await client.getUserProfiles();
+      var profilesData = await client.getHotspotProfiles();
 
       // Filter out system profiles AND any user data that leaked in
       profilesData = profilesData
@@ -1342,15 +1399,15 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     if (profile.validity != null &&
         profile.validity!.toLowerCase() != 'unlimited' &&
         profile.validity!.isNotEmpty) {
-      onLoginScript = OnLoginScriptGenerator.generate();
+      onLoginScript = OnLoginScriptGenerator.generate(profile.validity!);
     }
 
-    await client.addUserProfile(
-      name: profile.name,
-      rateLimit: rateLimit,
-      sessionTimeout: profile.validity,
-      onLogin: onLoginScript,
-    );
+    await client.addProfile({
+      'name': profile.name,
+      if (rateLimit != null) 'rate-limit': rateLimit,
+      if (profile.validity != null) 'session-timeout': profile.validity!,
+      if (onLoginScript != null) 'on-login': onLoginScript,
+    });
 
     // Force refresh from MikroTik to get updated data
     ref.invalidate(userProfileProvider);
@@ -1376,16 +1433,16 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     if (updatedProfile.validity != null &&
         updatedProfile.validity!.toLowerCase() != 'unlimited' &&
         updatedProfile.validity!.isNotEmpty) {
-      onLoginScript = OnLoginScriptGenerator.generate();
+      onLoginScript = OnLoginScriptGenerator.generate(updatedProfile.validity!);
     }
 
-    await client.updateUserProfile(
-      id: updatedProfile.id,
-      name: updatedProfile.name,
-      rateLimit: rateLimit,
-      sessionTimeout: updatedProfile.validity,
-      onLogin: onLoginScript,
-    );
+    await client.updateProfile(updatedProfile.id, {
+      'name': updatedProfile.name,
+      if (rateLimit != null) 'rate-limit': rateLimit,
+      if (updatedProfile.validity != null)
+        'session-timeout': updatedProfile.validity!,
+      if (onLoginScript != null) 'on-login': onLoginScript,
+    });
 
     // Force refresh from MikroTik to get updated data
     ref.invalidate(userProfileProvider);
@@ -1398,7 +1455,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       throw Exception('Not connected to RouterOS');
     }
 
-    await client.removeUserProfile(id);
+    await client.deleteProfile(id);
 
     // Force refresh from MikroTik
     ref.invalidate(userProfileProvider);

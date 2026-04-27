@@ -69,22 +69,6 @@ class _ShimmerEffectState extends State<ShimmerEffect>
   }
 }
 
-/// AnimatedBuilder wrapper
-class AnimatedBuilder extends AnimatedWidget {
-  final Widget Function(BuildContext context, Widget? child) builder;
-
-  const AnimatedBuilder({
-    super.key,
-    required Animation<double> animation,
-    required this.builder,
-  }) : super(listenable: animation);
-
-  @override
-  Widget build(BuildContext context) {
-    return builder(context, null);
-  }
-}
-
 /// Reusable skeleton base widget
 class Skeleton extends StatelessWidget {
   final double? width;
@@ -117,7 +101,6 @@ class Skeleton extends StatelessWidget {
 
 /// Pre-configured skeleton widgets for common UI patterns
 class SkeletonLoaders {
-  // Card skeleton
   static Widget card({double height = 100}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -128,7 +111,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Voucher grid card skeleton
   static Widget voucherCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -140,7 +122,6 @@ class SkeletonLoaders {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // QR placeholder
           Center(
             child: Skeleton(
               width: 150,
@@ -149,13 +130,10 @@ class SkeletonLoaders {
             ),
           ),
           const SizedBox(height: 16),
-          // Username placeholder
           Skeleton(width: 100, height: 16),
           const SizedBox(height: 8),
-          // Profile placeholder
           Skeleton(width: 60, height: 12),
           const SizedBox(height: 8),
-          // Details placeholder
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -168,7 +146,6 @@ class SkeletonLoaders {
     );
   }
 
-  // User list item skeleton
   static Widget userListItem() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -179,14 +156,12 @@ class SkeletonLoaders {
       ),
       child: Row(
         children: [
-          // Avatar
           Skeleton(
             width: 48,
             height: 48,
             borderRadius: BorderRadius.circular(12),
           ),
           const SizedBox(width: 12),
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,7 +172,6 @@ class SkeletonLoaders {
               ],
             ),
           ),
-          // Status
           Skeleton(
               width: 50, height: 24, borderRadius: BorderRadius.circular(12)),
         ],
@@ -205,7 +179,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Summary card skeleton
   static Widget summaryCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -227,7 +200,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Chart skeleton
   static Widget chart({double height = 200}) {
     return Container(
       height: height,
@@ -241,7 +213,6 @@ class SkeletonLoaders {
         children: [
           Skeleton(width: 120, height: 16),
           const SizedBox(height: 16),
-          // Chart area
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -265,7 +236,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Transaction item skeleton
   static Widget transactionItem() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -276,14 +246,12 @@ class SkeletonLoaders {
       ),
       child: Row(
         children: [
-          // Icon
           Skeleton(
             width: 40,
             height: 40,
             borderRadius: BorderRadius.circular(12),
           ),
           const SizedBox(width: 12),
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,14 +262,12 @@ class SkeletonLoaders {
               ],
             ),
           ),
-          // Amount
           Skeleton(width: 80, height: 16),
         ],
       ),
     );
   }
 
-  // List of items skeleton
   static Widget list({
     int itemCount = 5,
     Widget Function()? itemBuilder,
@@ -317,7 +283,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Grid skeleton
   static Widget grid({
     int crossAxisCount = 2,
     int itemCount = 4,
@@ -340,7 +305,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Text lines skeleton
   static Widget text({
     int lines = 3,
     double spacing = 8,
@@ -360,7 +324,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Profile skeleton
   static Widget profile() {
     return Row(
       children: [
@@ -382,7 +345,6 @@ class SkeletonLoaders {
     );
   }
 
-  // Table row skeleton
   static Widget tableRow({bool showHeader = false}) {
     return Row(
       children: [
@@ -392,6 +354,38 @@ class SkeletonLoaders {
         const SizedBox(width: 8),
         Expanded(flex: 2, child: Skeleton(height: showHeader ? 14 : 16)),
       ],
+    );
+  }
+
+  static Widget fileItem() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Skeleton(
+            width: 40,
+            height: 40,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Skeleton(width: 140, height: 14),
+                const SizedBox(height: 6),
+                Skeleton(width: 80, height: 12),
+              ],
+            ),
+          ),
+          Skeleton(width: 24, height: 24, borderRadius: BorderRadius.circular(6)),
+        ],
+      ),
     );
   }
 }

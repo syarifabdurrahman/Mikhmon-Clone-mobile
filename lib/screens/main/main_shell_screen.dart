@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/global_search.dart';
+import '../../widgets/router_switcher.dart';
 import '../../l10n/translations.dart';
 import '../../services/onboarding_service.dart';
 import '../../services/cache_service.dart';
+import '../../providers/app_providers.dart';
 
 final isDemoModeProvider = FutureProvider<bool>((ref) async {
   return await OnboardingService.isDemoMode();
@@ -75,6 +77,10 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
       },
       child: Scaffold(
         backgroundColor: context.appBackground,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(kToolbarHeight),
+          child: _buildAppBar(context),
+        ),
         body: Column(
           children: [
             // Demo mode banner
@@ -168,6 +174,69 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: context.appSurface,
+      elevation: 0,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: Center(
+          child: Text(
+            'Ω',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: context.appPrimary,
+            ),
+          ),
+        ),
+      ),
+      title: Consumer(
+        builder: (context, ref, _) {
+          final savedConnectionsAsync = ref.watch(savedConnectionsProvider);
+          return savedConnectionsAsync.when(
+            data: (connections) {
+              if (connections.length <= 1) {
+                return Text(
+                  'ΩMMON',
+                  style: TextStyle(
+                    color: context.appOnSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                );
+              }
+              return const RouterSwitcher();
+            },
+            loading: () => Text(
+              'ΩMMON',
+              style: TextStyle(
+                color: context.appOnSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            error: (_, __) => Text(
+              'ΩMMON',
+              style: TextStyle(
+                color: context.appOnSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          );
+        },
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.search, color: context.appOnSurface),
+          onPressed: () => showGlobalSearch(context),
+          tooltip: 'Search',
+        ),
+      ],
     );
   }
 

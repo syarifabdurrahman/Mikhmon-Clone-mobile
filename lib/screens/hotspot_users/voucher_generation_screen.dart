@@ -254,7 +254,6 @@ class _VoucherGenerationScreenState
           password: password,
           profile: _selectedProfile ?? 'default',
           comment: comment,
-          validity: limitUptime,
           dataLimit: dataLimit,
         );
 

@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'mikrotik_client.dart';
 
-class RouterOSClient {
+class RouterOSClient implements MikrotikClient {
   final String host;
   final String port;
   final String username;
@@ -331,9 +332,13 @@ class RouterOSClient {
     );
   }
 
+  @override
+  void close() => disconnect();
+
+  @override
   Future<Map<String, dynamic>> getSystemResources() async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/system/resource/print');
       _writeWord(''); // Empty word to terminate sentence
       final response = await _readResponse();
@@ -348,9 +353,10 @@ class RouterOSClient {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getHotspotUsersList() async {
+  @override
+  Future<List<Map<String, dynamic>>> getHotspotUsers() async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/print');
       _writeWord(''); // Empty word to terminate sentence
       final response = await _readResponse();
@@ -361,9 +367,10 @@ class RouterOSClient {
     }
   }
 
+  @override
   Future<List<Map<String, dynamic>>> getHotspotActiveUsers() async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/active/print');
       _writeWord(''); // Empty word to terminate sentence
       final response = await _readResponse();
@@ -374,9 +381,10 @@ class RouterOSClient {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getUserProfiles() async {
+  @override
+  Future<List<Map<String, dynamic>>> getHotspotProfiles() async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/profile/print');
       _writeWord(''); // Empty word to terminate sentence
       final response = await _readResponse();
@@ -387,9 +395,10 @@ class RouterOSClient {
     }
   }
 
+  @override
   Future<List<Map<String, dynamic>>> getInterfaceStats() async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/interface/print');
       _writeWord(''); // Empty word to terminate sentence
       final response = await _readResponse();
@@ -400,34 +409,13 @@ class RouterOSClient {
     }
   }
 
-  Future<void> addHotspotUser({
-    required String username,
-    required String password,
-    required String profile,
-    String? comment,
-    String? validity, // For limit-uptime (e.g., "5m", "1h", "1d")
-    String? dataLimit, // For limit-bytes-total (e.g., "1G", "500M")
-    String? sessionTimeout, // Session timeout (e.g., "30m", "1h")
-  }) async {
+  @override
+  Future<void> addUser(Map<String, String> user) async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/add');
-      _writeWord('=name=$username');
-      _writeWord('=password=$password');
-      _writeWord('=profile=$profile');
-      if (comment != null) {
-        _writeWord('=comment=$comment');
-      }
-      if (validity != null && validity.isNotEmpty && validity != 'unlimited') {
-        _writeWord('=limit-uptime=$validity');
-      }
-      if (dataLimit != null && dataLimit.isNotEmpty) {
-        _writeWord('=limit-bytes-total=$dataLimit');
-      }
-      if (sessionTimeout != null &&
-          sessionTimeout.isNotEmpty &&
-          sessionTimeout != 'unlimited') {
-        _writeWord('=session-timeout=$sessionTimeout');
+      for (var entry in user.entries) {
+        _writeWord('=${entry.key}=${entry.value}');
       }
       _writeWord(''); // Empty word to terminate sentence
 
@@ -440,9 +428,30 @@ class RouterOSClient {
     }
   }
 
-  Future<void> removeHotspotUser(String id) async {
+  @override
+  Future<void> updateUser(String id, Map<String, String> user) async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
+      _writeWord('/ip/hotspot/user/set');
+      _writeWord('=.id=$id');
+      for (var entry in user.entries) {
+        _writeWord('=${entry.key}=${entry.value}');
+      }
+      _writeWord(''); // Empty word to terminate sentence
+
+      final response = await _readResponse();
+      if (_hasError(response)) {
+        throw Exception('Failed to update user: ${response.first}');
+      }
+    } catch (e) {
+      throw Exception('Failed to update hotspot user: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteUser(String id) async {
+    try {
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/remove');
       _writeWord('=.id=$id');
       _writeWord(''); // Empty word to terminate sentence
@@ -456,28 +465,10 @@ class RouterOSClient {
     }
   }
 
-  Future<void> logoutHotspotUser(String id) async {
+  @override
+  Future<void> toggleUserStatus(String id, bool disabled) async {
     try {
-      _ensureConnected();
-      _writeWord('/ip/hotspot/active/remove');
-      _writeWord('=.id=$id');
-      _writeWord(''); // Empty word to terminate sentence
-
-      final response = await _readResponse();
-      if (_hasError(response)) {
-        throw Exception('Failed to logout user: ${response.first}');
-      }
-    } catch (e) {
-      throw Exception('Failed to logout hotspot user: $e');
-    }
-  }
-
-  Future<void> setHotspotUserStatus({
-    required String id,
-    required bool disabled,
-  }) async {
-    try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/set');
       _writeWord('=.id=$id');
       _writeWord('=disabled=${disabled ? "yes" : "no"}');
@@ -492,81 +483,85 @@ class RouterOSClient {
     }
   }
 
-  Future<void> setHotspotUserProfile({
-    required String id,
-    required String profile,
-  }) async {
+  @override
+  Future<void> logoutUser(String id) async {
     try {
-      _ensureConnected();
-      _writeWord('/ip/hotspot/user/set');
+      await _ensureConnected();
+      _writeWord('/ip/hotspot/active/remove');
       _writeWord('=.id=$id');
-      _writeWord('=profile=$profile');
       _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
       if (_hasError(response)) {
-        throw Exception('Failed to set user profile: ${response.first}');
+        throw Exception('Failed to logout user: ${response.first}');
       }
     } catch (e) {
-      throw Exception('Failed to set hotspot user profile: $e');
+      throw Exception('Failed to logout hotspot user: $e');
     }
   }
 
-  Future<void> updateHotspotUser({
-    required String id,
+  @override
+  Future<void> logoutHotspotUser(String id) async => logoutUser(id);
+
+  @override
+  Future<void> setHotspotUserStatus(String id, bool disabled) async =>
+      toggleUserStatus(id, disabled);
+
+  @override
+  Future<List<Map<String, dynamic>>> getDhcpLeases() async {
+    try {
+      await _ensureConnected();
+      _writeWord('/ip/dhcp-server/lease/print');
+      _writeWord('');
+      return await _readResponse();
+    } catch (e) {
+      throw Exception('Failed to fetch DHCP leases: $e');
+    }
+  }
+
+  @override
+  Future<void> addHotspotUser({
     required String username,
     required String password,
     required String profile,
     String? comment,
-    bool disabled = false,
+    String? validity,
+    String? dataLimit,
   }) async {
-    try {
-      _ensureConnected();
-      // First remove the existing user
-      await removeHotspotUser(id);
-
-      // Then add the updated user
-      _writeWord('/ip/hotspot/user/add');
-      _writeWord('=name=$username');
-      _writeWord('=password=$password');
-      _writeWord('=profile=$profile');
-      _writeWord('=disabled=${disabled ? "yes" : "no"}');
-      if (comment != null) {
-        _writeWord('=comment=$comment');
-      }
-      _writeWord(''); // Empty word to terminate sentence
-
-      final response = await _readResponse();
-      if (_hasError(response)) {
-        throw Exception('Failed to update user: ${response.first}');
-      }
-    } catch (e) {
-      throw Exception('Failed to update hotspot user: $e');
-    }
+    await addUser({
+      'name': username,
+      'password': password,
+      'profile': profile,
+      if (comment != null) 'comment': comment,
+      if (validity != null) 'limit-uptime': validity,
+      if (dataLimit != null) 'limit-bytes-total': dataLimit,
+    });
   }
 
-  Future<void> addUserProfile({
-    required String name,
-    String? rateLimit,
-    String? sessionTimeout,
-    String? onLogin,
-    String? onLogout,
+  @override
+  Future<void> updateHotspotUser({
+    required String id,
+    required String username,
+    required String profile,
+    String? comment,
   }) async {
+    await updateUser(id, {
+      'name': username,
+      'profile': profile,
+      if (comment != null) 'comment': comment,
+    });
+  }
+
+  @override
+  Future<void> removeHotspotUser(String id) async => deleteUser(id);
+
+  @override
+  Future<void> addProfile(Map<String, String> profile) async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/profile/add');
-      _writeWord('=name=$name');
-      if (rateLimit != null) {
-        _writeWord('=rate-limit=$rateLimit');
-      }
-      if (sessionTimeout != null) {
-        _writeWord('=session-timeout=$sessionTimeout');
-      }
-      if (onLogin != null) {
-        _writeWord('=on-login=' + onLogin.replaceAll('\n', '\\n'));
-      }
-      if (onLogout != null) {
-        _writeWord('=on-logout=$onLogout');
+      for (var entry in profile.entries) {
+        _writeWord('=${entry.key}=${entry.value}');
       }
       _writeWord(''); // Empty word to terminate sentence
 
@@ -579,28 +574,14 @@ class RouterOSClient {
     }
   }
 
-  Future<void> updateUserProfile({
-    required String id,
-    String? name,
-    String? rateLimit,
-    String? sessionTimeout,
-    String? onLogin,
-  }) async {
+  @override
+  Future<void> updateProfile(String id, Map<String, String> profile) async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/profile/set');
       _writeWord('=.id=$id');
-      if (name != null) {
-        _writeWord('=name=$name');
-      }
-      if (rateLimit != null) {
-        _writeWord('=rate-limit=$rateLimit');
-      }
-      if (sessionTimeout != null) {
-        _writeWord('=session-timeout=$sessionTimeout');
-      }
-      if (onLogin != null) {
-        _writeWord('=on-login=' + onLogin.replaceAll('\n', '\\n'));
+      for (var entry in profile.entries) {
+        _writeWord('=${entry.key}=${entry.value}');
       }
       _writeWord(''); // Empty word to terminate sentence
 
@@ -613,9 +594,10 @@ class RouterOSClient {
     }
   }
 
-  Future<void> removeUserProfile(String id) async {
+  @override
+  Future<void> deleteProfile(String id) async {
     try {
-      _ensureConnected();
+      await _ensureConnected();
       _writeWord('/ip/hotspot/user/profile/remove');
       _writeWord('=.id=$id');
       _writeWord(''); // Empty word to terminate sentence
@@ -629,6 +611,102 @@ class RouterOSClient {
     }
   }
 
+  @override
+  Future<List<Map<String, dynamic>>> getHotspotHosts() async {
+    try {
+      await _ensureConnected();
+      _writeWord('/ip/hotspot/host/print');
+      _writeWord('');
+      final response = await _readResponse();
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch hotspot hosts: $e');
+    }
+  }
+
+  @override
+  Future<void> setHotspotUserProfile(String id, String profile) async {
+    try {
+      await _ensureConnected();
+      _writeWord('/ip/hotspot/user/set');
+      _writeWord('=.id=$id');
+      _writeWord('=profile=$profile');
+      _writeWord('');
+      await _readResponse();
+    } catch (e) {
+      throw Exception('Failed to set user profile: $e');
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getFiles() async {
+    try {
+      await _ensureConnected();
+      _writeWord('/file/print');
+      _writeWord('');
+      return await _readResponse();
+    } catch (e) {
+      throw Exception('Failed to fetch files: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteFile(String id) async {
+    try {
+      await _ensureConnected();
+      _writeWord('/file/remove');
+      _writeWord('=.id=$id');
+      _writeWord('');
+      await _readResponse();
+    } catch (e) {
+      throw Exception('Failed to delete file: $e');
+    }
+  }
+
+  @override
+  Future<void> createBackup(String name) async {
+    try {
+      await _ensureConnected();
+      _writeWord('/system/backup/save');
+      _writeWord('=name=$name');
+      _writeWord('');
+      await _readResponse();
+    } catch (e) {
+      throw Exception('Failed to create backup: $e');
+    }
+  }
+
+  @override
+  Future<void> exportConfig(String name) async {
+    try {
+      await _ensureConnected();
+      _writeWord('/export');
+      _writeWord('=file=$name');
+      _writeWord('');
+      await _readResponse();
+    } catch (e) {
+      throw Exception('Failed to export configuration: $e');
+    }
+  }
+
+  @override
+  Future<String> downloadFile(String name) async {
+    try {
+      await _ensureConnected();
+      _writeWord('/file/get');
+      _writeWord('=name=$name');
+      _writeWord('');
+      final response = await _readResponse();
+      if (response.isEmpty) {
+        throw Exception('File not found: $name');
+      }
+      final content = response.first['contents'] ?? '';
+      return content.toString();
+    } catch (e) {
+      throw Exception('Failed to download file: $e');
+    }
+  }
+
   bool _hasError(List<Map<String, dynamic>> response) {
     for (final item in response) {
       if (item.containsKey('message') || item.containsKey('detail')) {
@@ -636,34 +714,6 @@ class RouterOSClient {
       }
     }
     return false;
-  }
-
-  /// Get all hotspot hosts (DHCP leases/binding)
-  Future<List<Map<String, dynamic>>> getHotspotHosts() async {
-    try {
-      _ensureConnected();
-      _writeWord('/ip/hotspot/host/print');
-      _writeWord(''); // Empty word to terminate sentence
-      final response = await _readResponse();
-      _log('Got ${response.length} hotspot hosts');
-      return response;
-    } catch (e) {
-      throw Exception('Failed to fetch hotspot hosts: $e');
-    }
-  }
-
-  /// Get all DHCP leases (contains device hostname)
-  Future<List<Map<String, dynamic>>> getDhcpLeases() async {
-    try {
-      _ensureConnected();
-      _writeWord('/ip/dhcp-server/lease/print');
-      _writeWord(''); // Empty word to terminate sentence
-      final response = await _readResponse();
-      _log('Got ${response.length} DHCP leases');
-      return response;
-    } catch (e) {
-      throw Exception('Failed to fetch DHCP leases: $e');
-    }
   }
 
   Future<void> disconnect() async {

@@ -1,15 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'mikrotik_client.dart';
 
-class RouterOSHttpClient {
+class RouterOSHttpClient implements MikrotikClient {
   final String host;
   final String port;
   final String username;
   final String password;
   bool _isConnected = false;
   Dio? _dio;
-  String? _sessionId;
 
   // Enable debug logging
   static const bool _debug = false;
@@ -36,7 +37,6 @@ class RouterOSHttpClient {
       _log('=== Starting HTTP connection ===');
       _log('Host: $host:$port');
       _log('Username: $username');
-      _log('Password: ${password.isNotEmpty ? "***" : "(empty)"}');
 
       _dio = Dio(BaseOptions(
         baseUrl: _baseUrl,
@@ -45,552 +45,193 @@ class RouterOSHttpClient {
         sendTimeout: const Duration(seconds: 30),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization':
+              'Basic ${base64Encode(utf8.encode('$username:$password'))}',
         },
         validateStatus: (status) => status != null && status < 500,
       ));
 
-      // Login to get session
-      if (password.isNotEmpty) {
-        _log('Logging in with password...');
-        await _login();
-      } else {
-        _log('Logging in without password...');
-        await _loginWithoutPassword();
-      }
-
+      // Test connection by fetching system resources
+      await getSystemResources();
       _isConnected = true;
-      _log('✓ Connection successful!');
+      _log('✓ HTTP Connection successful!');
     } catch (e) {
-      _log('✗ Connection failed: $e');
+      _log('✗ HTTP Connection failed: $e');
       _isConnected = false;
-      _sessionId = null;
       rethrow;
     }
   }
 
-  Future<void> _login() async {
-    try {
-      final response = await _dio!.post(
-        '/login',
-        data: {
-          'username': username,
-          'password': password,
-        },
-      );
-
-      _log('Login response status: ${response.statusCode}');
-
-      // Check for session cookie
-      final cookies = response.headers['set-cookie'];
-      if (cookies != null && cookies.isNotEmpty) {
-        for (final cookie in cookies) {
-          if (cookie.contains('MIKROTIK_JWT') || cookie.contains('PHPSESSID')) {
-            _sessionId = cookie.split(';')[0];
-            _log('Session ID: $_sessionId');
-            break;
-          }
-        }
-      }
-
-      // Some RouterOS versions return the session directly
-      if (response.data is Map && response.data['token'] != null) {
-        _sessionId = response.data['token'];
-        _log('Token: $_sessionId');
-      }
-
-      if (response.statusCode != 200 && response.statusCode != 401) {
-        throw Exception('Login failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Login error: $e');
-      rethrow;
-    }
+  @override
+  void close() {
+    _dio?.close();
+    _isConnected = false;
   }
 
-  Future<void> _loginWithoutPassword() async {
-    // For login without password, just send username
-    try {
-      final response = await _dio!.post(
-        '/login',
-        data: {
-          'username': username,
-        },
-      );
-
-      _log('Login response status: ${response.statusCode}');
-
-      if (response.statusCode != 200 && response.statusCode != 401) {
-        throw Exception('Login failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Login error: $e');
-      rethrow;
-    }
-  }
-
+  @override
   Future<Map<String, dynamic>> getSystemResources() async {
-    try {
-      _ensureConnected();
-      _log('Fetching system resources...');
-
-      final response = await _dio!.get(
-        '/system/resource/print',
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-      _log('Response data: ${response.data}');
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data is List && data.isNotEmpty) {
-          return Map<String, dynamic>.from(data[0]);
-        }
-        return Map<String, dynamic>.from(data);
-      }
-
-      throw Exception('Failed with status: ${response.statusCode}');
-    } catch (e) {
-      _log('Error fetching system resources: $e');
-      rethrow;
+    final response = await _dio!.get('/system/resource');
+    if (response.data is List && (response.data as List).isNotEmpty) {
+      return response.data[0] as Map<String, dynamic>;
     }
+    if (response.data is Map) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {};
   }
 
-  Future<List<Map<String, dynamic>>> getHotspotUsersList() async {
-    try {
-      _ensureConnected();
-      _log('Fetching hotspot users...');
-
-      final response = await _dio!.get(
-        '/ip/hotspot/user/print',
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data is List) {
-          return List<Map<String, dynamic>>.from(
-            data.map((e) => Map<String, dynamic>.from(e)),
-          );
-        }
-        return [Map<String, dynamic>.from(data)];
-      }
-
-      throw Exception('Failed with status: ${response.statusCode}');
-    } catch (e) {
-      _log('Error fetching hotspot users: $e');
-      rethrow;
-    }
+  @override
+  Future<List<Map<String, dynamic>>> getInterfaceStats() async {
+    final response = await _dio!.get('/interface');
+    return List<Map<String, dynamic>>.from(response.data);
   }
 
+  @override
+  Future<List<Map<String, dynamic>>> getHotspotUsers() async {
+    final response = await _dio!.get('/ip/hotspot/user');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  @override
   Future<List<Map<String, dynamic>>> getHotspotActiveUsers() async {
-    try {
-      _ensureConnected();
-      _log('Fetching active hotspot users...');
-
-      final response = await _dio!.get(
-        '/ip/hotspot/active/print',
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data is List) {
-          return List<Map<String, dynamic>>.from(
-            data.map((e) => Map<String, dynamic>.from(e)),
-          );
-        }
-        return [Map<String, dynamic>.from(data)];
-      }
-
-      throw Exception('Failed with status: ${response.statusCode}');
-    } catch (e) {
-      _log('Error fetching active users: $e');
-      rethrow;
-    }
+    final response = await _dio!.get('/ip/hotspot/active');
+    return List<Map<String, dynamic>>.from(response.data);
   }
 
-  Future<List<Map<String, dynamic>>> getUserProfiles() async {
-    try {
-      _ensureConnected();
-      _log('Fetching user profiles...');
-
-      final response = await _dio!.get(
-        '/ip/hotspot/user/profile/print',
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data is List) {
-          return List<Map<String, dynamic>>.from(
-            data.map((e) => Map<String, dynamic>.from(e)),
-          );
-        }
-        return [Map<String, dynamic>.from(data)];
-      }
-
-      throw Exception('Failed with status: ${response.statusCode}');
-    } catch (e) {
-      _log('Error fetching user profiles: $e');
-      rethrow;
-    }
+  @override
+  Future<List<Map<String, dynamic>>> getHotspotHosts() async {
+    final response = await _dio!.get('/ip/hotspot/host');
+    return List<Map<String, dynamic>>.from(response.data);
   }
 
+  @override
+  Future<List<Map<String, dynamic>>> getHotspotProfiles() async {
+    final response = await _dio!.get('/ip/hotspot/user/profile');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  @override
+  Future<void> addUser(Map<String, String> user) async {
+    await _dio!.post('/ip/hotspot/user', data: user);
+  }
+
+  @override
+  Future<void> updateUser(String id, Map<String, String> user) async {
+    await _dio!.patch('/ip/hotspot/user/$id', data: user);
+  }
+
+  @override
+  Future<void> deleteUser(String id) async {
+    await _dio!.delete('/ip/hotspot/user/$id');
+  }
+
+  @override
+  Future<void> toggleUserStatus(String id, bool disabled) async {
+    await _dio!.patch('/ip/hotspot/user/$id', data: {'disabled': disabled});
+  }
+
+  @override
+  Future<void> setHotspotUserProfile(String id, String profile) async {
+    await _dio!.patch('/ip/hotspot/user/$id', data: {'profile': profile});
+  }
+
+  @override
+  Future<void> logoutUser(String id) async {
+    await _dio!.delete('/ip/hotspot/active/$id');
+  }
+
+  @override
+  Future<void> logoutHotspotUser(String id) async => logoutUser(id);
+
+  @override
+  Future<void> setHotspotUserStatus(String id, bool disabled) async {
+    await _dio!.patch('/ip/hotspot/user/$id', data: {'disabled': disabled});
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getDhcpLeases() async {
+    final response = await _dio!.get('/ip/dhcp-server/lease');
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+
+  @override
   Future<void> addHotspotUser({
     required String username,
     required String password,
     required String profile,
     String? comment,
-    String? validity, // For limit-uptime (e.g., "5m", "1h", "1d")
-    String? dataLimit, // For limit-bytes-total (e.g., "1G", "500M")
-    String? sessionTimeout, // Session timeout (e.g., "30m", "1h")
+    String? validity,
+    String? dataLimit,
   }) async {
-    try {
-      _ensureConnected();
-      _log('Adding hotspot user: $username');
-
-      final data = {
-        'name': username,
-        'password': password,
-        'profile': profile,
-      };
-      if (comment != null) {
-        data['comment'] = comment;
-      }
-      if (validity != null && validity.isNotEmpty && validity != 'unlimited') {
-        data['limit-uptime'] = validity;
-      }
-      if (dataLimit != null && dataLimit.isNotEmpty) {
-        data['limit-bytes-total'] = dataLimit;
-      }
-      if (sessionTimeout != null &&
-          sessionTimeout.isNotEmpty &&
-          sessionTimeout != 'unlimited') {
-        data['session-timeout'] = sessionTimeout;
-      }
-
-      final response = await _dio!.put(
-        '/ip/hotspot/user/add',
-        data: data,
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error adding hotspot user: $e');
-      rethrow;
-    }
+    await addUser({
+      'name': username,
+      'password': password,
+      'profile': profile,
+      if (comment != null) 'comment': comment,
+      if (validity != null) 'limit-uptime': validity,
+      if (dataLimit != null) 'limit-bytes-total': dataLimit,
+    });
   }
 
-  Future<void> removeHotspotUser(String id) async {
-    try {
-      _ensureConnected();
-      _log('Removing hotspot user: $id');
-
-      final response = await _dio!.post(
-        '/ip/hotspot/user/remove',
-        data: {'.id': id},
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error removing hotspot user: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> logoutHotspotUser(String id) async {
-    try {
-      _ensureConnected();
-      _log('Logging out hotspot user: $id');
-
-      final response = await _dio!.post(
-        '/ip/hotspot/active/remove',
-        data: {'.id': id},
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error logging out user: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> setHotspotUserStatus({
-    required String id,
-    required bool disabled,
-  }) async {
-    try {
-      _ensureConnected();
-      _log('Setting user status: $id -> disabled=$disabled');
-
-      final response = await _dio!.post(
-        '/ip/hotspot/user/set',
-        data: {
-          '.id': id,
-          'disabled': disabled ? 'true' : 'false',
-        },
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error setting user status: $e');
-      rethrow;
-    }
-  }
-
+  @override
   Future<void> updateHotspotUser({
     required String id,
     required String username,
-    required String password,
     required String profile,
     String? comment,
-    bool disabled = false,
   }) async {
-    try {
-      _ensureConnected();
-      _log('Updating hotspot user: $username');
-
-      final data = {
-        '.id': id,
-        'name': username,
-        'password': password,
-        'profile': profile,
-        'disabled': disabled ? 'yes' : 'no',
-      };
-      if (comment != null) {
-        data['comment'] = comment;
-      }
-
-      final response = await _dio!.post(
-        '/ip/hotspot/user/set',
-        data: data,
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error updating hotspot user: $e');
-      rethrow;
-    }
+    await updateUser(id, {
+      'name': username,
+      'profile': profile,
+      if (comment != null) 'comment': comment,
+    });
   }
 
-  Future<void> addUserProfile({
-    required String name,
-    String? rateLimit,
-    String? sessionTimeout,
-    String? onLogin,
-  }) async {
-    try {
-      _ensureConnected();
-      _log('Adding user profile: $name');
+  @override
+  Future<void> removeHotspotUser(String id) async => deleteUser(id);
 
-      final data = <String, dynamic>{'name': name};
-      if (rateLimit != null) {
-        data['rate-limit'] = rateLimit;
-      }
-      if (sessionTimeout != null &&
-          sessionTimeout.isNotEmpty &&
-          sessionTimeout.toLowerCase() != 'unlimited') {
-        data['session-timeout'] = sessionTimeout;
-      }
-      if (onLogin != null) {
-        data['on-login'] = onLogin.replaceAll('\n', '\\n');
-      }
-
-      final response = await _dio!.put(
-        '/ip/hotspot/user/profile/add',
-        data: data,
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error adding user profile: $e');
-      rethrow;
-    }
+  @override
+  Future<void> addProfile(Map<String, String> profile) async {
+    await _dio!.post('/ip/hotspot/user/profile', data: profile);
   }
 
-  Future<void> updateUserProfile({
-    required String id,
-    String? name,
-    String? rateLimit,
-    String? sessionTimeout,
-    String? onLogin,
-  }) async {
-    try {
-      _ensureConnected();
-      _log('Updating user profile: $id');
-
-      final data = <String, dynamic>{'.id': id};
-      if (name != null) {
-        data['name'] = name;
-      }
-      if (rateLimit != null) {
-        data['rate-limit'] = rateLimit;
-      }
-      if (sessionTimeout != null) {
-        data['session-timeout'] = sessionTimeout;
-      }
-      if (onLogin != null) {
-        data['on-login'] = onLogin.replaceAll('\n', '\\n');
-      }
-
-      final response = await _dio!.post(
-        '/ip/hotspot/user/profile/set',
-        data: data,
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error updating user profile: $e');
-      rethrow;
-    }
+  @override
+  Future<void> updateProfile(String id, Map<String, String> profile) async {
+    await _dio!.patch('/ip/hotspot/user/profile/$id', data: profile);
   }
 
-  Future<void> removeUserProfile(String id) async {
-    try {
-      _ensureConnected();
-      _log('Removing user profile: $id');
-
-      final response = await _dio!.post(
-        '/ip/hotspot/user/profile/remove',
-        data: {'.id': id},
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed with status: ${response.statusCode}');
-      }
-    } catch (e) {
-      _log('Error removing user profile: $e');
-      rethrow;
-    }
+  @override
+  Future<void> deleteProfile(String id) async {
+    await _dio!.delete('/ip/hotspot/user/profile/$id');
   }
 
-  /// Get all DHCP leases (contains device hostname)
-  Future<List<Map<String, dynamic>>> getDhcpLeases() async {
-    try {
-      _ensureConnected();
-      _log('Fetching DHCP leases...');
-
-      final response = await _dio!.get(
-        '/ip/dhcp-server/lease/print',
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data is List) {
-          return List<Map<String, dynamic>>.from(
-            data.map((e) => Map<String, dynamic>.from(e)),
-          );
-        }
-        return [Map<String, dynamic>.from(data)];
-      }
-
-      throw Exception('Failed with status: ${response.statusCode}');
-    } catch (e) {
-      _log('Error fetching DHCP leases: $e');
-      rethrow;
-    }
+  @override
+  Future<List<Map<String, dynamic>>> getFiles() async {
+    final response = await _dio!.get('/file');
+    return List<Map<String, dynamic>>.from(response.data);
   }
 
-  /// Get all hotspot hosts (contains device names like OPPO, Samsung, etc)
-  Future<List<Map<String, dynamic>>> getHotspotHosts() async {
-    try {
-      _ensureConnected();
-      _log('Fetching hotspot hosts...');
-
-      final response = await _dio!.get(
-        '/ip/hotspot/host/print',
-        options: _buildOptions(),
-      );
-
-      _log('Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data is List) {
-          return List<Map<String, dynamic>>.from(
-            data.map((e) => Map<String, dynamic>.from(e)),
-          );
-        }
-        return [Map<String, dynamic>.from(data)];
-      }
-
-      throw Exception('Failed with status: ${response.statusCode}');
-    } catch (e) {
-      _log('Error fetching hotspot hosts: $e');
-      rethrow;
-    }
+  @override
+  Future<void> deleteFile(String id) async {
+    await _dio!.delete('/file/$id');
   }
 
-  Future<void> _ensureConnected() async {
-    if (!_isConnected || _dio == null) {
-      _log('Auto-reconnecting...');
-      await connect();
-    }
+  @override
+  Future<void> createBackup(String name) async {
+    await _dio!.post('/system/backup/save', data: {'name': name});
   }
 
-  Options _buildOptions() {
-    final options = Options();
-
-    if (_sessionId != null) {
-      options.headers = {'Cookie': _sessionId};
-    }
-
-    return options;
+  @override
+  Future<void> exportConfig(String name) async {
+    await _dio!.post('/export', data: {'file': name});
   }
 
-  Future<void> disconnect() async {
-    _sessionId = null;
-    _dio?.close();
-    _dio = null;
-    _isConnected = false;
-    _log('Disconnected');
+  @override
+  Future<String> downloadFile(String name) async {
+    final response = await _dio!.get('/file/$name');
+    if (response.data is Map) {
+      return response.data['contents'] ?? '';
+    }
+    return '';
   }
 }

@@ -47,10 +47,14 @@ class Voucher {
 
   // Check if voucher is expired
   bool get isExpired {
-    // Use remainingSeconds if tracked, otherwise fall back to expiresAt
+    final now = DateTime.now();
+    // 1. Check uptime limit (remainingSeconds)
     if (remainingSeconds != null && remainingSeconds! <= 0) return true;
-    if (expiresAt == null) return false;
-    return DateTime.now().isAfter(expiresAt!);
+    
+    // 2. Check wall-clock validity (expiresAt)
+    if (expiresAt != null && now.isAfter(expiresAt!)) return true;
+    
+    return false;
   }
 
   // Check if voucher is active

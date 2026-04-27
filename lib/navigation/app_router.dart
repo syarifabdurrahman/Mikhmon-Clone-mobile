@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/files/files_screen.dart';
 import '../screens/hotspot_users/hotspot_users_screen.dart';
 import '../screens/hotspot_users/user_profiles_screen.dart';
 import '../screens/hotspot_users/hotspot_hosts_screen.dart';
@@ -20,6 +21,7 @@ class AppRouter {
   static const String dhcpLeasesRoute = '/dhcp-leases';
   static const String settingsRoute = '/settings';
   static const String hostDetailRoute = '/hosts/:id';
+  static const String filesRoute = '/files';
 
   static final router = GoRouter(
     initialLocation: initialRoute,
@@ -69,6 +71,11 @@ class AppRouter {
         path: dhcpLeasesRoute,
         pageBuilder: (context, state) =>
             const MaterialPage(child: DhcpLeasesScreen()),
+      ),
+      GoRoute(
+        path: filesRoute,
+        pageBuilder: (context, state) =>
+            const MaterialPage(child: FilesScreen()),
       ),
     ],
   );

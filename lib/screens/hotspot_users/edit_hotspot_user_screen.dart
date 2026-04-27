@@ -121,9 +121,8 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
 
       // Update user on RouterOS
       await client.updateHotspotUser(
-        id: userId,
+        id: widget.user['.id'],
         username: widget.user['name'],
-        password: password,
         profile: selectedProfile.name,
         comment: _commentController.text.trim().isEmpty
             ? null

@@ -112,7 +112,6 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
             ? null
             : _commentController.text.trim(),
         validity: validity == 'unlimited' ? null : validity,
-        sessionTimeout: limitUptime,
       );
 
       // Also add to local state for immediate UI update

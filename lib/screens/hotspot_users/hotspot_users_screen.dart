@@ -890,10 +890,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       try {
         final user = allUsers.firstWhere((u) => u.id == userId);
         if (user.profile != targetProfile) {
-          await client.setHotspotUserProfile(
-            id: userId,
-            profile: targetProfile,
-          );
+          await client.setHotspotUserProfile(userId, targetProfile);
           successCount++;
         }
       } catch (e) {

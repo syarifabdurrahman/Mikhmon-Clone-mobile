@@ -1,16 +1,12 @@
 # ΩMMON - Open Mikrotik Monitor - Progress Tracker
-
 > **App Name**: ΩMMON (Open Mikrotik Monitor)
 > **Package**: `com.simpurrapps.ommon`
 > **Flutter**: SDK ^3.6.0
-
 ---
-
 ## ✅ Already Implemented
-
 | Feature | Status | Notes |
 | --------------------------- | ------ | ----------------------------------------------------- |
-| **Login System** | ✅ | RouterOS API (port 8728), demo mode toggle |
+| **Login System** | ✅ | RouterOS API (port 8728), demo mode toggle, REST/Legacy toggle |
 | **Dashboard** | ✅ | **Real-time line chart** with CPU/Memory/Disk, auto-scrolls right-to-left |
 | **Resource History** | ✅ | **60+ data points** (unlimited history), animated updates, accurate elapsed time labels |
 | **Interface Traffic** | ✅ | **Network monitoring** widget showing TX/RX bytes and rates |
@@ -46,6 +42,135 @@
 | **Sales Report Export** | ✅ | CSV export with date filtering and profile filter |
 | **Performance Optimization** | ✅ | Memory leaks fixed, const constructors, reusable filter utilities |
 | **DRY Code** | ✅ | FilterUtils for consistent filtering across the app |
+| **Dual API Protocol Support** | ✅ | REST API (ROS7) and Legacy API (ROS6) with port defaults |
+| **File Manager** | ✅ | Upload/download/backup files with glassmorphic UI |
+| **Bulk Voucher Operations** | ✅ | Batch PDF export, extend validity, bulk delete |
+| **Flutter Analyze Clean** | ✅ | All 27 errors fixed - 0 errors, only minor warnings |
+| **Activity Logs** | ✅ | Central log viewer with search, filters, export, date range picker |
+| **Skeleton Loaders** | ✅ | Shimmer effect skeleton loaders for all loading states |
+| **Multi-Router Support** | ✅ | Switch between MikroTik devices without logging out |
+| **Voucher Template Editor** | ✅ | Custom voucher text, fields toggle, color customization with live preview |
+
+---
+
+## 🆕 Recent Updates (April 27, 2026)
+
+### 1. Dual API Protocol Support (REST + Legacy) ✅
+
+- **REST API (ROS7)**: HTTP-based on port 80/443 with JSON payloads
+- **Legacy API (ROS6)**: Socket-based on port 8728 with RouterOS protocol
+- **Toggle in Login**: Switch between REST/Legacy modes with clear port defaults
+- **Files**:
+  - `lib/services/mikrotik_client.dart` - Unified interface for both protocols
+  - `lib/services/routeros_http_client.dart` - REST implementation (187 lines)
+  - `lib/services/routeros_api_client.dart` - Legacy socket implementation (678 lines)
+  - `lib/services/routeros_service.dart` - Connection manager with protocol selection
+  - `lib/models/router_connection.dart` - Connection model with useRest flag
+  - `lib/screens/auth/login_screen.dart` - REST/Legacy toggle switch
+
+### 2. File Manager / Backup System ✅
+
+- **Features**:
+  - Create system backups (.backup files)
+  - Export configurations (.rsc files)
+  - View router files with glassmorphic UI
+  - Download files to local device
+  - Delete files from router
+- **Glassmorphic Design**: Blurred backgrounds, semi-transparent cards
+- **Files**:
+  - `lib/screens/files/files_screen.dart` - File manager UI (glassmorphic)
+  - `lib/providers/router_files_provider.dart` - File operations provider
+  - `lib/providers/app_providers.dart` - Added Files action to dashboard
+
+### 3. Bulk Voucher Operations ✅
+
+- **Batch PDF Export**: Export multiple vouchers to single PDF
+- **Bulk Extend Validity**: Extend expiration of multiple vouchers
+- **Bulk Delete**: Delete selected vouchers
+- **Files**:
+  - `lib/providers/bulk_voucher_provider.dart` - Bulk operations provider
+  - `lib/screens/vouchers/bulk_actions_screen.dart` - Bulk operations UI
+  - `lib/screens/vouchers/vouchers_list_screen.dart` - Added menu option
+  - `pubspec.yaml` - Added `pdf: ^3.11.0` and `printing: ^5.13.0`
+
+### 4. Flutter Analyze - All Errors Fixed ✅
+
+- **Result**: 0 errors, only minor warnings (7 unused imports/variables)
+- **Fixed 27 errors** including:
+  - Missing methods in MikrotikClient interface
+  - Wrong parameter names in hotspot user screens
+  - Missing positional arguments in setHotspotUserProfile calls
+  - Session timeout parameter not in interface
+- **Files Fixed**:
+  - `lib/services/mikrotik_client.dart` - Added missing methods
+  - `lib/services/routeros_api_client.dart` - Implemented all interface methods
+  - `lib/services/routeros_http_client.dart` - Implemented all interface methods
+  - `lib/services/routeros_service.dart` - Added clearCredentials method
+  - `lib/screens/hotspot_users/add_hotspot_user_screen.dart` - Removed sessionTimeout
+  - `lib/screens/hotspot_users/voucher_generation_screen.dart` - Fixed addHotspotUser call
+  - `lib/screens/hotspot_users/edit_hotspot_user_screen.dart` - Fixed updateHotspotUser call
+  - `lib/screens/hotspot_users/hotspot_users_screen.dart` - Fixed setHotspotUserProfile call
+  - `lib/providers/app_providers.dart` - Fixed setHotspotUserStatus call
+
+### 5. Activity Logs System ✅
+
+- **Central Log Viewer**: Comprehensive activity tracking with filtering and search
+- **Log Types**: login, logout, connection, voucher created/deleted/printed, sale, user action, error, system
+- **Features**:
+  - Search logs by title, description, username
+  - Filter by log type (All, Login, Logout, Voucher, Sale, Error, System)
+  - Date range picker for time filtering
+  - Export logs to CSV
+  - Clear all logs with confirmation
+  - Real-time timestamps ("Just now", "5m ago", "2h ago", etc.)
+- **Persistence**: Hive database for offline storage
+- **Files**:
+  - `lib/services/log_service.dart` - Log persistence with Hive
+  - `lib/services/models/activity_log.dart` - ActivityLog model + LogType enum
+  - `lib/screens/activity_logs/activity_logs_screen.dart` - Complete UI
+  - `lib/providers/app_providers.dart` - ActivityLogsNotifier provider
+
+### 6. Skimmer/Loading Skeletons ✅
+
+- **Shimmer Effect**: Animated grey boxes that replace spinning progress indicators
+- **Shape Matching**: Skeletons match the actual content shape (cards, lists, charts, etc.)
+- **Smoother UX**: Makes app feel faster and more modern
+- **Available Skeleton Loaders**:
+  - `SkeletonLoaders.card()` - Generic card skeleton
+  - `SkeletonLoaders.userListItem()` - User list item
+  - `SkeletonLoaders.voucherCard()` - Voucher card with QR placeholder
+  - `SkeletonLoaders.summaryCard()` - Summary card with icon
+  - `SkeletonLoaders.chart()` - Chart skeleton
+  - `SkeletonLoaders.transactionItem()` - Transaction list item
+  - `SkeletonLoaders.fileItem()` - File list item (new)
+- **Files**:
+  - `lib/widgets/skeleton_loader.dart` - ShimmerEffect + Skeleton + SkeletonLoaders
+
+### 7. Multi-Router Support ✅
+
+- **Switch Between MikroTik Devices**: Seamless switching without logging out
+- **RouterSwitcher Widget**: Popup dropdown in app bar showing current router
+- **Manage Connections Dialog**: View, edit, delete saved connections
+- **Password Management**: Secure storage with FlutterSecureStorage
+- **Auto-reconnect**: Automatically reconnects when switching routers
+- **Files**:
+  - `lib/widgets/router_switcher.dart` - Router switcher widget
+  - `lib/services/routeros_service.dart` - Added multi-connection methods
+  - `lib/screens/main/main_shell_screen.dart` - Added RouterSwitcher to app bar
+  - `lib/providers/app_providers.dart` - Added SavedConnectionsNotifier
+
+### 8. Voucher Template Editor ✅
+
+- **Custom Voucher Templates**: Full customization of voucher appearance
+- **Branding Options**: Company name and header text customization
+- **Field Toggles**: Show/hide username, password, validity, profile, price, QR code, cut lines
+- **Color Customization**: Primary and background colors with color picker
+- **Live Preview**: Real-time preview of voucher changes
+- **Files**:
+  - `lib/screens/settings/voucher_template_editor_screen.dart` - Template editor UI
+  - `lib/services/template_service.dart` - Added CustomVoucherTemplate model
+  - `lib/providers/app_providers.dart` - Added route for voucher template editor
+  - `lib/screens/settings/settings_screen.dart` - Added "Custom Template" option
 
 ---
 
@@ -750,10 +875,9 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
   - Filtered period totals
 
 #### 4. Log System
-
-- **Activity logging** - User actions
-- **Transaction history** - All sales
-- **Connection logs** - Login/logout events
+- ~~**Activity logging**~~ ✅ COMPLETED - Central log viewer with filters and search
+- ~~**Transaction history**~~ ✅ COMPLETED - All sales with revenue dashboard
+- ~~**Connection logs**~~ ✅ COMPLETED - Connection/disconnection events logged
 
 #### 5. Settings
 
@@ -773,6 +897,12 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 - **Idle Timeout** - Auto-logout timer (10 min)
 - **Session Management** - Save/load router sessions
 - **About Page** - App information and version ✅ (Already in settings)
+
+#### 7. Backup & File Management (ROS7+)
+- ~~**System Backup (.backup)**~~ ✅ COMPLETED - Create/download/restore backups
+- ~~**Configuration Export (.rsc)**~~ ✅ COMPLETED - Full, Compact exports
+- ~~**File Management UI**~~ ✅ COMPLETED - Glassmorphic file browser
+- ~~**ROS7 REST API Support**~~ ✅ COMPLETED - HTTP-based transfers
 
 ---
 
@@ -794,21 +924,25 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 12. ~~**Seamless Navigation**~~ ✅ COMPLETED - Provider keepAlive for smooth transitions
 13. ~~**Data Validation & Protection**~~ ✅ COMPLETED - Concurrent fetch protection and string validation
 14. ~~**Accurate Time Labels**~~ ✅ COMPLETED - Elapsed time formatting and continuous scrolling
+15. ~~**Dual API Protocol (REST + Legacy)**~~ ✅ COMPLETED - REST for ROS7, Legacy for ROS6
+16. ~~**File Manager / Backup System**~~ ✅ COMPLETED - Glassmorphic UI with file operations
+17. ~~**Bulk Voucher Operations**~~ ✅ COMPLETED - Batch PDF export, extend validity, bulk delete
+18. ~~**Flutter Analyze Clean**~~ ✅ COMPLETED - All 27 errors fixed
 
 ### Medium Priority (User Experience)
 
-12. ~~**Settings screen**~~ ✅ COMPLETED - Theme switcher, template selection, router management
-13. ~~**Reports page**~~ ✅ COMPLETED - Sales history with filtering, charts, and CSV export
-14. **Log viewer** - Activity tracking
-15. ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease monitoring
-16. **Health Monitoring** - Temperature, voltage sensors
-17. **User Search Enhancement** - Profile filter, date range, CSV export
+1. ~~**Settings screen**~~ ✅ COMPLETED - Theme switcher, template selection, router management
+2. ~~**Reports page**~~ ✅ COMPLETED - Sales history with filtering, charts, and CSV export
+3. ~~**Activity Logs**~~ ✅ COMPLETED - Central log viewer with search, filters, export
+4. ~~**Hotspot Hosts**~~ ✅ COMPLETED - DHCP lease monitoring
+5. ~~**Skeleton Loaders**~~ ✅ COMPLETED - Shimmer effect skeletons for all loading states
+6. ~~**Multi-Router Support**~~ ✅ COMPLETED - Switch routers without logging out
+7. **Health Monitoring** - Temperature, voltage sensors
 
 ### Low Priority (Nice to Have)
 
-17. **Template editor** - Custom voucher printing templates
-18. **Multi-session support** - Multiple routers
-19. **Real-time clock widget** - Dashboard enhancement
+1. **Template editor** - Custom voucher printing templates
+2. **Real-time clock widget** - Dashboard enhancement
 
 ---
 
@@ -827,6 +961,8 @@ Login → RouterOS API (8728) → Pre-fetch → Hive Cache → Dashboard
 - **Screenshot**: screenshot 3.0.0
 - **Sharing**: share_plus 10.1.3
 - **Number Formatting**: intl 0.19.0
+- **PDF Generation**: pdf 3.11.0
+- **Printing**: printing 5.13.0
 - **Demo Mode**: In-memory cache (module-level variables)
 
 ### Theme Configuration
@@ -846,20 +982,34 @@ Design System: Material 3
 
 ### RouterOS API Protocol
 
+#### REST API (ROS7 - port 80/443)
 ```
-┌─────────────────────────────────────────────────────────┐
-│ RouterOS API Protocol (port 8728)                       │
-├─────────────────────────────────────────────────────────┤
-│ • Encoding: Variable-length (1-5 bytes)                 │
-│ • Login: Post-v6.43 plain text in one sentence           │
-│   /login                                                  │
-│   =name=username                                          │
-│   =password=password                                     │
-│   '' (empty word terminator)                               │
-│ • Termination: Zero-length word for each sentence        │
-│ • Responses: !re (data), !done (end), !trap (error)       │
-│ • Multi-record: Each !re starts new record              │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ RouterOS REST API Protocol                                   │
+├─────────────────────────────────────────────────────────────┤
+│ • Transport: HTTP/HTTPS                                     │
+│ • Authentication: Basic Auth (Base64 encoded)                │
+│ • Format: JSON for requests and responses                    │
+│ • Endpoints: /rest/interface, /rest/ip/hotspot, etc.        │
+│ • Advantages: Better reliability, works through firewalls     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Legacy API (ROS6 - port 8728)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ RouterOS Legacy API Protocol                                 │
+├─────────────────────────────────────────────────────────────┤
+│ • Encoding: Variable-length (1-5 bytes)                      │
+│ • Login: Post-v6.43 plain text in one sentence               │
+│   /login                                                     │
+│   =name=username                                             │
+│   =password=password                                         │
+│   '' (empty word terminator)                                  │
+│ • Termination: Zero-length word for each sentence           │
+│ • Responses: !re (data), !done (end), !trap (error)          │
+│ • Multi-record: Each !re starts new record                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Cache Settings
@@ -904,9 +1054,11 @@ lib/
 │                                         # + ResourceHistoryNotifier
 │                                         # + UserProfileNotifier (fixed circular dependency)
 │                                         # + HotspotHostsNotifier with auto-refresh
+│   └── router_files_provider.dart        # File manager provider (NEW)
+│   └── bulk_voucher_provider.dart        # Bulk voucher operations (NEW)
 ├── screens/
 │   ├── auth/
-│   │   └── login_screen.dart             # Login with demo toggle (port 8728)
+│   │   └── login_screen.dart             # Login with demo toggle + REST/Legacy toggle (NEW)
 │   ├── dashboard/
 │   │   ├── dashboard_screen.dart         # Dashboard with real-time chart + Hotspot Hosts button
 │   │   │                                  # + Initial load indicator (_isInitialLoad flag)
@@ -923,6 +1075,12 @@ lib/
 │   │   └── welcome_screen.dart           # Welcome screen (ΩMMON branding)
 │   ├── settings/
 │   │   └── settings_screen.dart          # Settings with ΩMMON branding
+│   ├── files/                             # NEW - File manager screens
+│   │   └── files_screen.dart              # Glassmorphic file browser UI
+│   ├── vouchers/                          # NEW - Voucher screens
+│   │   └── bulk_actions_screen.dart       # Bulk operations UI
+│   ├── activity_logs/                    # Activity logs with search and filters
+│   │   └── activity_logs_screen.dart     # Central log viewer
 │   └── hotspot_users/
 │       ├── hotspot_users_screen.dart     # User list + batch operations + long-press selection
 │       ├── hotspot_active_users_screen.dart # Active users (real-time)
@@ -940,13 +1098,15 @@ lib/
 │       └── main_shell_screen.dart       # NEW - Shell route with convex bottom bar
 ├── services/
 │   ├── models.dart                       # Data models + HotspotHost + Voucher
-│   ├── routeros_api_client.dart          # RouterOS API + setHotspotUserProfile()
-│   ├── routeros_service.dart             # Uses RouterOSClient
+│   ├── mikrotik_client.dart              # Unified interface for REST + Legacy (NEW)
+│   ├── routeros_api_client.dart          # Legacy socket implementation
+│   ├── routeros_http_client.dart         # REST API implementation (NEW)
+│   ├── routeros_service.dart             # Connection manager with protocol selection (NEW)
 │   ├── cache_service.dart                # Hive caching service
 │   ├── resource_history.dart             # Resource history tracking
 │   ├── traffic_rate_service.dart         # Real-time traffic rate calculation
 │   └── models/
-│       └── voucher.dart                  # NEW - Voucher data model
+│       └── voucher.dart                  # Voucher data model
 ├── theme/
 │   └── app_theme.dart                    # Modern Material 3 theme with Poppins
 ├── navigation/
@@ -993,6 +1153,7 @@ Choose a feature to implement:
 18. ~~**Convex Bottom Nav**~~ ✅ DONE - Modern curved navigation with animation
 19. **Log Viewer** - Activity tracking
 20. **Health Monitoring** - Temperature, voltage sensors
+21. **Backup & File Management** - System backup and config export (ROS7 REST)
 
 ---
 
@@ -1110,4 +1271,4 @@ Choose a feature to implement:
 
 ---
 
-_Last Updated: March 30, 2026_
+_Last Updated: April 26, 2026_

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -14,14 +15,13 @@ enum VoucherTemplate {
 /// Service for managing voucher template preferences
 class TemplateService {
   static const String _storageKey = 'voucher_template';
+  static const String _customTemplateKey = 'custom_voucher_template';
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
-  /// Load the saved template from storage
   static Future<VoucherTemplate> loadTemplate() async {
     try {
       final savedTemplate = await _storage.read(key: _storageKey);
       if (savedTemplate != null) {
-        // Extract just the enum name (e.g., "VoucherTemplate.classic" -> "classic")
         final enumName = savedTemplate.contains('.')
             ? savedTemplate.split('.').last
             : savedTemplate;
@@ -36,17 +36,35 @@ class TemplateService {
     return VoucherTemplate.full;
   }
 
-  /// Save template to storage
   static Future<void> saveTemplate(VoucherTemplate template) async {
     try {
-      // Save just the name (e.g., "classic" instead of "VoucherTemplate.classic")
       await _storage.write(key: _storageKey, value: template.name);
     } catch (e) {
       // Error saving template
     }
   }
 
-  /// Get template display name
+  static Future<CustomVoucherTemplate?> loadCustomTemplate() async {
+    try {
+      final savedTemplate = await _storage.read(key: _customTemplateKey);
+      if (savedTemplate != null) {
+        final json = jsonDecode(savedTemplate) as Map<String, dynamic>;
+        return CustomVoucherTemplate.fromJson(json);
+      }
+    } catch (e) {
+      // Error loading custom template
+    }
+    return null;
+  }
+
+  static Future<void> saveCustomTemplate(CustomVoucherTemplate template) async {
+    try {
+      await _storage.write(key: _customTemplateKey, value: jsonEncode(template.toJson()));
+    } catch (e) {
+      // Error saving custom template
+    }
+  }
+
   static String getTemplateName(VoucherTemplate template) {
     switch (template) {
       case VoucherTemplate.full:
@@ -64,7 +82,6 @@ class TemplateService {
     }
   }
 
-  /// Get template description
   static String getTemplateDescription(VoucherTemplate template) {
     switch (template) {
       case VoucherTemplate.full:
@@ -82,7 +99,6 @@ class TemplateService {
     }
   }
 
-  /// Get template icon
   static IconData getTemplateIcon(VoucherTemplate template) {
     switch (template) {
       case VoucherTemplate.full:
@@ -100,7 +116,6 @@ class TemplateService {
     }
   }
 
-  /// Get QR size based on template
   static int getQrSize(VoucherTemplate template, {bool isBulk = false}) {
     switch (template) {
       case VoucherTemplate.full:
@@ -118,7 +133,6 @@ class TemplateService {
     }
   }
 
-  /// Get voucher card max width based on template
   static String getCardMaxWidth(VoucherTemplate template) {
     switch (template) {
       case VoucherTemplate.full:
@@ -136,7 +150,6 @@ class TemplateService {
     }
   }
 
-  /// Get voucher card padding based on template
   static String getCardPadding(VoucherTemplate template) {
     switch (template) {
       case VoucherTemplate.full:
@@ -154,7 +167,6 @@ class TemplateService {
     }
   }
 
-  /// Get grid min width for bulk based on template
   static String getGridMinWidth(VoucherTemplate template) {
     switch (template) {
       case VoucherTemplate.full:
@@ -170,5 +182,93 @@ class TemplateService {
       case VoucherTemplate.compactAlt:
         return '190px';
     }
+  }
+}
+
+class CustomVoucherTemplate {
+  final String companyName;
+  final String headerText;
+  final bool showUsername;
+  final bool showPassword;
+  final bool showValidity;
+  final bool showProfile;
+  final bool showPrice;
+  final bool showQrCode;
+  final bool showCutLines;
+  final String primaryColor;
+  final String backgroundColor;
+
+  const CustomVoucherTemplate({
+    this.companyName = 'Hotspot WiFi',
+    this.headerText = 'WiFi Voucher',
+    this.showUsername = true,
+    this.showPassword = true,
+    this.showValidity = true,
+    this.showProfile = true,
+    this.showPrice = true,
+    this.showQrCode = true,
+    this.showCutLines = true,
+    this.primaryColor = '#7C3AED',
+    this.backgroundColor = '#1E293B',
+  });
+
+  CustomVoucherTemplate copyWith({
+    String? companyName,
+    String? headerText,
+    bool? showUsername,
+    bool? showPassword,
+    bool? showValidity,
+    bool? showProfile,
+    bool? showPrice,
+    bool? showQrCode,
+    bool? showCutLines,
+    String? primaryColor,
+    String? backgroundColor,
+  }) {
+    return CustomVoucherTemplate(
+      companyName: companyName ?? this.companyName,
+      headerText: headerText ?? this.headerText,
+      showUsername: showUsername ?? this.showUsername,
+      showPassword: showPassword ?? this.showPassword,
+      showValidity: showValidity ?? this.showValidity,
+      showProfile: showProfile ?? this.showProfile,
+      showPrice: showPrice ?? this.showPrice,
+      showQrCode: showQrCode ?? this.showQrCode,
+      showCutLines: showCutLines ?? this.showCutLines,
+      primaryColor: primaryColor ?? this.primaryColor,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'companyName': companyName,
+      'headerText': headerText,
+      'showUsername': showUsername,
+      'showPassword': showPassword,
+      'showValidity': showValidity,
+      'showProfile': showProfile,
+      'showPrice': showPrice,
+      'showQrCode': showQrCode,
+      'showCutLines': showCutLines,
+      'primaryColor': primaryColor,
+      'backgroundColor': backgroundColor,
+    };
+  }
+
+  factory CustomVoucherTemplate.fromJson(Map<String, dynamic> json) {
+    return CustomVoucherTemplate(
+      companyName: json['companyName'] as String? ?? 'Hotspot WiFi',
+      headerText: json['headerText'] as String? ?? 'WiFi Voucher',
+      showUsername: json['showUsername'] as bool? ?? true,
+      showPassword: json['showPassword'] as bool? ?? true,
+      showValidity: json['showValidity'] as bool? ?? true,
+      showProfile: json['showProfile'] as bool? ?? true,
+      showPrice: json['showPrice'] as bool? ?? true,
+      showQrCode: json['showQrCode'] as bool? ?? true,
+      showCutLines: json['showCutLines'] as bool? ?? true,
+      primaryColor: json['primaryColor'] as String? ?? '#7C3AED',
+      backgroundColor: json['backgroundColor'] as String? ?? '#1E293B',
+    );
   }
 }

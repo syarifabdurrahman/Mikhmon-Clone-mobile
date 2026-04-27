@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../theme/app_theme.dart';
 import '../../../services/resource_history.dart';
 import '../../../l10n/translations.dart';
+import '../../../widgets/skeleton_loader.dart';
 
 class CombinedResourceChart extends StatefulWidget {
   final ResourceHistoryNotifier resourceHistory;
@@ -261,19 +262,23 @@ class _CombinedResourceChartState extends State<CombinedResourceChart>
     );
   }
 
-  Widget _buildEmptyState() {
+Widget _buildEmptyState() {
     return SizedBox(
-      height: 200,
+      height: 240,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 32,
-              height: 32,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
+            ShimmerEffect(
+              child: SizedBox(
+                width: double.infinity,
+                height: 180,
+                child: Card(
+                  color: context.appCard,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),

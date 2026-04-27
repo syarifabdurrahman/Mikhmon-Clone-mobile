@@ -754,7 +754,15 @@ class _UserSearchDelegate extends SearchDelegate<String> {
           },
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => SizedBox(
+                height: 400,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: 4,
+                  itemBuilder: (context, index) =>
+                      SkeletonLoaders.summaryCard(),
+                ),
+              ),
       error: (error, _) => Center(
         child: Text(AppStrings.of(context)
             .errorPrefix

@@ -697,6 +697,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             template: VoucherTemplate.compactAlt,
             currentTemplate: currentTemplate,
           ),
+          Divider(
+            height: 1,
+            color: context.appOnSurface.withValues(alpha: 0.1),
+          ),
+          InkWell(
+            onTap: () => context.push('/main/settings/voucher-template'),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      color: Color(0xFF8B5CF6),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Custom Template',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: context.appOnSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Customize voucher text, fields and colors',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.appOnSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: context.appOnSurface.withValues(alpha: 0.4),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
