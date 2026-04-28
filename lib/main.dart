@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'providers/app_providers.dart';
 import 'services/cache_service.dart';
 import 'services/log_service.dart';
@@ -26,9 +25,6 @@ void main() async {
 
   // Initialize search service for recent searches
   await SearchService.init();
-
-  // Initialize Mobile Ads
-  MobileAds.instance.initialize();
 
   // Pre-load theme for instant display (no flash)
   final preloadedTheme = await ThemeService.loadThemeMode();
