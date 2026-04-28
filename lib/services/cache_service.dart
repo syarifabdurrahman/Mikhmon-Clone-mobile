@@ -367,7 +367,7 @@ class CacheService {
     try {
       final data = _cacheBox.get(_vouchersKey);
       if (data != null && data is List) {
-        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+        return (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       return null;
     } catch (e) {

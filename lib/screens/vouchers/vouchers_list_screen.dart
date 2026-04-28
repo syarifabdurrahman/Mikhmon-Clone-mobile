@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../widgets/cached_qr_image.dart';
 import '../../theme/app_theme.dart';
 import '../../services/models/voucher.dart';
+import '../../services/log_service.dart';
 import '../../services/cache_service.dart';
 import '../../utils/currency_formatter.dart';
 import '../../utils/voucher_printer.dart';
@@ -294,6 +295,7 @@ void _openBulkActions(List<Voucher> vouchers) {
     for (final voucherId in _selectedVoucherIds) {
       try {
         await ref.read(vouchersProvider.notifier).deleteVoucher(voucherId);
+        await LogService.logVoucherDeleted(voucherId, null);
         successCount++;
       } catch (e) {
         failCount++;
@@ -625,6 +627,7 @@ void _openBulkActions(List<Voucher> vouchers) {
 
     if (confirmed == true) {
       await ref.read(vouchersProvider.notifier).deleteVoucher(voucher.username);
+      await LogService.logVoucherDeleted(voucher.username, null);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(AppStrings.of(context).voucherDeleted),
@@ -841,11 +844,11 @@ class _VoucherGridCard extends StatelessWidget {
 
                   SizedBox(height: 8),
 
-                  // Status Badge
+                  // Status Badge - disabled on MikroTik shows as Expired (voucher was disabled/expired)
                   Row(
                     children: [
                       StatusBadge(
-                        status: isExpired
+                        status: isExpired || voucher.disabled
                             ? VoucherStatus.expired
                             : VoucherStatus.active,
                         showLabel: true,

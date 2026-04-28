@@ -582,8 +582,10 @@ class HotspotUser {
   }
 
   /// Check if this voucher/user is expired
-  /// Expired if: 1) past expiry date from comment, OR 2) uptime reached limit-uptime
+  /// Expired if: 1) disabled, OR 2) past expiry date from comment, OR 3) uptime reached limit-uptime
   bool get isExpired {
+    // Disabled user is considered expired
+    if (!active) return true;
     // Check expiry date in comment
     final expiry = expiresAt;
     if (expiry != null && DateTime.now().isAfter(expiry)) {

@@ -548,6 +548,10 @@ class _LogCard extends StatelessWidget {
         return const Color(0xFF14B8A6); // Teal
       case LogType.userAction:
         return const Color(0xFF64748B); // Slate
+      case LogType.userEnabled:
+        return const Color(0xFF10B981); // Green
+      case LogType.userDisabled:
+        return const Color(0xFFF59E0B); // Orange
       case LogType.error:
         return const Color(0xFFEF4444); // Red
       case LogType.system:
@@ -573,6 +577,10 @@ class _LogCard extends StatelessWidget {
         return Icons.payments_rounded;
       case LogType.userAction:
         return Icons.person_rounded;
+      case LogType.userEnabled:
+        return Icons.person_add_rounded;
+      case LogType.userDisabled:
+        return Icons.person_remove_rounded;
       case LogType.error:
         return Icons.error_rounded;
       case LogType.system:

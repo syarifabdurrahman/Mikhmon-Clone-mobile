@@ -8,6 +8,8 @@ enum LogType {
   voucherPrinted, // Voucher printed
   sale, // Sale made
   userAction, // General user action
+  userEnabled, // User enabled
+  userDisabled, // User disabled
   error, // Error occurred
   system, // System event
 }
@@ -86,6 +88,10 @@ class ActivityLog {
         return 'payments';
       case LogType.userAction:
         return 'person';
+      case LogType.userEnabled:
+        return 'person_add';
+      case LogType.userDisabled:
+        return 'person_remove';
       case LogType.error:
         return 'error';
       case LogType.system:
@@ -112,6 +118,10 @@ class ActivityLog {
         return 'emerald';
       case LogType.userAction:
         return 'slate';
+      case LogType.userEnabled:
+        return 'green';
+      case LogType.userDisabled:
+        return 'orange';
       case LogType.error:
         return 'red';
       case LogType.system:

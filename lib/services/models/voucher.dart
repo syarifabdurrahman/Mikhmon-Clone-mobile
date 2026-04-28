@@ -10,6 +10,7 @@ class Voucher {
   final int? remainingSeconds;
   final DateTime? sessionStartedAt;
   final double? price;
+  final bool disabled;
 
   Voucher({
     required this.username,
@@ -23,6 +24,7 @@ class Voucher {
     this.remainingSeconds,
     this.sessionStartedAt,
     this.price,
+    this.disabled = false,
   });
 
   int? get totalSeconds => Voucher.validityToSeconds(validity);
@@ -30,13 +32,14 @@ class Voucher {
   bool get isFirstUse => firstUsedAt == null;
 
   bool get isExpired {
+    if (disabled) return true;
     if (remainingSeconds != null && remainingSeconds! <= 0) return true;
     if (firstUsedAt == null || totalSeconds == null) return false;
     final elapsed = DateTime.now().difference(firstUsedAt!).inSeconds;
     return elapsed >= totalSeconds!;
   }
 
-  bool get isActive => !isExpired;
+  bool get isActive => !isExpired && !disabled;
 
   bool get isInSession => sessionStartedAt != null && !isExpired;
 

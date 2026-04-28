@@ -1393,6 +1393,23 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
   }
 }
 
+// Provider for getting disabled hotspot usernames from MikroTik
+final disabledHotspotUsersProvider = FutureProvider<Set<String>>((ref) async {
+  try {
+    final service = ref.read(routerOSServiceProvider);
+    final client = service.client;
+    if (client == null) return {};
+    final users = await client.getHotspotUsers();
+    return users
+        .where((u) => u['disabled'] == 'true')
+        .map((u) => u['name'] as String? ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet();
+  } catch (e) {
+    return {};
+  }
+});
+
 // Vouchers Provider
 final vouchersProvider =
     AsyncNotifierProvider<VouchersNotifier, List<Voucher>>(() {
@@ -1407,7 +1424,29 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
     // Try to get cached vouchers first
     final cachedVouchers = cache.getVouchers();
     if (cachedVouchers != null && cachedVouchers.isNotEmpty) {
-      return cachedVouchers.map((data) => Voucher.fromJson(data)).toList();
+      // Get disabled users from MikroTik
+      final disabledUsers = await ref.read(disabledHotspotUsersProvider.future);
+      
+      // Convert to Voucher with disabled status
+      return cachedVouchers.map((data) {
+        final username = data['username'] as String? ?? '';
+        final v = Voucher.fromJson(data);
+        // Return voucher with disabled status from MikroTik
+        return Voucher(
+          username: v.username,
+          password: v.password,
+          profile: v.profile,
+          validity: v.validity,
+          dataLimit: v.dataLimit,
+          comment: v.comment,
+          createdAt: v.createdAt,
+          firstUsedAt: v.firstUsedAt,
+          remainingSeconds: v.remainingSeconds,
+          sessionStartedAt: v.sessionStartedAt,
+          price: v.price,
+          disabled: disabledUsers.contains(username),
+        );
+      }).toList();
     }
 
     // No cache, return empty list

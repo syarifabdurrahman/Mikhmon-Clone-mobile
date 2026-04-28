@@ -8,6 +8,7 @@ import '../../services/models.dart';
 import '../../services/onboarding_service.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/ad_banner.dart';
 import 'widgets/expandable_chart.dart';
 import 'widgets/traffic_monitor_widgets.dart';
 import 'widgets/at_a_glance_card.dart';
@@ -248,6 +249,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(height: 8),
+          const AdBanner(),
+          SizedBox(height: 70),
+        ],
+      ),
       appBar: AppBar(
         backgroundColor: context.appSurface,
         foregroundColor: context.appOnSurface,

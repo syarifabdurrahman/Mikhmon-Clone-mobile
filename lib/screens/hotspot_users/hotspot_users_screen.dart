@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../services/log_service.dart';
 import '../../utils/performance_utils.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/skeleton_loader.dart';
@@ -390,6 +391,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
 
     if (confirmed == true) {
       await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+      await LogService.logUserDisabled(user.name);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -408,6 +410,7 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     if (!user.active) {
       // Enable the user
       await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+      await LogService.logUserEnabled(user.name);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -48,7 +48,7 @@ class LogService {
     for (var i = 0; i < box.length; i++) {
       final data = box.getAt(i);
       if (data != null) {
-        logs.add(ActivityLog.fromJson(Map<String, dynamic>.from(data)));
+        logs.add(ActivityLog.fromJson(Map<String, dynamic>.from(data as Map)));
       }
     }
     // Sort by timestamp (newest first)
@@ -114,7 +114,7 @@ class LogService {
         for (var j = 0; j < box.length; j++) {
           final data = box.getAt(j);
           if (data != null) {
-            final log = ActivityLog.fromJson(Map<String, dynamic>.from(data));
+            final log = ActivityLog.fromJson(Map<String, dynamic>.from(data as Map));
             if (log.id == logs[i].id) {
               await box.deleteAt(j);
               break;
@@ -159,6 +159,26 @@ class LogService {
       type: LogType.logout,
       title: 'User Logout',
       description: '$username logged out',
+      username: username,
+    );
+  }
+
+  /// Log user enabled
+  static Future<void> logUserEnabled(String username) async {
+    await addLog(
+      type: LogType.userEnabled,
+      title: 'User Enabled',
+      description: '$username has been enabled',
+      username: username,
+    );
+  }
+
+  /// Log user disabled
+  static Future<void> logUserDisabled(String username) async {
+    await addLog(
+      type: LogType.userDisabled,
+      title: 'User Disabled',
+      description: '$username has been disabled',
       username: username,
     );
   }
