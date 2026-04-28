@@ -15,6 +15,7 @@ import '../services/log_service.dart';
 import '../services/onboarding_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/welcome/welcome_screen.dart';
+import '../screens/command_center_minimal.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/onboarding/setup_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -337,6 +338,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/main/dashboard',
             name: 'dashboard',
             builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/main/command-center',
+            name: 'command_center',
+            builder: (context, state) => const CommandCenterMinimalScreen(),
           ),
           GoRoute(
             path: '/main/users',
@@ -742,8 +748,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   }
 
   /// Track session time for active voucher users.
-  /// Decreases remainingSeconds while connected, marks session start/end,
-  /// and disables vouchers on the router when time runs out.
+  /// Validity countdown starts on FIRST USE and runs continuously (wall-clock based).
+  /// Even if disconnected, time continues counting down.
   Future<void> _trackSessionTime(List<Map<String, dynamic>> activeUsers,
       List<Map<String, dynamic>> allUsers) async {
     try {
@@ -755,27 +761,33 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       final activeUsernames =
           activeUsers.map((u) => u['user'] as String? ?? '').toSet();
 
-      // Build map of all users from router for comment/expiration parsing
-      final routerUserMap = <String, Map<String, dynamic>>{};
-      for (final u in allUsers) {
-        final name = u['name'] as String? ?? '';
-        if (name.isNotEmpty) routerUserMap[name] = u;
-      }
-
       for (final vData in vouchersData) {
         final voucher = Voucher.fromJson(vData);
         final username = voucher.username;
+        final totalSecs = voucher.totalSeconds;
 
-        // Skip unlimited vouchers
-        if (voucher.validity == null ||
-            voucher.validity == 'unlimited' ||
-            (voucher.remainingSeconds == null && voucher.expiresAt == null)) {
+        if (totalSecs == null || totalSecs <= 0) continue;
+
+        final isFirstUse = voucher.isFirstUse;
+        final isActive = activeUsernames.contains(username);
+
+        if (isFirstUse) {
+          // FIRST USE - mark the start time, countdown begins
+          if (isActive) {
+            await cache.updateVoucher(username, {
+              'firstUsedAt': now.toIso8601String(),
+              'sessionStartedAt': now.toIso8601String(),
+            });
+          }
           continue;
         }
 
-        // 1. Check if already expired by wall-clock (expiresAt)
-        if (voucher.expiresAt != null && now.isAfter(voucher.expiresAt!)) {
-          // Time expired - disable on router if not already
+        // Calculate remaining based on wall-clock time since first use
+        final elapsed = now.difference(voucher.firstUsedAt!).inSeconds;
+        final newRemaining = (totalSecs - elapsed).clamp(0, totalSecs);
+
+        if (newRemaining <= 0) {
+          // Time is up - disable on router
           await _disableVoucherOnRouter(username);
           await cache.updateVoucher(username, {
             'remainingSeconds': 0,
@@ -784,94 +796,13 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
           continue;
         }
 
-        // 2. Check if router has updated info (e.g. activation date in comment)
-        final routerUserRaw = routerUserMap[username];
-        if (routerUserRaw != null && voucher.expiresAt == null) {
-          final hotspotUser = HotspotUser.fromJson(routerUserRaw);
-          final routerExpiresAt = hotspotUser.expiresAt;
-          if (routerExpiresAt != null) {
-            // Router has activation info - update local voucher
-            await cache.updateVoucher(username, {
-              'expiresAt': routerExpiresAt.toIso8601String(),
-            });
-            // Re-check expression with new info
-            if (now.isAfter(routerExpiresAt)) {
-              await _disableVoucherOnRouter(username);
-              await cache.updateVoucher(username, {
-                'remainingSeconds': 0,
-                'sessionStartedAt': null,
-              });
-              continue;
-            }
-          }
-        }
-
-        final isActive = activeUsernames.contains(username);
-
-        if (isActive) {
-          // User is currently connected
-          final remaining = voucher.remainingSeconds ?? 0;
-
-          if (voucher.sessionStartedAt != null) {
-            // Ongoing session - calculate elapsed time since last check
-            final elapsed = now.difference(voucher.sessionStartedAt!).inSeconds;
-            final newRemaining = (remaining - elapsed).clamp(0, remaining);
-
-            if (newRemaining <= 0) {
-              // Uptime expired - disable on router
-              await _disableVoucherOnRouter(username);
-              await cache.updateVoucher(username, {
-                'remainingSeconds': 0,
-                'sessionStartedAt': null,
-              });
-            } else {
-              // Update remaining, keep session going
-              await cache.updateVoucher(username, {
-                'remainingSeconds': newRemaining,
-                'sessionStartedAt': now.toIso8601String(),
-              });
-            }
-          } else {
-            // New session starting - mark session start
-            final updates = <String, dynamic>{
-              'sessionStartedAt': now.toIso8601String(),
-            };
-
-            // If this is the FIRST activation and we don't have expiresAt yet,
-            // calculate it from validity
-            if (voucher.expiresAt == null && voucher.validity != null) {
-              final validitySeconds =
-                  Voucher.validityToSeconds(voucher.validity);
-              if (validitySeconds != null) {
-                final expiresAt = now.add(Duration(seconds: validitySeconds));
-                updates['expiresAt'] = expiresAt.toIso8601String();
-              }
-            }
-
-            await cache.updateVoucher(username, updates);
-          }
-        } else {
-          // User is NOT connected
-          if (voucher.sessionStartedAt != null) {
-            // Was in session, now disconnected - finalize time used
-            final elapsed = now.difference(voucher.sessionStartedAt!).inSeconds;
-            final remaining = voucher.remainingSeconds ?? 0;
-            final newRemaining = (remaining - elapsed).clamp(0, remaining);
-
-            if (newRemaining <= 0) {
-              await _disableVoucherOnRouter(username);
-            }
-
-            // Save remaining time and clear session
-            await cache.updateVoucher(username, {
-              'remainingSeconds': newRemaining,
-              'sessionStartedAt': null,
-            });
-          }
-        }
+        // Update remaining time and session status
+        await cache.updateVoucher(username, {
+          'remainingSeconds': newRemaining,
+          'sessionStartedAt': isActive ? now.toIso8601String() : null,
+        });
       }
 
-      // Refresh vouchers provider to reflect changes
       ref.invalidate(vouchersProvider);
     } catch (_) {}
   }
@@ -1394,23 +1325,26 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         ? null
         : '${profile.rateLimitUpload ?? 'unlimited'}/${profile.rateLimitDownload ?? 'unlimited'}';
 
-    // Generate on-login script for auto-expiry if validity is set
     String? onLoginScript;
-    if (profile.validity != null &&
-        profile.validity!.toLowerCase() != 'unlimited' &&
-        profile.validity!.isNotEmpty) {
-      onLoginScript = OnLoginScriptGenerator.generate(profile.validity!);
+    try {
+      if (profile.validity != null &&
+          profile.validity!.toLowerCase() != 'unlimited' &&
+          profile.validity!.isNotEmpty) {
+        onLoginScript = OnLoginScriptGenerator.generate(profile.validity!);
+      }
+    } catch (e) {
+      // Skip on-login script if generation fails
     }
 
     await client.addProfile({
       'name': profile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
-      if (profile.validity != null) 'session-timeout': profile.validity!,
       if (onLoginScript != null) 'on-login': onLoginScript,
     });
 
-    // Force refresh from MikroTik to get updated data
-    ref.invalidate(userProfileProvider);
+    try {
+      Future.microtask(() => ref.invalidate(userProfileProvider));
+    } catch (_) {}
   }
 
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -1428,24 +1362,24 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         ? null
         : '${updatedProfile.rateLimitUpload ?? 'unlimited'}/${updatedProfile.rateLimitDownload ?? 'unlimited'}';
 
-    // Generate on-login script for auto-expiry if validity is set
     String? onLoginScript;
-    if (updatedProfile.validity != null &&
-        updatedProfile.validity!.toLowerCase() != 'unlimited' &&
-        updatedProfile.validity!.isNotEmpty) {
-      onLoginScript = OnLoginScriptGenerator.generate(updatedProfile.validity!);
-    }
+    try {
+      if (updatedProfile.validity != null &&
+          updatedProfile.validity!.toLowerCase() != 'unlimited' &&
+          updatedProfile.validity!.isNotEmpty) {
+        onLoginScript = OnLoginScriptGenerator.generate(updatedProfile.validity!);
+      }
+    } catch (e) {}
 
     await client.updateProfile(updatedProfile.id, {
       'name': updatedProfile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
-      if (updatedProfile.validity != null)
-        'session-timeout': updatedProfile.validity!,
       if (onLoginScript != null) 'on-login': onLoginScript,
     });
 
-    // Force refresh from MikroTik to get updated data
-    ref.invalidate(userProfileProvider);
+    try {
+      Future.microtask(() => ref.invalidate(userProfileProvider));
+    } catch (_) {}
   }
 
   Future<void> deleteProfile(String id) async {
@@ -1456,9 +1390,6 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     await client.deleteProfile(id);
-
-    // Force refresh from MikroTik
-    ref.invalidate(userProfileProvider);
   }
 }
 

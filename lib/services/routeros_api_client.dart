@@ -129,7 +129,12 @@ class RouterOSClient implements MikrotikClient {
 
       // Extract the word
       final wordBytes = _readBuffer.sublist(0, length);
-      final word = utf8.decode(wordBytes);
+      String word;
+      try {
+        word = utf8.decode(wordBytes, allowMalformed: true);
+      } catch (_) {
+        word = latin1.decode(wordBytes);
+      }
       _readBuffer.removeRange(0, length);
 
       _log('Read word: "$word" (${word.length} chars)');

@@ -6,7 +6,7 @@ class Voucher {
   final String? dataLimit;
   final String? comment;
   final DateTime createdAt;
-  final DateTime? expiresAt;
+  final DateTime? firstUsedAt;
   final int? remainingSeconds;
   final DateTime? sessionStartedAt;
   final double? price;
@@ -19,24 +19,66 @@ class Voucher {
     this.dataLimit,
     this.comment,
     required this.createdAt,
-    this.expiresAt,
+    this.firstUsedAt,
     this.remainingSeconds,
     this.sessionStartedAt,
     this.price,
   });
 
-  // Get display text for voucher
+  int? get totalSeconds => Voucher.validityToSeconds(validity);
+
+  bool get isFirstUse => firstUsedAt == null;
+
+  bool get isExpired {
+    if (remainingSeconds != null && remainingSeconds! <= 0) return true;
+    if (firstUsedAt == null || totalSeconds == null) return false;
+    final elapsed = DateTime.now().difference(firstUsedAt!).inSeconds;
+    return elapsed >= totalSeconds!;
+  }
+
+  bool get isActive => !isExpired;
+
+  bool get isInSession => sessionStartedAt != null && !isExpired;
+
+  int get currentRemainingSeconds {
+    if (firstUsedAt == null || totalSeconds == null) return totalSeconds ?? 0;
+    final elapsed = DateTime.now().difference(firstUsedAt!).inSeconds;
+    return (totalSeconds! - elapsed).clamp(0, totalSeconds!);
+  }
+
+  DateTime? get expiresAt {
+    if (firstUsedAt == null || totalSeconds == null) return null;
+    return firstUsedAt!.add(Duration(seconds: totalSeconds!));
+  }
+
+  String get remainingTimeDisplay {
+    final secs = isFirstUse
+        ? (remainingSeconds ?? totalSeconds ?? 0)
+        : currentRemainingSeconds;
+    if (secs <= 0) return 'Expired';
+    if (secs >= 86400) {
+      final d = secs ~/ 86400;
+      final h = (secs % 86400) ~/ 3600;
+      return '${d}d ${h}h';
+    }
+    if (secs >= 3600) {
+      final h = secs ~/ 3600;
+      final m = (secs % 3600) ~/ 60;
+      return '${h}h ${m}m';
+    }
+    final m = secs ~/ 60;
+    final s = secs % 60;
+    return '${m}m ${s}s';
+  }
+
   String get displayText {
     if (username == password) {
-      // Voucher mode - same username and password
       return 'Voucher: $username';
     } else {
-      // User/Password mode
       return 'User: $username\nPass: $password';
     }
   }
 
-  // Get QR code data
   String get qrData {
     if (username == password) {
       return 'WIFI:S:$username;;';
@@ -45,22 +87,6 @@ class Voucher {
     }
   }
 
-  // Check if voucher is expired
-  bool get isExpired {
-    final now = DateTime.now();
-    // 1. Check uptime limit (remainingSeconds)
-    if (remainingSeconds != null && remainingSeconds! <= 0) return true;
-    
-    // 2. Check wall-clock validity (expiresAt)
-    if (expiresAt != null && now.isAfter(expiresAt!)) return true;
-    
-    return false;
-  }
-
-  // Check if voucher is active
-  bool get isActive => !isExpired;
-
-  // Get total validity in seconds from the validity string
   static int? validityToSeconds(String? validity) {
     if (validity == null || validity.isEmpty || validity == 'unlimited') {
       return null;
@@ -92,31 +118,6 @@ class Voucher {
     }
   }
 
-  // Format remaining time as human-readable string
-  String get remainingTimeDisplay {
-    final secs = remainingSeconds;
-    if (secs == null || secs <= 0) return 'Expired';
-    if (secs >= 86400) {
-      final d = secs ~/ 86400;
-      final h = (secs % 86400) ~/ 3600;
-      return '${d}d${h}h';
-    }
-    if (secs >= 3600) {
-      final h = secs ~/ 3600;
-      final m = (secs % 3600) ~/ 60;
-      return '${h}h${m}m';
-    }
-    final m = secs ~/ 60;
-    final s = secs % 60;
-    return '${m}m${s}s';
-  }
-
-  // Check if currently in an active session (connected)
-  bool get isInSession =>
-      sessionStartedAt != null &&
-      remainingSeconds != null &&
-      remainingSeconds! > 0;
-
   Map<String, dynamic> toJson() {
     return {
       'username': username,
@@ -126,7 +127,7 @@ class Voucher {
       'dataLimit': dataLimit,
       'comment': comment,
       'createdAt': createdAt.toIso8601String(),
-      'expiresAt': expiresAt?.toIso8601String(),
+      'firstUsedAt': firstUsedAt?.toIso8601String(),
       'remainingSeconds': remainingSeconds,
       'sessionStartedAt': sessionStartedAt?.toIso8601String(),
       'price': price,
@@ -142,8 +143,8 @@ class Voucher {
       dataLimit: json['dataLimit'] as String?,
       comment: json['comment'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
-      expiresAt: json['expiresAt'] != null
-          ? DateTime.parse(json['expiresAt'] as String)
+      firstUsedAt: json['firstUsedAt'] != null
+          ? DateTime.parse(json['firstUsedAt'] as String)
           : null,
       remainingSeconds: json['remainingSeconds'] as int?,
       sessionStartedAt: json['sessionStartedAt'] != null
@@ -161,7 +162,7 @@ class Voucher {
     String? dataLimit,
     String? comment,
     DateTime? createdAt,
-    DateTime? expiresAt,
+    DateTime? firstUsedAt,
     int? remainingSeconds,
     DateTime? sessionStartedAt,
     double? price,
@@ -174,7 +175,7 @@ class Voucher {
       dataLimit: dataLimit ?? this.dataLimit,
       comment: comment ?? this.comment,
       createdAt: createdAt ?? this.createdAt,
-      expiresAt: expiresAt ?? this.expiresAt,
+      firstUsedAt: firstUsedAt ?? this.firstUsedAt,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
       sessionStartedAt: sessionStartedAt ?? this.sessionStartedAt,
       price: price ?? this.price,

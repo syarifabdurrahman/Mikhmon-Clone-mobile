@@ -114,11 +114,6 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
         throw Exception('User ID not found');
       }
 
-      // Use existing password if not changed
-      final password = _passwordController.text.trim().isEmpty
-          ? (widget.user['password'] ?? '')
-          : _passwordController.text.trim();
-
       // Update user on RouterOS
       await client.updateHotspotUser(
         id: widget.user['.id'],

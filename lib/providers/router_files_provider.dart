@@ -103,8 +103,9 @@ class RouterFilesState {
       files.where((f) => f.isBackup || f.isBackupFile).toList();
   List<RouterFile> get configs =>
       files.where((f) => f.isConfig && !f.isBackup).toList();
-  List<RouterFile> get otherFiles =>
+  List<RouterFile> get others =>
       files.where((f) => !f.isBackup && !f.isConfig && !f.isBackupFile).toList();
+  List<RouterFile> get filesList => files;
 }
 
 class RouterFilesNotifier extends StateNotifier<RouterFilesState> {
@@ -153,7 +154,7 @@ class RouterFilesNotifier extends StateNotifier<RouterFilesState> {
     try {
       await _client!.createBackup(name);
       await loadFiles();
-      state = state.copyWith(isCreatingBackup: false);
+      state = state.copyWith(isCreatingBackup: false, error: null);
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -170,7 +171,7 @@ class RouterFilesNotifier extends StateNotifier<RouterFilesState> {
     try {
       await _client!.exportConfig(name);
       await loadFiles();
-      state = state.copyWith(isExporting: false);
+      state = state.copyWith(isExporting: false, error: null);
       return true;
     } catch (e) {
       state = state.copyWith(

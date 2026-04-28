@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
-import '../../services/models.dart';
 import '../../services/models/voucher.dart';
 import '../../services/cache_service.dart';
 import '../../providers/app_providers.dart';
-import '../../l10n/translations.dart';
 
 class BulkVoucherState {
   final Set<String> selectedUsernames;
@@ -392,7 +389,6 @@ class _BulkActionsScreenState extends ConsumerState<BulkActionsScreen> {
   @override
   Widget build(BuildContext context) {
     final bulkState = ref.watch(bulkVoucherProvider);
-    final profilesAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: context.appBackground,

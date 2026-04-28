@@ -60,7 +60,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
         bottom: TabBar(
           controller: _tabController,
           labelColor: context.appPrimary,
-          unselectedLabelColor: context.appOnSurface.withValues(alpha: 0.6),
+          unselectedLabelColor:
+              context.appOnSurface.withValues(alpha: 0.6),
           indicatorColor: context.appPrimary,
           tabs: const [
             Tab(text: 'All'),
@@ -85,10 +86,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _showCreateBackupDialog,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Backup'),
+        backgroundColor: const Color(0xFF10B981),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.backup_rounded),
       ),
     );
   }
@@ -102,7 +104,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
         borderRadius: 16,
       ),
       child: TextField(
-        onChanged: (value) => setState(() => _searchQuery = value),
+        onChanged: (value) =>
+            setState(() => _searchQuery = value),
         decoration: InputDecoration(
           hintText: 'Search files...',
           prefixIcon: const Icon(Icons.search_rounded),
@@ -118,14 +121,14 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
 
   Widget _buildQuickActions(RouterFilesState state) {
     return Container(
-      height: 80,
+      height: 72,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           Expanded(
             child: _buildQuickActionCard(
               icon: Icons.backup_rounded,
-              label: 'Create Backup',
+              label: 'New Backup',
               color: const Color(0xFF10B981),
               isLoading: state.isCreatingBackup,
               onTap: () => _showCreateBackupDialog(),
@@ -153,8 +156,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
     required bool isLoading,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: isLoading ? null : onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: AppTheme.glassmorphismDecoration(
           surfaceColor: color.withValues(alpha: 0.15),
@@ -223,7 +227,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
     return RefreshIndicator(
       onRefresh: () => ref.read(routerFilesProvider.notifier).loadFiles(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         itemCount: filteredFiles.length,
         itemBuilder: (context, index) {
           final file = filteredFiles[index];
@@ -239,18 +243,18 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
       decoration: AppTheme.glassmorphismDecoration(
         surfaceColor: context.appSurface,
         onSurfaceColor: context.appOnSurface,
-        borderRadius: 16,
+        borderRadius: 12,
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 8,
+          vertical: 12,
         ),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: _getFileColor(file).withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             file.icon,
@@ -342,7 +346,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
           ],
           onSelected: (value) async {
             if (value == 'delete') {
-              _confirmDelete(file);
+              await _confirmDelete(file);
             } else if (value == 'download') {
               await _downloadFile(file);
             } else if (value == 'copy') {
@@ -377,78 +381,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
     }
   }
 
-  void _showCreateBackupDialog() {
-    final controller = TextEditingController(
-      text: 'backup-${DateFormat('yyyyMMdd-HHmmss').format(DateTime.now())}',
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create Backup'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Backup Name',
-            hintText: 'e.g., backup-20240101',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref
-                  .read(routerFilesProvider.notifier)
-                  .createBackup(controller.text);
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExportConfigDialog() {
-    final controller = TextEditingController(
-      text: 'config-${DateFormat('yyyyMMdd-HHmmss').format(DateTime.now())}',
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Configuration'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'File Name',
-            hintText: 'e.g., config-20240101',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref
-                  .read(routerFilesProvider.notifier)
-                  .exportConfig(controller.text);
-            },
-            child: const Text('Export'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(RouterFile file) {
-    showDialog(
+  Future<void> _confirmDelete(RouterFile file) async {
+    return showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete File'),
@@ -575,5 +509,179 @@ class _FilesScreenState extends ConsumerState<FilesScreen>
         );
       }
     }
+  }
+
+  Future<void> _showCreateBackupDialog() {
+    final controller = TextEditingController(
+      text: 'backup-${DateFormat('yyyyMMdd-HHmmss').format(DateTime.now())}',
+    );
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Backup'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Backup Name',
+                hintText: 'e.g., backup-20240101',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This backup is hardware-locked and can only be restored on this router. '
+                      'To migrate to a different device, use "Export Config" instead.',
+                      style: TextStyle(
+                        color: Colors.orange.shade700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success =
+                  await ref.read(routerFilesProvider.notifier).createBackup(controller.text);
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Backup created: ${controller.text}'),
+                      backgroundColor: context.appSuccess,
+                    ),
+                  );
+                } else {
+                  final error = ref.read(routerFilesProvider).error;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(error ?? 'Failed to create backup'),
+                      backgroundColor: context.appError,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showExportConfigDialog() {
+    final controller = TextEditingController(
+      text: 'config-${DateFormat('yyyyMMdd-HHmmss').format(DateTime.now())}',
+    );
+
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export Configuration'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'File Name',
+                hintText: 'e.g., config-20240101',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.green.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      color: Colors.green.shade600, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Exported as a plain-text script (.rsc). '
+                      'Can be imported to any RouterOS device for cross-device migration.',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success =
+                  await ref.read(routerFilesProvider.notifier).exportConfig(controller.text);
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Configuration exported: ${controller.text}'),
+                      backgroundColor: context.appSuccess,
+                    ),
+                  );
+                } else {
+                  final error = ref.read(routerFilesProvider).error;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(error ?? 'Failed to export configuration'),
+                      backgroundColor: context.appError,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Export'),
+          ),
+        ],
+      ),
+    );
   }
 }

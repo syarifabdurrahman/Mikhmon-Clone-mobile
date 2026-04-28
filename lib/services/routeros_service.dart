@@ -24,6 +24,10 @@ class RouterOSService {
   final _sessionMetadataKey = 'session_metadata';
 
   String? get currentConnectionId => _currentConnectionId;
+  String? get lastHost => _lastHost;
+  String? get lastPort => _lastPort;
+  String? get lastUsername => _lastUsername;
+  bool get lastUseRest => _lastUseRest;
   bool get hasMultipleConnections => _savedConnections != null && _savedConnections!.length > 1;
 
   List<Map<String, dynamic>>? _savedConnections;

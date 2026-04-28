@@ -223,16 +223,6 @@ class _VoucherGenerationScreenState
         final dataLimit = _parseDataLimit(_dataLimitController.text.trim());
 
         // Calculate expiration date
-        DateTime? expiresAt;
-        if (validity.isNotEmpty && validity != 'unlimited') {
-          expiresAt = ValidityParser.parseValidity(validity);
-        }
-
-        // Calculate initial remaining seconds from validity
-        final remainingSeconds =
-            Voucher.validityToSeconds(validity.isEmpty ? null : validity);
-
-        // Create voucher object
         final voucher = Voucher(
           username: username,
           password: password,
@@ -241,14 +231,11 @@ class _VoucherGenerationScreenState
           dataLimit: dataLimit,
           comment: comment.isEmpty ? null : comment,
           createdAt: DateTime.now(),
-          expiresAt: expiresAt,
-          remainingSeconds: remainingSeconds,
+          firstUsedAt: null,
+          remainingSeconds: null,
         );
 
         // Add user via RouterOS API
-        // Use profile's session-timeout as limit-uptime
-        final limitUptime = profileSessionTimeout;
-
         await client.addHotspotUser(
           username: username,
           password: password,

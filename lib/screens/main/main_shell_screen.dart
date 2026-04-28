@@ -236,6 +236,11 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
           onPressed: () => showGlobalSearch(context),
           tooltip: 'Search',
         ),
+        IconButton(
+          icon: const Icon(Icons.monitor_heart_outlined),
+          onPressed: () => context.go('/main/command-center'),
+          tooltip: 'Command Center',
+        ),
       ],
     );
   }

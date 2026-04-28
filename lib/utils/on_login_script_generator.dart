@@ -1,102 +1,58 @@
-/// Generates an on-login script for MikroTik Hotspot user profiles
-/// that automatically schedules user removal when their session timeout expires
 class OnLoginScriptGenerator {
   static String generate(String validity) {
-    return ''':local user \$user
-:local comment [/ip hotspot user get [find name=\$user] comment]
+    final parsed = _parseValidity(validity);
+    if (parsed == null) return '';
 
-:if (\$comment = "" || \$comment = "Aktif") do={
-    :if ([:len [/system scheduler find name=\$user]] = 0) do={
-        /system scheduler add name=\$user interval=''' +
-        validity +
-        ''' on-event="/ip hotspot user remove [find name=\$user]; /ip hotspot active remove [find user=\$user]; /system scheduler remove [find name=\$user]"
-    }
-    :local date [/system clock get date]
-    :local time [/system clock get time]
-    /ip hotspot user set [find name=\$user] comment="Aktif \$date \$time"
-}''';
+    final days = parsed['days'] ?? 0;
+    final hours = parsed['hours'] ?? 0;
+    final minutes = parsed['minutes'] ?? 0;
+
+    String interval = '';
+    if ((parsed['days'] ?? 0) > 0) interval += '${parsed['days']}d';
+    if ((parsed['hours'] ?? 0) > 0) interval += '${parsed['hours']}h';
+    if ((parsed['minutes'] ?? 0) > 0) interval += '${parsed['minutes']}m';
+    if (interval.isEmpty) interval = '1m';
+
+    return ':if ([/ip hotspot user get [find name="\$user"] comment] != "aktif") do={'
+        '/ip hotspot user set [find name="\$user"] comment="aktif"; '
+        // Perhatikan penggunaan \$user di luar tanda kutip on-event agar nilainya "tertanam"
+        '/system scheduler add name="\$user" interval=$interval on-event="/ip hotspot user disable [find name=\\"\$user\\"]; /ip hotspot active remove [find user=\\"\$user\\"]; /system scheduler remove [find name=\\"\$user\\"]"'
+        '}';
   }
 
   static bool isValidSessionTimeout(String? sessionTimeout) {
-    if (sessionTimeout == null ||
-        sessionTimeout.isEmpty ||
-        sessionTimeout.toLowerCase() == 'unlimited') {
-      return false;
-    }
-    return true;
+    if (sessionTimeout == null || sessionTimeout.isEmpty) return false;
+    return _parseValidity(sessionTimeout) != null;
   }
 
-  static String? parseSessionTimeout(String validity) {
-    final v = validity.toLowerCase().trim();
+  static Map<String, int>? _parseValidity(String v) {
+    v = v.toLowerCase().trim();
+    if (v.isEmpty || v == 'unlimited') return null;
 
-    if (v == 'unlimited' || v.isEmpty) {
-      return null;
-    }
+    int d = 0, h = 0, m = 0, s = 0;
 
-    // Handle format: "DD d HH:mm:ss" (e.g., "1d 00:00:00", "2d 03:30:00")
-    final fullFormatRegex = RegExp(r'^(\d+)d\s+(\d+):(\d+):(\d+)$');
-    final fullMatch = fullFormatRegex.firstMatch(v);
-
+    final fullMatch = RegExp(r'^(\d+)d\s+(\d+):(\d+):(\d+)$').firstMatch(v);
     if (fullMatch != null) {
-      final days = int.tryParse(fullMatch.group(1) ?? '0') ?? 0;
-      final hours = int.tryParse(fullMatch.group(2) ?? '0') ?? 0;
-      final minutes = int.tryParse(fullMatch.group(3) ?? '0') ?? 0;
-      final seconds = int.tryParse(fullMatch.group(4) ?? '0') ?? 0;
-
-      int totalSeconds =
-          (days * 24 * 3600) + (hours * 3600) + (minutes * 60) + seconds;
-
-      if (totalSeconds <= 0) return null;
-
-      return _formatDuration(totalSeconds);
+      d = int.tryParse(fullMatch.group(1) ?? '0') ?? 0;
+      h = int.tryParse(fullMatch.group(2) ?? '0') ?? 0;
+      m = int.tryParse(fullMatch.group(3) ?? '0') ?? 0;
+      s = int.tryParse(fullMatch.group(4) ?? '0') ?? 0;
+      return {'days': d, 'hours': h, 'minutes': m, 'seconds': s};
     }
 
-    // Handle simple format: "1d", "12h", "30m", "1s"
-    final simpleRegex = RegExp(r'^(\d+)([smhd])$');
-    final simpleMatch = simpleRegex.firstMatch(v);
-
-    if (simpleMatch == null) {
-      return null;
+    for (final match in RegExp(r'(\d+)([smhd])').allMatches(v)) {
+      final val = int.tryParse(match.group(1) ?? '') ?? 0;
+      final unit = match.group(2);
+      if (unit == 's')
+        s += val;
+      else if (unit == 'm')
+        m += val;
+      else if (unit == 'h')
+        h += val;
+      else if (unit == 'd') d += val;
     }
 
-    final value = int.tryParse(simpleMatch.group(1) ?? '');
-    final unit = simpleMatch.group(2) ?? 'd';
-
-    if (value == null || value <= 0) {
-      return null;
-    }
-
-    int seconds;
-    switch (unit) {
-      case 's':
-        seconds = value;
-        break;
-      case 'm':
-        seconds = value * 60;
-        break;
-      case 'h':
-        seconds = value * 60 * 60;
-        break;
-      case 'd':
-      default:
-        seconds = value * 24 * 60 * 60;
-        break;
-    }
-
-    return _formatDuration(seconds);
-  }
-
-  static String _formatDuration(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    final secs = seconds % 60;
-
-    if (hours > 0) {
-      return '${hours}h${minutes > 0 ? "${minutes}m" : ""}';
-    } else if (minutes > 0) {
-      return '${minutes}m${secs > 0 ? "${secs}s" : ""}';
-    } else {
-      return '${secs}s';
-    }
+    if (d == 0 && h == 0 && m == 0 && s == 0) return null;
+    return {'days': d, 'hours': h, 'minutes': m, 'seconds': s};
   }
 }
