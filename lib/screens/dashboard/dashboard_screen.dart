@@ -13,6 +13,7 @@ import 'widgets/traffic_monitor_widgets.dart';
 import 'widgets/at_a_glance_card.dart';
 import 'widgets/system_alerts_card.dart';
 import 'widgets/quick_actions_grid.dart';
+import '../../widgets/native_ad_widget.dart';
 import '../../l10n/translations.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -438,9 +439,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ] else
                   SkeletonLoaders.chart(height: 250),
                 // At a Glance summary (High priority) - THIRD
-                if (_highPriorityLoaded)
-                  const AtAGlanceCard()
-                else
+                if (_highPriorityLoaded) ...[
+                  const AtAGlanceCard(),
+                  const NativeAdWidget(),
+                ] else
                   SkeletonLoaders.card(height: 100),
                 SizedBox(height: isSmallScreen ? 12 : 16),
                 // System alerts (High priority)

@@ -52,7 +52,9 @@ class ActivityLog {
           : DateTime.now(),
       username: json['username'],
       routerHost: json['routerHost'],
-      metadata: json['metadata'] as Map<String, dynamic>?,
+      metadata: json['metadata'] != null
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : null,
     );
   }
 
