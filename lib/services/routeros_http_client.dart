@@ -126,6 +126,30 @@ class RouterOSHttpClient implements MikrotikClient {
   }
 
   @override
+  Future<void> deleteUserByName(String username) async {
+    try {
+      final response = await _dio!.get('/ip/hotspot/user');
+      
+      if (response.data is List) {
+        final List<dynamic> users = response.data;
+        for (final user in users) {
+          if (user is Map && user['name'] == username) {
+            final id = user['.id'] ?? user['id'];
+            if (id != null) {
+              await _dio!.delete('/ip/hotspot/user/$id');
+              _log('✓ Deleted user $username with ID $id');
+              return;
+            }
+          }
+        }
+      }
+      _log('! User $username not found for deletion');
+    } catch (e) {
+      _log('Failed to delete user by name: $e');
+    }
+  }
+
+  @override
   Future<void> toggleUserStatus(String id, bool disabled) async {
     await _dio!.patch('/ip/hotspot/user/$id', data: {'disabled': disabled});
   }
@@ -138,6 +162,32 @@ class RouterOSHttpClient implements MikrotikClient {
   @override
   Future<void> logoutUser(String id) async {
     await _dio!.delete('/ip/hotspot/active/$id');
+  }
+
+  @override
+  Future<void> logoutUserByName(String username) async {
+    try {
+      final response = await _dio!.get('/ip/hotspot/active');
+      
+      if (response.data is List) {
+        final List<dynamic> activeUsers = response.data;
+        int count = 0;
+        for (final user in activeUsers) {
+          if (user is Map && user['user'] == username) {
+            final id = user['.id'] ?? user['id'];
+            if (id != null) {
+              await _dio!.delete('/ip/hotspot/active/$id');
+              count++;
+            }
+          }
+        }
+        if (count > 0) {
+          _log('✓ Logged out $count active sessions for user $username');
+        }
+      }
+    } catch (e) {
+      _log('Failed to logout user by name: $e');
+    }
   }
 
   @override

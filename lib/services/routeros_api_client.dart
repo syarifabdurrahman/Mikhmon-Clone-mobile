@@ -463,10 +463,55 @@ class RouterOSClient implements MikrotikClient {
 
       final response = await _readResponse();
       if (_hasError(response)) {
-        throw Exception('Failed to remove user: ${response.first}');
+        throw Exception('Failed to delete user: ${response.first}');
       }
     } catch (e) {
-      throw Exception('Failed to remove hotspot user: $e');
+      throw Exception('Failed to delete hotspot user: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteUserByName(String username) async {
+    try {
+      await _ensureConnected();
+      
+      // 1. Find the user record
+      _writeWord('/ip/hotspot/user/print');
+      _writeWord('?name=$username');
+      _writeWord('');
+      
+      final printResponse = await _readResponse();
+      if (_hasError(printResponse)) {
+        throw Exception('Failed to find user to delete: ${printResponse.first}');
+      }
+      
+      // Filter in Dart to be absolutely sure
+      final targetUsers = printResponse.where((u) => u['name'] == username).toList();
+      
+      if (targetUsers.isEmpty) {
+        _log('! User $username not found on router for deletion');
+        return;
+      }
+      
+      // 2. Remove the user
+      for (final user in targetUsers) {
+        final userId = user['.id'];
+        if (userId != null) {
+          _writeWord('/ip/hotspot/user/remove');
+          _writeWord('=.id=$userId');
+          _writeWord('');
+          
+          final removeResponse = await _readResponse();
+          if (_hasError(removeResponse)) {
+            _log('✗ Failed to remove user $username ($userId): ${removeResponse.first}');
+          } else {
+            _log('✓ Successfully removed user $username ($userId)');
+          }
+        }
+      }
+    } catch (e) {
+      _log('✗ Failed to delete user $username from router: $e');
+      throw Exception('Failed to delete user $username from router: $e');
     }
   }
 
@@ -502,6 +547,46 @@ class RouterOSClient implements MikrotikClient {
       }
     } catch (e) {
       throw Exception('Failed to logout hotspot user: $e');
+    }
+  }
+
+  @override
+  Future<void> logoutUserByName(String username) async {
+    try {
+      await _ensureConnected();
+      
+      // 1. Find the active session ID for this username
+      _writeWord('/ip/hotspot/active/print');
+      _writeWord('?user=$username');
+      _writeWord('');
+      
+      final printResponse = await _readResponse();
+      if (_hasError(printResponse)) {
+        throw Exception('Failed to find active user: ${printResponse.first}');
+      }
+      
+      final activeUsers = printResponse;
+      if (activeUsers.isEmpty) {
+        // User is not currently logged in, nothing to do
+        return;
+      }
+      
+      // 2. Remove all active sessions for this user (usually just one)
+      for (final activeUser in activeUsers) {
+        final activeId = activeUser['.id'];
+        if (activeId != null) {
+          _writeWord('/ip/hotspot/active/remove');
+          _writeWord('=.id=$activeId');
+          _writeWord('');
+          
+          final removeResponse = await _readResponse();
+          if (_hasError(removeResponse)) {
+            _log('Failed to remove active session $activeId: ${removeResponse.first}');
+          }
+        }
+      }
+    } catch (e) {
+      throw Exception('Failed to logout user by name: $e');
     }
   }
 

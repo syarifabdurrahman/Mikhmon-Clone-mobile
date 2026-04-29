@@ -23,11 +23,13 @@ abstract class MikrotikClient {
     String? comment,
   });
   Future<void> deleteUser(String id);
+  Future<void> deleteUserByName(String username);
   Future<void> removeHotspotUser(String id);
   Future<void> toggleUserStatus(String id, bool disabled);
   Future<void> setHotspotUserStatus(String id, bool disabled);
   Future<void> setHotspotUserProfile(String id, String profile);
   Future<void> logoutUser(String id);
+  Future<void> logoutUserByName(String username);
   Future<void> logoutHotspotUser(String id);
   Future<void> addProfile(Map<String, String> profile);
   Future<void> updateProfile(String id, Map<String, String> profile);

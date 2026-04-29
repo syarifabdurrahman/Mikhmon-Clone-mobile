@@ -8,6 +8,7 @@ import '../../services/cache_service.dart';
 import '../../utils/currency_formatter.dart';
 import '../../utils/voucher_printer.dart';
 import '../../providers/app_providers.dart';
+import '../../services/printer_service.dart';
 import '../../widgets/cached_qr_image.dart';
 import '../../l10n/translations.dart';
 
@@ -57,10 +58,34 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
             onPressed: _shareVoucher,
             tooltip: 'Share',
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.print_rounded),
-            onPressed: _printVoucher,
             tooltip: 'Print',
+            onSelected: (value) {
+              if (value == 'pdf') {
+                _printVoucher();
+              } else if (value == 'thermal') {
+                _printThermalVoucher();
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'pdf',
+                child: ListTile(
+                  leading: Icon(Icons.picture_as_pdf_rounded),
+                  title: Text('Standard Print (PDF)'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'thermal',
+                child: ListTile(
+                  leading: Icon(Icons.receipt_long_rounded),
+                  title: Text('Thermal Printer (Bluetooth)'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -395,6 +420,68 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
       loginUrl: loginUrl,
       currencySymbol: currencySymbol,
     );
+  }
+
+  Future<void> _printThermalVoucher() async {
+    final printerService = PrinterService();
+    
+    if (!printerService.isConnected) {
+      // Prompt user to connect printer first
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: context.appSurface,
+          title: Text('Printer Not Connected', style: TextStyle(color: context.appOnSurface)),
+          content: Text('Please connect to a Bluetooth thermal printer first in Settings.', style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.8))),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // In a real app we'd navigate to the settings screen using GoRouter
+                // context.push('/settings/printer');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.appPrimary,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Go to Settings'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    final currencyStr = settings?['currency'] as String? ?? 'USD';
+    final currency = CurrencyData.currencies[currencyStr] ?? CurrencyData.currencies['USD']!;
+
+    String priceStr = 'Free';
+    if (widget.voucher.price != null) {
+      priceStr = CurrencyFormatter.format(widget.voucher.price!, currency);
+    }
+
+    final success = await printerService.printVoucher(
+      hotspotName: settings?['companyName'] as String? ?? 'OMMON HOTSPOT',
+      username: widget.voucher.username,
+      password: widget.voucher.password,
+      price: priceStr,
+      validity: widget.voucher.validity ?? 'Unlimited',
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Printing...' : 'Failed to print'),
+          backgroundColor: success ? context.appPrimary : context.appError,
+        ),
+      );
+    }
   }
 }
 

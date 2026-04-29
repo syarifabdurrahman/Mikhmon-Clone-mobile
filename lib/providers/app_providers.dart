@@ -736,7 +736,9 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
         final comment = userComments[username] ?? '';
         final commentLower = comment.toLowerCase();
         final isVoucher = commentLower.contains('mode:vc') || 
-                         commentLower.contains('mode:up');
+                         commentLower.contains('mode:up') ||
+                         commentLower.startsWith('vc-') ||
+                         commentLower.startsWith('up-');
 
         if (!isVoucher) continue;
 
@@ -1041,6 +1043,15 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
           id,
           !isCurrentlyDisabled,
         );
+
+        // Auto-kick: If we are disabling the user, remove their active session
+        if (!isCurrentlyDisabled && currentUser['name'] != null) {
+          try {
+            await client.logoutUserByName(currentUser['name'].toString());
+          } catch (e) {
+            debugPrint('Failed to auto-kick user ${currentUser['name']}: $e');
+          }
+        }
       } catch (e) {
         // Revert UI change on error
         state = AsyncValue.data(currentState);
@@ -1519,6 +1530,18 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
     final cache = ref.read(cacheServiceProvider);
     await cache.deleteVoucher(username);
 
+    // Also delete from MikroTik router
+    try {
+      final service = ref.read(routerOSServiceProvider);
+      if (service.isConnected && service.client != null) {
+        await service.client!.deleteUserByName(username);
+        // We should also remove their active session if they are logged in
+        await service.client!.logoutUserByName(username);
+      }
+    } catch (e) {
+      debugPrint('Failed to delete user $username from router: $e');
+    }
+
     // Refresh state from cache
     await refresh();
   }
@@ -1526,8 +1549,20 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
   /// Delete multiple vouchers by usernames (for bulk delete)
   Future<void> deleteVouchers(List<String> usernames) async {
     final cache = ref.read(cacheServiceProvider);
+    final service = ref.read(routerOSServiceProvider);
+    final bool connected = service.isConnected && service.client != null;
+
     for (final username in usernames) {
       await cache.deleteVoucher(username);
+      
+      if (connected) {
+        try {
+          await service.client!.deleteUserByName(username);
+          await service.client!.logoutUserByName(username);
+        } catch (e) {
+          debugPrint('Failed to delete user $username from router: $e');
+        }
+      }
     }
 
     // Refresh state from cache
@@ -1605,21 +1640,36 @@ final incomeProvider = AsyncNotifierProvider<IncomeNotifier, IncomeState>(() {
 class IncomeState {
   final List<SalesTransaction> transactions;
   final IncomeSummary summary;
+  final List<SalesChartPoint> chartPoints;
+  final String filter; // '7days', '30days', 'all'
 
   const IncomeState({
     this.transactions = const [],
     required this.summary,
+    this.chartPoints = const [],
+    this.filter = '30days',
   });
 
   IncomeState copyWith({
     List<SalesTransaction>? transactions,
     IncomeSummary? summary,
+    List<SalesChartPoint>? chartPoints,
+    String? filter,
   }) {
     return IncomeState(
       transactions: transactions ?? this.transactions,
       summary: summary ?? this.summary,
+      chartPoints: chartPoints ?? this.chartPoints,
+      filter: filter ?? this.filter,
     );
   }
+}
+
+class SalesChartPoint {
+  final DateTime date;
+  final double amount;
+
+  SalesChartPoint({required this.date, required this.amount});
 }
 
 class IncomeNotifier extends AsyncNotifier<IncomeState> {
@@ -1636,11 +1686,23 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
     // Sort transactions by timestamp (newest first)
     transactions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
+    return _calculateState(transactions, '30days');
+  }
+
+  Future<void> setFilter(String filter) async {
+    final currentState = state.valueOrNull;
+    if (currentState == null) return;
+    
+    state = AsyncValue.data(_calculateState(currentState.transactions, filter));
+  }
+
+  IncomeState _calculateState(List<SalesTransaction> transactions, String filter) {
+    final cache = ref.read(cacheServiceProvider);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final firstOfMonth = DateTime(now.year, now.month, 1);
 
-    // Filter for summary calculations
+    // Filter for summary calculations (always show today/this month in summary)
     final todayTransactions = transactions.where((t) => 
       t.timestamp.isAfter(today) || t.timestamp.isAtSameMomentAs(today)).toList();
     
@@ -1657,17 +1719,26 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
       transactionsThisMonth: monthTransactions.length,
     );
 
-    // Save summary to cache for other components
-    await cache.saveIncomeSummary({
-      'todayIncome': todayIncome,
-      'thisMonthIncome': monthIncome,
-      'transactionsToday': todayTransactions.length,
-      'transactionsThisMonth': monthTransactions.length,
-    });
+    // Calculate chart points (daily income for the last N days)
+    final int daysToCalculate = filter == '7days' ? 7 : 30;
+    final List<SalesChartPoint> points = [];
+    
+    for (int i = daysToCalculate - 1; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      final nextDate = date.add(const Duration(days: 1));
+      
+      final dailyTotal = transactions
+          .where((t) => t.timestamp.isAfter(date.subtract(const Duration(milliseconds: 1))) && t.timestamp.isBefore(nextDate))
+          .fold(0.0, (sum, t) => sum + t.price);
+          
+      points.add(SalesChartPoint(date: date, amount: dailyTotal));
+    }
 
     return IncomeState(
       transactions: transactions,
       summary: summary,
+      chartPoints: points,
+      filter: filter,
     );
   }
 

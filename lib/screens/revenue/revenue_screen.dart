@@ -23,7 +23,6 @@ class RevenueScreen extends ConsumerStatefulWidget {
 class _RevenueScreenState extends ConsumerState<RevenueScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  TimePeriod _timePeriod = TimePeriod.week;
 
   @override
   void initState() {
@@ -67,24 +66,30 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
       await file.writeAsString(buffer.toString());
 
       // Share the file
+      if (!mounted) return;
+      
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Sales Report - ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
+      );
+      
       if (mounted) {
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text:
-              'Sales Report - ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
-        );
         FeedbackUtils.showSuccess(context, 'Report exported successfully!');
       }
     } catch (e) {
-      FeedbackUtils.showError(
-        context,
-        AppStrings.of(context).failedToExport.replaceAll('%s', e.toString()),
-      );
+      if (mounted) {
+        FeedbackUtils.showError(
+          context,
+          AppStrings.of(context).failedToExport.replaceAll('%s', e.toString()),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final incomeAsync = ref.watch(incomeProvider);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -110,27 +115,19 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
                 ),
           ),
           actions: [
-            PopupMenuButton<TimePeriod>(
+            PopupMenuButton<String>(
               icon: const Icon(Icons.calendar_today_rounded),
-              initialValue: _timePeriod,
-              onSelected: (period) {
-                setState(() {
-                  _timePeriod = period;
-                });
+              initialValue: incomeAsync.valueOrNull?.filter ?? '30days',
+              onSelected: (filter) {
+                ref.read(incomeProvider.notifier).setFilter(filter);
               },
               itemBuilder: (context) => [
-                PopupMenuItem(
-                    value: TimePeriod.week,
-                    child: Text(AppStrings.of(context).thisWeek)),
-                PopupMenuItem(
-                    value: TimePeriod.month,
-                    child: Text(AppStrings.of(context).thisMonth)),
-                PopupMenuItem(
-                    value: TimePeriod.quarter,
-                    child: Text(AppStrings.of(context).thisQuarter)),
-                PopupMenuItem(
-                    value: TimePeriod.year,
-                    child: Text(AppStrings.of(context).thisYear)),
+                const PopupMenuItem(
+                    value: '7days',
+                    child: Text('Last 7 Days')),
+                const PopupMenuItem(
+                    value: '30days',
+                    child: Text('Last 30 Days')),
               ],
             ),
             IconButton(
@@ -146,7 +143,7 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
         ),
         body: Column(
           children: [
-            _SummaryCards(timePeriod: _timePeriod),
+            const _SummaryCards(),
             Container(
               color: context.appSurface,
               child: TabBar(
@@ -182,12 +179,8 @@ class _RevenueScreenState extends ConsumerState<RevenueScreen>
   }
 }
 
-enum TimePeriod { week, month, quarter, year }
-
 class _SummaryCards extends ConsumerWidget {
-  final TimePeriod timePeriod;
-
-  const _SummaryCards({required this.timePeriod});
+  const _SummaryCards();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -196,29 +189,54 @@ class _SummaryCards extends ConsumerWidget {
     return incomeAsync.when(
       data: (income) {
         final summary = income.summary;
+        final filterLabel = income.filter == '7days' ? 'Last 7 Days' : 'Last 30 Days';
 
         return Container(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: _SummaryCard(
-                  title: _getPeriodLabel(timePeriod),
-                  value:
-                      _formatCurrency(_getValueForPeriod(summary, timePeriod)),
-                  icon: Icons.payments_rounded,
-                  color: context.appPrimary,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SummaryCard(
+                      title: 'Today',
+                      value: _formatCurrency(summary.todayIncome),
+                      icon: Icons.today_rounded,
+                      color: context.appPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SummaryCard(
+                      title: 'This Month',
+                      value: _formatCurrency(summary.thisMonthIncome),
+                      icon: Icons.calendar_month_rounded,
+                      color: context.appSecondary,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _SummaryCard(
-                  title: 'Transactions',
-                  value: _getTransactionCountForPeriod(summary, timePeriod)
-                      .toString(),
-                  icon: Icons.receipt_long_rounded,
-                  color: context.appSecondary,
-                ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SummaryCard(
+                      title: 'Transactions Today',
+                      value: summary.transactionsToday.toString(),
+                      icon: Icons.receipt_long_rounded,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SummaryCard(
+                      title: filterLabel,
+                      value: _formatCurrency(income.chartPoints.fold(0.0, (sum, p) => sum + p.amount)),
+                      icon: Icons.analytics_rounded,
+                      color: Colors.teal,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -233,7 +251,7 @@ class _SummaryCards extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       height: 100,
-      child: Row(
+      child: const Row(
         children: [
           Expanded(child: _CardPlaceholder()),
           SizedBox(width: 12),
@@ -247,7 +265,7 @@ class _SummaryCards extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       height: 100,
-      child: Row(
+      child: const Row(
         children: [
           Expanded(child: _CardPlaceholder()),
           SizedBox(width: 12),
@@ -255,41 +273,6 @@ class _SummaryCards extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  String _getPeriodLabel(TimePeriod period) {
-    switch (period) {
-      case TimePeriod.week:
-        return 'This Week';
-      case TimePeriod.month:
-        return 'This Month';
-      case TimePeriod.quarter:
-        return 'This Quarter';
-      case TimePeriod.year:
-        return 'This Year';
-    }
-  }
-
-  double _getValueForPeriod(IncomeSummary summary, TimePeriod period) {
-    switch (period) {
-      case TimePeriod.week:
-      case TimePeriod.month:
-        return summary.thisMonthIncome;
-      case TimePeriod.quarter:
-      case TimePeriod.year:
-        return summary.thisMonthIncome * 3; // Approximate
-    }
-  }
-
-  int _getTransactionCountForPeriod(IncomeSummary summary, TimePeriod period) {
-    switch (period) {
-      case TimePeriod.week:
-      case TimePeriod.month:
-        return summary.transactionsThisMonth;
-      case TimePeriod.quarter:
-      case TimePeriod.year:
-        return summary.transactionsThisMonth * 3; // Approximate
-    }
   }
 
   String _formatCurrency(double value) {
@@ -333,7 +316,7 @@ class _SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 24),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
             title,
             style: TextStyle(
@@ -342,7 +325,7 @@ class _SummaryCard extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
@@ -358,6 +341,8 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _CardPlaceholder extends StatelessWidget {
+  const _CardPlaceholder();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -387,30 +372,50 @@ class _ChartsTab extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Revenue Trend',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: context.appOnSurface,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: context.appPrimary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      income.filter == '7days' ? '7 Days' : '30 Days',
+                      style: TextStyle(
+                        color: context.appPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _RevenueChart(points: income.chartPoints),
+              const SizedBox(height: 24),
               Text(
-                'Revenue Trend',
+                'Recent Transactions',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: context.appOnSurface,
                       fontWeight: FontWeight.bold,
                     ),
               ),
-              SizedBox(height: 16),
-              _RevenueChart(transactions: income.transactions),
-              SizedBox(height: 24),
-              Text(
-                'Daily Breakdown',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: context.appOnSurface,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              SizedBox(height: 16),
-              _DailyBarChart(transactions: income.transactions),
+              const SizedBox(height: 16),
+              ...income.transactions.take(5).map((t) => _TransactionCard(transaction: t)),
             ],
           ),
         );
       },
-      loading: () => Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, __) => _buildErrorState(context, error.toString()),
     );
   }
@@ -425,7 +430,7 @@ class _ChartsTab extends ConsumerWidget {
             size: 64,
             color: context.appError,
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'Failed to load revenue data',
             style: TextStyle(
@@ -433,7 +438,7 @@ class _ChartsTab extends ConsumerWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             error,
             style: TextStyle(
@@ -447,47 +452,47 @@ class _ChartsTab extends ConsumerWidget {
 }
 
 class _RevenueChart extends StatelessWidget {
-  final List<SalesTransaction> transactions;
+  final List<SalesChartPoint> points;
 
-  const _RevenueChart({required this.transactions});
+  const _RevenueChart({required this.points});
 
   @override
   Widget build(BuildContext context) {
-    if (transactions.isEmpty) {
+    if (points.isEmpty || points.every((p) => p.amount == 0)) {
       return _buildEmptyChart(context);
     }
 
-    // Group transactions by date
-    final groupedData = _groupByDate(transactions);
-    final sortedDates = groupedData.keys.toList()..sort();
-
-    if (sortedDates.isEmpty) {
-      return _buildEmptyChart(context);
-    }
+    final maxAmount = points.fold(0.0, (max, p) => p.amount > max ? p.amount : max);
+    final interval = maxAmount > 0 ? (maxAmount / 4).ceilToDouble() : 1000.0;
 
     return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
+      height: 240,
+      padding: const EdgeInsets.fromLTRB(8, 24, 24, 8),
       decoration: BoxDecoration(
         color: context.appCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: context.appOnSurface.withValues(alpha: 0.05),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: LineChart(
         LineChartData(
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: _calculateHorizontalInterval(groupedData),
-            getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: context.appOnSurface.withValues(alpha: 0.1),
-                strokeWidth: 1,
-              );
-            },
+            horizontalInterval: interval > 0 ? interval : 1.0,
+            getDrawingHorizontalLine: (value) => FlLine(
+              color: context.appOnSurface.withValues(alpha: 0.05),
+              strokeWidth: 1,
+            ),
           ),
           titlesData: FlTitlesData(
             show: true,
@@ -495,18 +500,22 @@ class _RevenueChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 30,
+                interval: points.length > 10 ? 5 : 1,
                 getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= sortedDates.length ||
-                      value.toInt() < 0) {
-                    return Text('');
+                  final idx = value.toInt();
+                  if (idx < 0 || idx >= points.length) return const SizedBox.shrink();
+                  
+                  if (points.length > 10 && idx % 5 != 0 && idx != points.length - 1) {
+                    return const SizedBox.shrink();
                   }
-                  final date = sortedDates[value.toInt()];
+
+                  final date = points[idx].date;
                   return Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
-                      _formatDateShort(date),
+                      DateFormat('dd/MM').format(date),
                       style: TextStyle(
-                        color: context.appOnSurface.withValues(alpha: 0.6),
+                        color: context.appOnSurface.withValues(alpha: 0.5),
                         fontSize: 10,
                       ),
                     ),
@@ -517,51 +526,41 @@ class _RevenueChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 60,
+                reservedSize: 45,
                 getTitlesWidget: (value, meta) {
+                  if (value == meta.max) return const SizedBox.shrink();
                   return Text(
-                    _formatCurrency(value.toDouble()),
+                    value >= 1000 ? '${(value / 1000).toStringAsFixed(0)}k' : value.toStringAsFixed(0),
                     style: TextStyle(
-                      color: context.appOnSurface.withValues(alpha: 0.6),
+                      color: context.appOnSurface.withValues(alpha: 0.5),
                       fontSize: 10,
                     ),
                   );
                 },
               ),
             ),
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           ),
-          borderData: FlBorderData(
-            show: true,
-            border: Border.all(
-              color: context.appOnSurface.withValues(alpha: 0.1),
-            ),
-          ),
+          borderData: FlBorderData(show: false),
           lineBarsData: [
             LineChartBarData(
-              spots: _generateSpots(sortedDates, groupedData),
+              spots: List.generate(points.length, (i) => FlSpot(i.toDouble(), points[i].amount)),
               isCurved: true,
+              curveSmoothness: 0.35,
               gradient: LinearGradient(
-                colors: [
-                  context.appPrimary,
-                  context.appPrimary.withValues(alpha: 0.3),
-                ],
+                colors: [context.appPrimary, context.appSecondary],
               ),
-              barWidth: 3,
+              barWidth: 4,
+              isStrokeCapRound: true,
               dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
-                    radius: 4,
-                    color: context.appPrimary,
-                    strokeWidth: 2,
-                  );
-                },
+                show: points.length < 15,
+                getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                  radius: 3,
+                  color: context.appCard,
+                  strokeWidth: 2,
+                  strokeColor: context.appPrimary,
+                ),
               ),
               belowBarData: BarAreaData(
                 show: true,
@@ -576,7 +575,24 @@ class _RevenueChart extends StatelessWidget {
               ),
             ),
           ],
-          minY: 0,
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (spot) => context.appSurface,
+              getTooltipItems: (spots) => spots.map((s) {
+                final date = points[s.x.toInt()].date;
+                return LineTooltipItem(
+                  '${DateFormat('MMM dd').format(date)}\n',
+                  TextStyle(color: context.appOnSurface, fontWeight: FontWeight.bold),
+                  children: [
+                    TextSpan(
+                      text: _formatCurrency(s.y),
+                      style: TextStyle(color: context.appPrimary, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
         ),
       ),
     );
@@ -603,7 +619,7 @@ class _RevenueChart extends StatelessWidget {
               size: 48,
               color: context.appOnSurface.withValues(alpha: 0.3),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'No revenue data yet',
               style: TextStyle(
@@ -616,240 +632,8 @@ class _RevenueChart extends StatelessWidget {
     );
   }
 
-  Map<DateTime, double> _groupByDate(List<SalesTransaction> transactions) {
-    final grouped = <DateTime, double>{};
-    for (final transaction in transactions) {
-      final date = DateTime(
-        transaction.timestamp.year,
-        transaction.timestamp.month,
-        transaction.timestamp.day,
-      );
-      grouped[date] = (grouped[date] ?? 0) + transaction.price;
-    }
-    return grouped;
-  }
-
-  List<FlSpot> _generateSpots(
-      List<DateTime> dates, Map<DateTime, double> groupedData) {
-    final spots = <FlSpot>[];
-    for (var i = 0; i < dates.length; i++) {
-      spots.add(FlSpot(i.toDouble(), groupedData[dates[i]] ?? 0));
-    }
-    return spots;
-  }
-
-  double _calculateHorizontalInterval(Map<DateTime, double> data) {
-    if (data.isEmpty) return 10000;
-    final values = data.values.toList();
-    final max = values.reduce((a, b) => a > b ? a : b);
-    return (max / 4).ceilToDouble() * 1000;
-  }
-
-  String _formatDateShort(DateTime date) {
-    return '${date.day}/${date.month}';
-  }
-
   String _formatCurrency(double value) {
-    return FilterUtils.formatCurrency(value, symbol: '');
-  }
-}
-
-class _DailyBarChart extends StatelessWidget {
-  final List<SalesTransaction> transactions;
-
-  const _DailyBarChart({required this.transactions});
-
-  @override
-  Widget build(BuildContext context) {
-    if (transactions.isEmpty) {
-      return _buildEmptyChart(context);
-    }
-
-    final groupedData = _groupByDate(transactions);
-    final sortedDates = groupedData.keys.toList()..sort();
-    final recentDates = sortedDates.take(7).toList();
-
-    if (recentDates.isEmpty) {
-      return _buildEmptyChart(context);
-    }
-
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.appCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: context.appOnSurface.withValues(alpha: 0.05),
-          width: 1,
-        ),
-      ),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: _getMaxYValue(groupedData, recentDates),
-          minY: 0,
-          barGroups: [
-            for (var i = 0; i < recentDates.length; i++)
-              BarChartGroupData(
-                x: i,
-                barRods: [
-                  BarChartRodData(
-                    toY: groupedData[recentDates[i]] ?? 0,
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        context.appSecondary,
-                        context.appSecondary.withValues(alpha: 0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    width: 16,
-                  ),
-                ],
-              ),
-          ],
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval:
-                _calculateHorizontalInterval(groupedData, recentDates),
-            getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: context.appOnSurface.withValues(alpha: 0.1),
-                strokeWidth: 1,
-              );
-            },
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 30,
-                getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= recentDates.length ||
-                      value.toInt() < 0) {
-                    return Text('');
-                  }
-                  final date = recentDates[value.toInt()];
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      _formatDateShort(date),
-                      style: TextStyle(
-                        color: context.appOnSurface.withValues(alpha: 0.6),
-                        fontSize: 10,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 60,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    _formatCurrency(value.toDouble()),
-                    style: TextStyle(
-                      color: context.appOnSurface.withValues(alpha: 0.6),
-                      fontSize: 10,
-                    ),
-                  );
-                },
-              ),
-            ),
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-          ),
-          borderData: FlBorderData(
-            show: true,
-            border: Border.all(
-              color: context.appOnSurface.withValues(alpha: 0.1),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyChart(BuildContext context) {
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.appCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: context.appOnSurface.withValues(alpha: 0.05),
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          'No data available',
-          style: TextStyle(
-            color: context.appOnSurface.withValues(alpha: 0.5),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Map<DateTime, double> _groupByDate(List<SalesTransaction> transactions) {
-    final grouped = <DateTime, double>{};
-    for (final transaction in transactions) {
-      final date = DateTime(
-        transaction.timestamp.year,
-        transaction.timestamp.month,
-        transaction.timestamp.day,
-      );
-      grouped[date] = (grouped[date] ?? 0) + transaction.price;
-    }
-    return grouped;
-  }
-
-  double _getMaxYValue(
-      Map<DateTime, double> groupedData, List<DateTime> dates) {
-    double max = 0;
-    for (final date in dates) {
-      if ((groupedData[date] ?? 0) > max) {
-        max = groupedData[date]!;
-      }
-    }
-    if (max == 0) return 10000;
-    return max * 1.2;
-  }
-
-  double _calculateHorizontalInterval(
-      Map<DateTime, double> groupedData, List<DateTime> dates) {
-    double max = 0;
-    for (final date in dates) {
-      if ((groupedData[date] ?? 0) > max) {
-        max = groupedData[date]!;
-      }
-    }
-    return (max / 4).ceilToDouble() * 1000;
-  }
-
-  String _formatDateShort(DateTime date) {
-    return '${date.day}/${date.month}';
-  }
-
-  String _formatCurrency(double value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    } else if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toStringAsFixed(0);
+    return NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(value);
   }
 }
 
@@ -882,7 +666,7 @@ class _ByProfileTab extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ...sortedProfiles.map((entry) {
                 return _ProfileRevenueCard(
                   profileName: entry.key,
@@ -898,7 +682,7 @@ class _ByProfileTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) =>
           Center(child: Text(AppStrings.of(context).connectionError)),
     );
@@ -914,7 +698,7 @@ class _ByProfileTab extends ConsumerWidget {
             size: 64,
             color: context.appOnSurface.withValues(alpha: 0.3),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'No revenue data yet',
             style: TextStyle(
@@ -983,7 +767,7 @@ class _ProfileRevenueCard extends StatelessWidget {
             child: Center(
               child: Text(
                 rank.toString(),
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -991,7 +775,7 @@ class _ProfileRevenueCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1004,7 +788,7 @@ class _ProfileRevenueCard extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   '$transactionCount transactions',
                   style: TextStyle(
@@ -1065,7 +849,6 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
 
     return incomeAsync.when(
       data: (income) {
-        // Apply filters using FilterUtils
         final allTransactions = income.transactions;
         var transactions = FilterUtils.filterBySearch<SalesTransaction>(
           allTransactions,
@@ -1086,7 +869,6 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
           (t) => t.timestamp,
         );
 
-        // Sort by date (newest first)
         transactions = FilterUtils.sortByDate<SalesTransaction>(
             transactions, (t) => t.timestamp);
 
@@ -1136,7 +918,7 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
           ],
         );
       },
-      loading: () => Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) =>
           Center(child: Text(AppStrings.of(context).connectionError)),
     );
@@ -1152,7 +934,7 @@ class _TransactionsTabState extends ConsumerState<_TransactionsTab> {
             size: 64,
             color: context.appOnSurface.withValues(alpha: 0.3),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'No transactions found',
             style: TextStyle(
@@ -1208,10 +990,10 @@ class _FilterBar extends StatelessWidget {
                 child: TextField(
                   decoration: InputDecoration(
                     hintText: 'Search by username...',
-                    prefixIcon: Icon(Icons.search_rounded),
+                    prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: Icon(Icons.clear_rounded),
+                            icon: const Icon(Icons.clear_rounded),
                             onPressed: () => onSearchChanged(''),
                           )
                         : null,
@@ -1225,7 +1007,7 @@ class _FilterBar extends StatelessWidget {
                   onChanged: onSearchChanged,
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               InkWell(
                 onTap: () => _showDateRangePicker(context),
                 borderRadius: BorderRadius.circular(12),
@@ -1247,7 +1029,7 @@ class _FilterBar extends StatelessWidget {
                         size: 18,
                         color: context.appOnSurface,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         _formatDateRange(),
                         style: TextStyle(
@@ -1262,7 +1044,7 @@ class _FilterBar extends StatelessWidget {
             ],
           ),
           if (profiles.isNotEmpty) ...[
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -1320,11 +1102,11 @@ class _FilterBar extends StatelessWidget {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.dark(
-              primary: const Color(0xFF7C3AED),
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF7C3AED),
               onPrimary: Colors.white,
-              surface: const Color(0xFF1E293B),
-              onSurface: const Color(0xFFE2E8F0),
+              surface: Color(0xFF1E293B),
+              onSurface: Color(0xFFE2E8F0),
             ),
           ),
           child: child!,
@@ -1374,7 +1156,7 @@ class _TransactionCard extends StatelessWidget {
                         fontSize: 15,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       transaction.profile.toUpperCase(),
                       style: TextStyle(
@@ -1397,7 +1179,7 @@ class _TransactionCard extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
             children: [
               Icon(
@@ -1405,7 +1187,7 @@ class _TransactionCard extends StatelessWidget {
                 size: 16,
                 color: context.appOnSurface.withValues(alpha: 0.5),
               ),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
                 _formatTimestamp(transaction.timestamp),
                 style: TextStyle(
@@ -1413,14 +1195,14 @@ class _TransactionCard extends StatelessWidget {
                   fontSize: 12,
                 ),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               if (transaction.comment != null) ...[
                 Icon(
                   Icons.comment_rounded,
                   size: 16,
                   color: context.appOnSurface.withValues(alpha: 0.5),
                 ),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     transaction.comment!,

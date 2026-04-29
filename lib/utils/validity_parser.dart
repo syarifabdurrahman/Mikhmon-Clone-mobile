@@ -117,15 +117,15 @@ class ValidityParser {
       final code = DateTime.now().millisecondsSinceEpoch % 1000;
       final date = DateTime.now();
       final dateStr = '${date.month}.${date.day}.${date.year.toString().substring(2)}';
-      return '$mode-$code-$dateStr-${comment ?? ''}';
+      return 'mode:$mode;$dateStr;${comment ?? ""}';
     }
 
     // Build comment with expiry
     final code = DateTime.now().millisecondsSinceEpoch % 1000;
     final date = DateTime.now();
     final dateStr = '${date.month}.${date.day}.${date.year.toString().substring(2)}';
-    // Mikhmon format: mode-CODE-DATE-COMMENT
-    return '$mode-$code-$dateStr-${comment ?? ""}';
+    // Mikhmon compatible format: mode:vc;...
+    return 'mode:$mode;$dateStr;${comment ?? ""}';
   }
 
   /// Get validity in MikroTik format for API
