@@ -848,9 +848,11 @@ class _VoucherGridCard extends StatelessWidget {
                   Row(
                     children: [
                       StatusBadge(
-                        status: isExpired || voucher.disabled
+                        status: voucher.isExpired
                             ? VoucherStatus.expired
-                            : VoucherStatus.active,
+                            : voucher.isDisabledOnly
+                                ? VoucherStatus.disabled
+                                : VoucherStatus.active,
                         showLabel: true,
                         fontSize: 10,
                         padding: const EdgeInsets.symmetric(

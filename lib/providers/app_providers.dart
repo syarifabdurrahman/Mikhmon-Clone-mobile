@@ -519,13 +519,15 @@ class PaginatedUsers {
   final bool hasMore;
   final int currentPage;
   final int pageSize;
-  final Set<String> activeUsernames; // usernames found in hotspot/active
+  final int totalCount;
+  final Set<String> activeUsernames;
 
   PaginatedUsers({
     required this.users,
-    this.hasMore = true,
-    this.currentPage = 1,
-    this.pageSize = 20,
+    required this.hasMore,
+    required this.currentPage,
+    required this.pageSize,
+    this.totalCount = 0,
     this.activeUsernames = const {},
   });
 
@@ -540,6 +542,7 @@ class PaginatedUsers {
       hasMore: hasMore ?? this.hasMore,
       currentPage: currentPage ?? this.currentPage,
       pageSize: pageSize,
+      totalCount: totalCount,
       activeUsernames: activeUsernames ?? this.activeUsernames,
     );
   }
@@ -620,6 +623,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       hasMore: hasMore,
       currentPage: page,
       pageSize: _pageSize,
+      totalCount: filteredUsers.length,
       activeUsernames: activeUsernames,
     );
   }
@@ -630,6 +634,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       hasMore: false,
       currentPage: 1,
       pageSize: _pageSize,
+      totalCount: 0,
     );
   }
 
@@ -675,7 +680,7 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
     // Auto-record revenue for new connections
     if (activeUsers.isNotEmpty) {
-      await _autoRecordRevenue(activeUsers);
+      await _autoRecordRevenue(activeUsers, allUsers);
     }
 
     // Track session time for vouchers
@@ -690,15 +695,23 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   }
 
   /// Auto-record revenue when a voucher connects to the hotspot.
-  /// Checks each active user against recorded connections and records
-  /// a sale based on the user's profile price.
   Future<void> _autoRecordRevenue(
-      List<Map<String, dynamic>> activeUsers) async {
+      List<Map<String, dynamic>> activeUsers,
+      List<Map<String, dynamic>> allUsers) async {
     try {
-      // Get cached profiles with prices
-      final profilesAsync = ref.read(userProfileProvider);
-      final profiles = profilesAsync.valueOrNull;
-      if (profiles == null || profiles.isEmpty) return;
+      // Create a map for quick user lookup to get comments
+      final userComments = <String, String>{};
+      for (final u in allUsers) {
+        final name = u['name'] as String? ?? '';
+        final comment = u['comment'] as String? ?? '';
+        if (name.isNotEmpty) {
+          userComments[name] = comment;
+        }
+      }
+
+      // Get profiles - await the future to ensure data is loaded
+      final profiles = await ref.read(userProfileProvider.future);
+      if (profiles.isEmpty) return;
 
       // Build a map of profile name -> price
       final profilePrices = <String, double>{};
@@ -712,38 +725,42 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
       for (final activeUser in activeUsers) {
         final username = activeUser['user'] as String? ?? '';
-        final loginTime = activeUser['login-time'] as String? ?? '';
         final profileName = activeUser['profile'] as String? ?? '';
 
-        if (username.isEmpty || loginTime.isEmpty) continue;
+        if (username.isEmpty) continue;
 
-        // Create unique key for this session
-        final connectionKey = '$username|$loginTime';
+        // Skip if already recorded in this session (memory)
+        if (_recordedConnections.contains(username)) continue;
 
-        // Skip if already recorded
-        if (_recordedConnections.contains(connectionKey)) continue;
+        // Verify if it's a voucher from the user list comment
+        final comment = userComments[username] ?? '';
+        final commentLower = comment.toLowerCase();
+        final isVoucher = commentLower.contains('mode:vc') || 
+                         commentLower.contains('mode:up');
+
+        if (!isVoucher) continue;
 
         // Check if this profile has a price
         final price = profilePrices[profileName.toLowerCase()];
         if (price == null || price <= 0) continue;
 
-        // Mark as recorded before async call to prevent duplicates
-        _recordedConnections.add(connectionKey);
+        // Mark as recorded
+        _recordedConnections.add(username);
 
         // Save to cache for persistence
         final cache = ref.read(cacheServiceProvider);
         await cache.saveRecordedConnections(_recordedConnections);
 
-        // Record the sale asynchronously
-        ref.read(incomeProvider.notifier).recordSale(
+        // Record the sale
+        await ref.read(incomeProvider.notifier).recordSale(
               username: username,
               profile: profileName,
               price: price,
-              comment: 'Auto: voucher connected',
+              comment: 'Auto: voucher activated',
             );
       }
-    } catch (_) {
-      // Silent fail - don't block user list loading
+    } catch (e) {
+      debugPrint('Error in _autoRecordRevenue: $e');
     }
   }
 
@@ -1336,10 +1353,17 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       // Skip on-login script if generation fails
     }
 
+    // Format comment with price for Mikhmon compatibility
+    final comment = profile.price != null 
+        ? '${profile.validity ?? "unlimited"}/${profile.price!.toInt()}'
+        : null;
+
     await client.addProfile({
       'name': profile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
       if (onLoginScript != null) 'on-login': onLoginScript,
+      if (comment != null) 'comment': comment,
+      if (profile.sharedUsers != null) 'shared-users': profile.sharedUsers.toString(),
     });
 
     try {
@@ -1371,10 +1395,17 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       }
     } catch (e) {}
 
+    // Format comment with price for Mikhmon compatibility
+    final comment = updatedProfile.price != null 
+        ? '${updatedProfile.validity ?? "unlimited"}/${updatedProfile.price!.toInt()}'
+        : null;
+
     await client.updateProfile(updatedProfile.id, {
       'name': updatedProfile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
       if (onLoginScript != null) 'on-login': onLoginScript,
+      if (comment != null) 'comment': comment,
+      if (updatedProfile.sharedUsers != null) 'shared-users': updatedProfile.sharedUsers.toString(),
     });
 
     try {
@@ -1417,8 +1448,13 @@ final vouchersProvider =
 });
 
 class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
+  Timer? _refreshTimer;
+
   @override
   Future<List<Voucher>> build() async {
+    // Start auto-refresh for expired status
+    _startAutoRefresh();
+    
     final cache = ref.read(cacheServiceProvider);
 
     // Try to get cached vouchers first
@@ -1451,6 +1487,21 @@ class VouchersNotifier extends AsyncNotifier<List<Voucher>> {
 
     // No cache, return empty list
     return [];
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      if (ref.read(routerOSServiceProvider).isConnected) {
+        refresh();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    // Use the native dispose from Riverpod if available, otherwise just clear timer
   }
 
   /// Add new vouchers to cache and update state
@@ -1575,107 +1626,49 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
   @override
   Future<IncomeState> build() async {
     final cache = ref.read(cacheServiceProvider);
+    
+    // Load all historical transactions from cache
+    final cachedData = cache.getSalesTransactions() ?? [];
+    final transactions = cachedData
+        .map((t) => SalesTransaction.fromJson(t))
+        .toList();
+    
+    // Sort transactions by timestamp (newest first)
+    transactions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    // Try to load from cache first
-    final cachedTransactions = cache.getSalesTransactions();
-    final cachedSummary = cache.getIncomeSummary();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final firstOfMonth = DateTime(now.year, now.month, 1);
 
-    if (cachedTransactions != null && cachedSummary != null) {
-      // Show cached data immediately
-      final cachedState = IncomeState(
-        transactions: cachedTransactions
-            .map((t) => SalesTransaction.fromJson(t))
-            .toList(),
-        summary: IncomeSummary(
-          todayIncome: (cachedSummary['todayIncome'] as num).toDouble(),
-          thisMonthIncome: (cachedSummary['thisMonthIncome'] as num).toDouble(),
-          transactionsToday: cachedSummary['transactionsToday'] as int,
-          transactionsThisMonth: cachedSummary['transactionsThisMonth'] as int,
-        ),
-      );
+    // Filter for summary calculations
+    final todayTransactions = transactions.where((t) => 
+      t.timestamp.isAfter(today) || t.timestamp.isAtSameMomentAs(today)).toList();
+    
+    final monthTransactions = transactions.where((t) => 
+      t.timestamp.isAfter(firstOfMonth) || t.timestamp.isAtSameMomentAs(firstOfMonth)).toList();
 
-      // Refresh in background
-      refresh();
+    final todayIncome = todayTransactions.fold(0.0, (sum, t) => sum + t.price);
+    final monthIncome = monthTransactions.fold(0.0, (sum, t) => sum + t.price);
 
-      return cachedState;
-    }
+    final summary = IncomeSummary(
+      todayIncome: todayIncome,
+      thisMonthIncome: monthIncome,
+      transactionsToday: todayTransactions.length,
+      transactionsThisMonth: monthTransactions.length,
+    );
 
-    // No cache - fetch fresh data
-    return _fetchIncomeData();
-  }
+    // Save summary to cache for other components
+    await cache.saveIncomeSummary({
+      'todayIncome': todayIncome,
+      'thisMonthIncome': monthIncome,
+      'transactionsToday': todayTransactions.length,
+      'transactionsThisMonth': monthTransactions.length,
+    });
 
-  Future<IncomeState> _fetchIncomeData() async {
-    final cache = ref.read(cacheServiceProvider);
-    final service = ref.read(routerOSServiceProvider);
-    final client = service.client;
-
-    if (client == null) {
-      return const IncomeState(
-        transactions: [],
-        summary: IncomeSummary(
-          todayIncome: 0.0,
-          thisMonthIncome: 0.0,
-          transactionsToday: 0,
-          transactionsThisMonth: 0,
-        ),
-      );
-    }
-
-    try {
-      // Get active users to calculate income
-      final activeUsers = await client.getHotspotActiveUsers();
-      final profilesAsync = ref.read(userProfileProvider);
-      final profiles = profilesAsync.valueOrNull ?? [];
-
-      // Build profile price map
-      final profilePrices = <String, double>{};
-      for (final profile in profiles) {
-        if (profile.price != null && profile.price! > 0) {
-          profilePrices[profile.name.toLowerCase()] = profile.price!;
-        }
-      }
-
-      // Calculate today's income from active users
-      double todayIncome = 0;
-      int transactionsToday = 0;
-
-      for (final user in activeUsers) {
-        final profileName = user['profile']?.toString().toLowerCase() ?? '';
-        final price = profilePrices[profileName];
-        if (price != null) {
-          todayIncome += price;
-          transactionsToday++;
-        }
-      }
-
-      // Save to cache
-      await cache.saveIncomeSummary({
-        'todayIncome': todayIncome,
-        'thisMonthIncome': todayIncome * 30, // Estimate
-        'transactionsToday': transactionsToday,
-        'transactionsThisMonth': transactionsToday * 30,
-      });
-
-      return IncomeState(
-        transactions: [],
-        summary: IncomeSummary(
-          todayIncome: todayIncome,
-          thisMonthIncome: todayIncome * 30,
-          transactionsToday: transactionsToday,
-          transactionsThisMonth: transactionsToday * 30,
-        ),
-      );
-    } catch (e) {
-      return const IncomeState(
-        transactions: [],
-        summary: IncomeSummary(
-          todayIncome: 0.0,
-          thisMonthIncome: 0.0,
-          transactionsToday: 0,
-          transactionsThisMonth: 0,
-        ),
-      );
-    }
+    return IncomeState(
+      transactions: transactions,
+      summary: summary,
+    );
   }
 
   Future<void> recordSale({
@@ -1699,14 +1692,12 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
     await cache.saveSalesTransaction(transaction.toJson());
 
     // Refresh state
-    ref.invalidate(incomeProvider);
+    ref.invalidateSelf();
   }
 
   Future<void> refresh() async {
-    return refreshLock.synchronizedRefresh('income', () async {
-      state = const AsyncValue.loading();
-      state = await AsyncValue.guard(() => build());
-    });
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => build());
   }
 }
 

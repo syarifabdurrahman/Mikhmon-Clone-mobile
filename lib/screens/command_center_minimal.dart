@@ -265,7 +265,7 @@ class CommandCenterMinimalScreen extends ConsumerWidget {
                     Icons.upload_rounded,
                     'TX',
                     router.trafficTxMbps != null
-                        ? '${router.trafficTxMbps} MB'
+                        ? '${router.trafficTxMbps} Mbps'
                         : 'N/A',
                     const Color(0xFF8B5CF6)),
                 _buildChip(
@@ -273,7 +273,7 @@ class CommandCenterMinimalScreen extends ConsumerWidget {
                     Icons.download_rounded,
                     'RX',
                     router.trafficRxMbps != null
-                        ? '${router.trafficRxMbps} MB'
+                        ? '${router.trafficRxMbps} Mbps'
                         : 'N/A',
                     const Color(0xFF06B6D4)),
                 _buildChip(

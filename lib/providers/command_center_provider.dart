@@ -63,9 +63,17 @@ class CommandCenterState {
   int get onlineRouters => routers.where((r) => r.isConnected).length;
 }
 
+class _RouterHistoricalData {
+  final int totalTx;
+  final int totalRx;
+  final DateTime timestamp;
+  _RouterHistoricalData(this.totalTx, this.totalRx, this.timestamp);
+}
+
 class CommandCenterNotifier extends StateNotifier<CommandCenterState> {
   final Ref _ref;
   final _secureStorage = const FlutterSecureStorage();
+  final Map<String, _RouterHistoricalData> _history = {};
   Timer? _refreshTimer;
 
   CommandCenterNotifier(this._ref) : super(const CommandCenterState()) {
@@ -75,7 +83,8 @@ class CommandCenterNotifier extends StateNotifier<CommandCenterState> {
 
   void _startAutoRefresh() {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => refresh());
+    // Refresh more frequently for command center (every 10s)
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => refresh());
   }
 
   @override
@@ -87,7 +96,6 @@ class CommandCenterNotifier extends StateNotifier<CommandCenterState> {
   Future<MikrotikClient> _createTemporaryClient(Map<String, dynamic> conn) async {
     final routerId = conn['id'] as String;
 
-    // Active session — reuse the already-connected client
     if (routerId == '__active__') {
       final service = _ref.read(routerOSServiceProvider);
       final client = service.client;
@@ -105,51 +113,36 @@ class CommandCenterNotifier extends StateNotifier<CommandCenterState> {
 
     if (useRest) {
       final apiPort = port.isEmpty ? '80' : port;
-      final client = RouterOSHttpClient(
-        host: host,
-        port: apiPort,
-        username: username,
-        password: password,
-      );
+      final client = RouterOSHttpClient(host: host, port: apiPort, username: username, password: password);
       await client.connect();
       return client;
     } else {
       final apiPort = port.isEmpty ? '8728' : port;
-      final client = RouterOSClient(
-        host: host,
-        port: apiPort,
-        username: username,
-        password: password,
-      );
+      final client = RouterOSClient(host: host, port: apiPort, username: username, password: password);
       await client.connect();
       return client;
     }
   }
 
   Future<List<Map<String, dynamic>>> _buildActiveConnectionMap(RouterOSService service) async {
-    final conn = <String, dynamic>{
+    return [{
       'id': '__active__',
       'name': 'Current Router',
       'host': service.lastHost ?? '',
       'port': service.lastPort ?? '',
       'username': service.lastUsername ?? '',
       'useRest': service.lastUseRest,
-    };
-    return [conn];
+    }];
   }
 
   Future<void> refresh() async {
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: state.routers.isEmpty);
 
     final service = _ref.read(routerOSServiceProvider);
     final connections = await service.loadSavedConnections();
-
     final results = <RouterStats>[];
-
-    // Build the list of routers to monitor
     List<Map<String, dynamic>> routersToMonitor = List.from(connections);
 
-    // If no saved connections but currently connected, monitor the active session
     if (routersToMonitor.isEmpty && service.isConnected) {
       routersToMonitor = await _buildActiveConnectionMap(service);
     }
@@ -169,54 +162,61 @@ class CommandCenterNotifier extends StateNotifier<CommandCenterState> {
       MikrotikClient? client;
       final isActiveSession = routerId == '__active__';
 
-    try {
-      client = await _createTemporaryClient(conn);
-      final resources = await client.getSystemResources();
-      final activeUsers = await client.getHotspotActiveUsers();
-      final interfaces = await client.getInterfaceStats();
+      try {
+        client = await _createTemporaryClient(conn);
+        final resources = await client.getSystemResources();
+        final activeUsers = await client.getHotspotActiveUsers();
+        final interfaces = await client.getInterfaceStats();
 
-      final cpuLoad = int.tryParse(
-        resources['cpu-load']?.toString().replaceAll('%', '') ?? '',
-      );
+        final cpuLoad = int.tryParse(resources['cpu-load']?.toString().replaceAll('%', '') ?? '');
 
-      int totalTx = 0;
-      int totalRx = 0;
-      for (final iface in interfaces) {
-        totalTx += int.tryParse(iface['tx-byte']?.toString() ?? '0') ?? 0;
-        totalRx += int.tryParse(iface['rx-byte']?.toString() ?? '0') ?? 0;
+        int totalTx = 0;
+        int totalRx = 0;
+        for (final iface in interfaces) {
+          totalTx += int.tryParse(iface['tx-byte']?.toString() ?? '0') ?? 0;
+          totalRx += int.tryParse(iface['rx-byte']?.toString() ?? '0') ?? 0;
+        }
+
+        // Calculate Rate
+        final now = DateTime.now();
+        final previous = _history[routerId];
+        double txMbps = 0;
+        double rxMbps = 0;
+
+        if (previous != null) {
+          final seconds = now.difference(previous.timestamp).inSeconds;
+          if (seconds > 0) {
+            // (delta bytes * 8 bits) / seconds / 1M
+            txMbps = ((totalTx - previous.totalTx) * 8) / seconds / 1000000;
+            rxMbps = ((totalRx - previous.totalRx) * 8) / seconds / 1000000;
+          }
+        }
+        _history[routerId] = _RouterHistoricalData(totalTx, totalRx, now);
+
+        results.add(RouterStats(
+          routerId: routerId,
+          routerName: routerName,
+          address: address,
+          isConnected: true,
+          cpuLoad: cpuLoad,
+          trafficTxMbps: txMbps.round().clamp(0, 10000),
+          trafficRxMbps: rxMbps.round().clamp(0, 10000),
+          onlineUsers: activeUsers.length,
+        ));
+      } catch (e) {
+        results.add(RouterStats(
+          routerId: routerId,
+          routerName: routerName,
+          address: address,
+          isConnected: false,
+          errorMessage: e.toString(),
+        ));
+      } finally {
+        if (!isActiveSession) client?.close();
       }
-
-      results.add(RouterStats(
-        routerId: routerId,
-        routerName: routerName,
-        address: address,
-        isConnected: true,
-        cpuLoad: cpuLoad,
-        trafficTxMbps: _bytesToMbps(totalTx),
-        trafficRxMbps: _bytesToMbps(totalRx),
-        onlineUsers: activeUsers.length,
-      ));
-    } catch (e) {
-      results.add(RouterStats(
-        routerId: routerId,
-        routerName: routerName,
-        address: address,
-        isConnected: false,
-        errorMessage: e.toString(),
-      ));
-    } finally {
-      // Only close temporary clients, not the active session's shared client
-      if (!isActiveSession) {
-        client?.close();
-      }
-    }
     }
 
     state = state.copyWith(isLoading: false, routers: results);
-  }
-
-  int _bytesToMbps(int bytes) {
-    return (bytes / 1024 / 1024).round();
   }
 }
 

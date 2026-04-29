@@ -126,12 +126,18 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isExpired
+                      color: widget.voucher.isExpired
                           ? context.appError.withValues(alpha: 0.1)
-                          : Colors.green.withValues(alpha: 0.1),
+                          : widget.voucher.isDisabledOnly
+                              ? Colors.orange.withValues(alpha: 0.1)
+                              : Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isExpired ? context.appError : Colors.green,
+                        color: widget.voucher.isExpired
+                            ? context.appError
+                            : widget.voucher.isDisabledOnly
+                                ? Colors.orange
+                                : Colors.green,
                         width: 1,
                       ),
                     ),
@@ -139,16 +145,30 @@ class _VoucherDetailScreenState extends ConsumerState<VoucherDetailScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isExpired
+                          widget.voucher.isExpired
                               ? Icons.cancel_rounded
-                              : Icons.check_circle_rounded,
-                          color: isExpired ? context.appError : Colors.green,
+                              : widget.voucher.isDisabledOnly
+                                  ? Icons.pause_circle_rounded
+                                  : Icons.check_circle_rounded,
+                          color: widget.voucher.isExpired
+                              ? context.appError
+                              : widget.voucher.isDisabledOnly
+                                  ? Colors.orange
+                                  : Colors.green,
                         ),
                         SizedBox(width: 8),
                         Text(
-                          isExpired ? 'EXPIRED' : 'ACTIVE',
+                          widget.voucher.isExpired
+                              ? 'EXPIRED'
+                              : widget.voucher.isDisabledOnly
+                                  ? 'DISABLED'
+                                  : 'ACTIVE',
                           style: TextStyle(
-                            color: isExpired ? context.appError : Colors.green,
+                            color: widget.voucher.isExpired
+                                ? context.appError
+                                : widget.voucher.isDisabledOnly
+                                    ? Colors.orange
+                                    : Colors.green,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             letterSpacing: 1,

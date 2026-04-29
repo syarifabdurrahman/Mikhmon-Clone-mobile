@@ -87,16 +87,7 @@ class AtAGlanceCard extends ConsumerWidget {
                 color: Colors.green,
                 label: 'Online',
                 value: usersAsync.when(
-                  data: (paginatedUsers) {
-                    final online = paginatedUsers.users.where((u) {
-                      final user = HotspotUser.fromJson(u,
-                          activeUsernames: paginatedUsers.activeUsernames);
-                      return user.uptime != null &&
-                          user.uptime != '0s' &&
-                          user.uptime != '00:00:00';
-                    }).length;
-                    return '$online';
-                  },
+                  data: (paginatedUsers) => '${paginatedUsers.activeUsernames.length}',
                   loading: () => '-',
                   error: (_, __) => '-',
                 ),
@@ -110,7 +101,7 @@ class AtAGlanceCard extends ConsumerWidget {
                 color: context.appPrimary,
                 label: 'Total',
                 value: usersAsync.when(
-                  data: (paginatedUsers) => '${paginatedUsers.users.length}',
+                  data: (paginatedUsers) => '${paginatedUsers.totalCount}',
                   loading: () => '-',
                   error: (_, __) => '-',
                 ),

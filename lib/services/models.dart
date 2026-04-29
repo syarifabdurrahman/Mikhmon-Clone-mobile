@@ -143,20 +143,48 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    double? price = json['price'] != null ? double.tryParse(json['price'].toString()) : null;
+    
+    // Fallback: Try to parse price from comment if null (Mikhmon format: "1d/5000" or "price=5000")
+    if (price == null && json['comment'] != null) {
+      final comment = json['comment'].toString();
+      // Try "1d/5000" format
+      final slashMatch = RegExp(r'/(\d+)$').firstMatch(comment);
+      if (slashMatch != null) {
+        price = double.tryParse(slashMatch.group(1)!);
+      } else {
+        // Try "price=5000" format
+        final priceMatch = RegExp(r'price=(\d+)').firstMatch(comment);
+        if (priceMatch != null) {
+          price = double.tryParse(priceMatch.group(1)!);
+        }
+      }
+    }
+
+    // Parse rate limit (MikroTik format: "upload/download" or "limit")
+    String? upload;
+    String? download;
+    final rateLimit = json['rate-limit']?.toString();
+    if (rateLimit != null && rateLimit.contains('/')) {
+      final parts = rateLimit.split('/');
+      upload = parts[0];
+      download = parts[1];
+    } else if (rateLimit != null) {
+      download = rateLimit;
+    }
+
     return UserProfile(
       id: json['.id'] ?? json['id'] ?? '',
       name: json['name'] ?? 'default',
-      rateLimitUpload: json['rate-limit-upload'],
-      rateLimitDownload: json['rate-limit-download'],
+      rateLimitUpload: upload ?? json['rate-limit-upload'],
+      rateLimitDownload: download ?? json['rate-limit-download'],
       validity: json['validity'],
       sessionTimeout: json['session-timeout'],
-      price: json['price'] != null
-          ? double.tryParse(json['price'].toString())
-          : null,
+      price: price,
       sharedUsers: json['shared-users'] != null
           ? int.tryParse(json['shared-users'].toString())
           : null,
-      autologout: json['autologout'] == 'true',
+      autologout: json['autologout'] == 'true' || json['autologout'] == true,
       expiresAt: json['expires-at'] != null
           ? DateTime.tryParse(json['expires-at'])
           : null,
@@ -417,6 +445,7 @@ class HotspotUser {
   final String name;
   final String profile;
   final bool active;
+  final bool disabled;
   final String? uptime;
   final int? bytesIn;
   final int? bytesOut;
@@ -430,6 +459,7 @@ class HotspotUser {
     required this.name,
     required this.profile,
     required this.active,
+    this.disabled = false,
     this.uptime,
     this.bytesIn,
     this.bytesOut,
@@ -452,6 +482,7 @@ class HotspotUser {
       name: name,
       profile: json['profile'] ?? 'default',
       active: isActive,
+      disabled: json['disabled'] == 'true' || json['disabled'] == true,
       uptime: json['uptime'],
       bytesIn: int.tryParse(json['bytes-in'] ?? '0'),
       bytesOut: int.tryParse(json['bytes-out'] ?? '0'),
@@ -582,16 +613,25 @@ class HotspotUser {
   }
 
   /// Check if this voucher/user is expired
-  /// Expired if: 1) disabled, OR 2) past expiry date from comment, OR 3) uptime reached limit-uptime
+  /// Expired if:
+  /// 1) disabled AND comment contains 'aktif' (User's specific rule)
+  /// 2) past expiry date from comment
+  /// 3) uptime reached limit-uptime
   bool get isExpired {
-    // Disabled user is considered expired
-    if (!active) return true;
-    // Check expiry date in comment
+    // 1. User's specific rule: if disabled and comment is 'aktif', it's expired
+    if (disabled &&
+        comment != null &&
+        comment!.toLowerCase().contains('aktif')) {
+      return true;
+    }
+
+    // 2. Check expiry date in comment
     final expiry = expiresAt;
     if (expiry != null && DateTime.now().isAfter(expiry)) {
       return true;
     }
-    // Check if uptime has reached limit-uptime
+
+    // 3. Check if uptime has reached limit-uptime
     if (limitUptime != null && uptime != null) {
       final limitSeconds = _parseTimeToSeconds(limitUptime);
       final uptimeSeconds = _parseTimeToSeconds(uptime);
@@ -603,20 +643,21 @@ class HotspotUser {
     return false;
   }
 
+  /// Check if the user is manually disabled (and not expired)
+  bool get isDisabledOnly => disabled && !isExpired;
+
   Map<String, dynamic> toMap() {
-    // Keep disabled in sync with active
-    final disabledValue = (!active).toString();
     return {
       '.id': id,
       'name': name,
       'profile': profile,
       'active': active.toString(),
+      'disabled': disabled.toString(),
       'uptime': uptime ?? '0',
       'bytes-in': (bytesIn ?? 0).toString(),
       'bytes-out': (bytesOut ?? 0).toString(),
       'limit-bytes-in': (limitBytesIn ?? 0).toString(),
       'limit-bytes-out': (limitBytesOut ?? 0).toString(),
-      'disabled': disabledValue,
       'comment': comment,
     };
   }

@@ -15,6 +15,7 @@ import 'edit_hotspot_user_screen.dart';
 import 'voucher_generation_screen.dart';
 import 'widgets/enhanced_user_card.dart';
 import 'widgets/bulk_mode_indicator.dart';
+import '../../utils/show_feedback.dart';
 import '../../l10n/translations.dart';
 
 class HotspotUsersScreen extends ConsumerStatefulWidget {
@@ -406,26 +407,19 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   }
 
   Future<void> _handleSwipeRight(HotspotUser user) async {
-    // Swipe right to enable if disabled, or show info if already active
-    if (!user.active) {
-      // Enable the user
-      await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
-      await LogService.logUserEnabled(user.name);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                AppStrings.of(context).enabled.replaceAll('%s', user.name)),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } else {
+    // Swipe right to enable if disabled, or show info if already enabled
+    if (!user.disabled) {
+      FeedbackUtils.showInfo(context, 'User "${user.name}" is already enabled');
+      return;
+    }
+    await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
+    await LogService.logUserEnabled(user.name);
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              AppStrings.of(context).alreadyActive.replaceAll('%s', user.name)),
+              AppStrings.of(context).enabled.replaceAll('%s', user.name)),
+          backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -446,8 +440,51 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       case 'extend':
         _handleSwipeRight(user);
         break;
+      case 'delete':
+        _confirmDeleteSingleUser(user);
+        break;
       default:
         break;
+    }
+  }
+
+  Future<void> _confirmDeleteSingleUser(HotspotUser user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text(
+          'Delete User?',
+          style: TextStyle(color: context.appOnSurface),
+        ),
+        content: Text(
+          'Delete user "${user.name}"? This action cannot be undone.',
+          style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(hotspotUsersProvider.notifier).deleteUser(user.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User "${user.name}" deleted'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -461,8 +498,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
       'bytes-in': (user.bytesIn ?? 0).toString(),
       'bytes-out': (user.bytesOut ?? 0).toString(),
       'limit-uptime': '0',
-      'disabled': (!user.active).toString(),
-      'comment': '',
+      'disabled': user.disabled.toString(),
+      'comment': user.comment ?? '',
     };
     await Navigator.push(
       context,
@@ -475,14 +512,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
   Future<void> _toggleUserStatus(HotspotUser user) async {
     await ref.read(hotspotUsersProvider.notifier).toggleUserStatus(user.id);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'User "${user.name}" ${user.active ? 'disabled' : 'enabled'}'),
-          backgroundColor: context.appPrimary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      FeedbackUtils.showSuccess(context,
+          'User "${user.name}" ${user.disabled ? 'disabled' : 'enabled'}');
     }
   }
 
@@ -629,8 +660,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     for (final userId in _selectedUserIds) {
       try {
         final user = allUsers.firstWhere((u) => u.id == userId);
-        // Only disable if currently active (enabled)
-        if (user.active) {
+        // Only disable if currently enabled
+        if (!user.disabled) {
           await ref
               .read(hotspotUsersProvider.notifier)
               .toggleUserStatus(userId);
@@ -706,8 +737,8 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
     for (final userId in _selectedUserIds) {
       try {
         final user = allUsers.firstWhere((u) => u.id == userId);
-        // Only enable if currently inactive (disabled)
-        if (!user.active) {
+        // Only enable if currently disabled
+        if (user.disabled) {
           await ref
               .read(hotspotUsersProvider.notifier)
               .toggleUserStatus(userId);
@@ -941,11 +972,14 @@ class _HotspotUsersScreenState extends ConsumerState<HotspotUsersScreen>
 
     // Apply status filter
     switch (_statusFilter) {
-      case UserStatusFilter.active:
+      case UserStatusFilter.online:
         filtered = filtered.where((user) => user.active).toList();
         break;
-      case UserStatusFilter.inactive:
-        filtered = filtered.where((user) => !user.active).toList();
+      case UserStatusFilter.disabled:
+        filtered = filtered.where((user) => user.isDisabledOnly).toList();
+        break;
+      case UserStatusFilter.expired:
+        filtered = filtered.where((user) => user.isExpired).toList();
         break;
       case UserStatusFilter.all:
         break;
@@ -1092,13 +1126,19 @@ class _SearchAndFilterBar extends StatelessWidget {
                 icon: Icon(Icons.people_rounded, size: 18),
               ),
               ButtonSegment(
-                value: UserStatusFilter.active,
-                label: Text(AppStrings.of(context).filterActive),
+                value: UserStatusFilter.online,
+                label: Text('Online'),
+                icon: Icon(Icons.wifi_rounded, size: 18),
               ),
               ButtonSegment(
-                value: UserStatusFilter.inactive,
-                label: Text(AppStrings.of(context).filterInactive),
-                icon: Icon(Icons.cancel_rounded, size: 18),
+                value: UserStatusFilter.disabled,
+                label: Text('Disabled'),
+                icon: Icon(Icons.wifi_off_rounded, size: 18),
+              ),
+              ButtonSegment(
+                value: UserStatusFilter.expired,
+                label: Text('Expired'),
+                icon: Icon(Icons.timer_off_rounded, size: 18),
               ),
             ],
             selected: {statusFilter},
@@ -1125,4 +1165,4 @@ class _SearchAndFilterBar extends StatelessWidget {
   }
 }
 
-enum UserStatusFilter { all, active, inactive }
+enum UserStatusFilter { all, online, disabled, expired }

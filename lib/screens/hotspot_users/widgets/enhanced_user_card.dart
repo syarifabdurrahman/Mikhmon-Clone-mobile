@@ -80,18 +80,8 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
 
   UserStatusType _getUserStatusType(bool isConnected) {
     if (isConnected) return UserStatusType.connected;
-    if (!widget.user.active) {
-      // Check if it's an expired voucher (has expiry date in comment)
-      if (widget.user.isVoucher && widget.user.isExpired) {
-        return UserStatusType.expired;
-      }
-      return UserStatusType.disabled;
-    }
-    // Check if voucher is expired
-    if (widget.user.isVoucher && widget.user.isExpired) {
-      return UserStatusType.expired;
-    }
-    // Could add idle detection based on uptime here
+    if (widget.user.isExpired) return UserStatusType.expired;
+    if (widget.user.disabled) return UserStatusType.disabled;
     return UserStatusType.active;
   }
 
@@ -261,7 +251,7 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: widget.user.active
+              colors: !widget.user.disabled
                   ? [statusColor, statusColor.withValues(alpha: 0.7)]
                   : [
                       const Color(0xFF475569),
@@ -275,7 +265,7 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
           ),
           child: Icon(
             Icons.person_rounded,
-            color: widget.user.active ? Colors.white : Colors.white54,
+            color: !widget.user.disabled ? Colors.white : Colors.white54,
           ),
         ),
         if (isConnected)
@@ -451,22 +441,31 @@ class _EnhancedUserCardState extends ConsumerState<EnhancedUserCard>
                 color: const Color(0xFF6366F1),
                 onTap: () => widget.onQuickAction?.call(widget.user, 'edit'),
               ),
-              _buildQuickAction(
-                icon: widget.user.active
-                    ? Icons.wifi_off_rounded
-                    : Icons.wifi_rounded,
-                label: widget.user.active ? 'Disable' : 'Enable',
-                color: widget.user.active
-                    ? const Color(0xFFF43F5E)
-                    : const Color(0xFF10B981),
-                onTap: () => widget.onQuickAction?.call(widget.user, 'toggle'),
-              ),
-              _buildQuickAction(
-                icon: Icons.access_time_rounded,
-                label: 'Extend',
-                color: const Color(0xFFF59E0B),
-                onTap: () => widget.onQuickAction?.call(widget.user, 'extend'),
-              ),
+              if (!widget.user.isExpired) ...[
+                _buildQuickAction(
+                  icon: !widget.user.disabled
+                      ? Icons.wifi_off_rounded
+                      : Icons.wifi_rounded,
+                  label: !widget.user.disabled ? 'Disable' : 'Enable',
+                  color: !widget.user.disabled
+                      ? const Color(0xFFF43F5E)
+                      : const Color(0xFF10B981),
+                  onTap: () => widget.onQuickAction?.call(widget.user, 'toggle'),
+                ),
+                _buildQuickAction(
+                  icon: Icons.access_time_rounded,
+                  label: 'Extend',
+                  color: const Color(0xFFF59E0B),
+                  onTap: () => widget.onQuickAction?.call(widget.user, 'extend'),
+                ),
+              ],
+              if (widget.user.isExpired)
+                _buildQuickAction(
+                  icon: Icons.delete_forever_rounded,
+                  label: 'Delete',
+                  color: const Color(0xFFF43F5E),
+                  onTap: () => widget.onQuickAction?.call(widget.user, 'delete'),
+                ),
               _buildQuickAction(
                 icon: Icons.key_rounded,
                 label: 'Reset PWD',
@@ -573,4 +572,5 @@ enum QuickActionType {
   toggle,
   extend,
   resetPassword,
+  delete,
 }

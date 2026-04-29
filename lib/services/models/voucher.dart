@@ -31,15 +31,25 @@ class Voucher {
 
   bool get isFirstUse => firstUsedAt == null;
 
-  bool get isExpired {
-    if (disabled) return true;
-    if (remainingSeconds != null && remainingSeconds! <= 0) return true;
-    if (firstUsedAt == null || totalSeconds == null) return false;
-    final elapsed = DateTime.now().difference(firstUsedAt!).inSeconds;
-    return elapsed >= totalSeconds!;
+  bool get isVoucher {
+    if (comment == null) return false;
+    final commentLower = comment!.toLowerCase();
+    return commentLower.contains('mode:up') || commentLower.contains('mode:vc');
   }
 
-  bool get isActive => !isExpired && !disabled;
+  bool get isExpired {
+    // A voucher is considered expired if it's disabled AND it's a voucher (has mode:vc/up in comment)
+    // This matches the logic in HotspotUser
+    if (!disabled) return false;
+    return isVoucher;
+  }
+
+  bool get isDisabledOnly {
+    // Manually disabled but NOT expired
+    return disabled && !isVoucher;
+  }
+
+  bool get isActive => !disabled;
 
   bool get isInSession => sessionStartedAt != null && !isExpired;
 
