@@ -286,13 +286,11 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
     });
 
     try {
-      final cache = CacheService();
+      final currency = ref.watch(currencyProvider);
+      final cache = ref.read(cacheServiceProvider);
       final settings = cache.getAppSettings();
       final companyName = settings?['companyName'] as String? ?? 'WiFi';
       final loginUrl = settings?['loginUrl'] as String? ?? 'http://wifi.local';
-      final currency = settings?['currency'] as String? ?? 'USD';
-      final currencySymbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
-
       final template = ref.read(voucherTemplateProvider);
       await VoucherPrinter.printBulkVouchers(
         context,
@@ -300,7 +298,7 @@ class _VoucherPreviewScreenState extends ConsumerState<VoucherPreviewScreen> {
         template: template,
         companyName: companyName,
         loginUrl: loginUrl,
-        currencySymbol: currencySymbol,
+        currencySymbol: currency.symbol,
       );
     } catch (e) {
       if (mounted) {

@@ -448,7 +448,7 @@ class _EditHotspotUserScreenState extends ConsumerState<EditHotspotUserScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '${selectedProfile.priceDisplay} • ${selectedProfile.validityDisplay} • ${selectedProfile.rateLimitDisplay}',
+                          '${selectedProfile.priceDisplay(ref.watch(currencyProvider))} • ${selectedProfile.validityDisplay} • ${selectedProfile.rateLimitDisplay}',
                           style: TextStyle(
                             fontSize: 12,
                             color: context.appOnSurface.withValues(alpha: 0.8),

@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../utils/currency_formatter.dart';
 import '../../utils/filter_utils.dart';
 import '../../utils/show_feedback.dart';
 import '../../l10n/translations.dart';
@@ -190,6 +191,7 @@ class _SummaryCards extends ConsumerWidget {
       data: (income) {
         final summary = income.summary;
         final filterLabel = income.filter == '7days' ? 'Last 7 Days' : 'Last 30 Days';
+        final currency = _getCurrencyFromSettings(ref);
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -200,7 +202,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: 'Today',
-                      value: _formatCurrency(summary.todayIncome),
+                      value: _formatCurrencyValue(summary.todayIncome, currency),
                       icon: Icons.today_rounded,
                       color: context.appPrimary,
                     ),
@@ -209,7 +211,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: 'This Month',
-                      value: _formatCurrency(summary.thisMonthIncome),
+                      value: _formatCurrencyValue(summary.thisMonthIncome, currency),
                       icon: Icons.calendar_month_rounded,
                       color: context.appSecondary,
                     ),
@@ -231,7 +233,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: filterLabel,
-                      value: _formatCurrency(income.chartPoints.fold(0.0, (sum, p) => sum + p.amount)),
+                      value: _formatCurrencyValue(income.chartPoints.fold(0.0, (sum, p) => sum + p.amount), currency),
                       icon: Icons.analytics_rounded,
                       color: Colors.teal,
                     ),
@@ -273,10 +275,6 @@ class _SummaryCards extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(value);
   }
 }
 
@@ -451,19 +449,20 @@ class _ChartsTab extends ConsumerWidget {
   }
 }
 
-class _RevenueChart extends StatelessWidget {
+class _RevenueChart extends ConsumerWidget {
   final List<SalesChartPoint> points;
 
   const _RevenueChart({required this.points});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (points.isEmpty || points.every((p) => p.amount == 0)) {
       return _buildEmptyChart(context);
     }
 
     final maxAmount = points.fold(0.0, (max, p) => p.amount > max ? p.amount : max);
     final interval = maxAmount > 0 ? (maxAmount / 4).ceilToDouble() : 1000.0;
+    final currency = _getCurrencyFromSettings(ref);
 
     return Container(
       height: 240,
@@ -585,7 +584,7 @@ class _RevenueChart extends StatelessWidget {
                   TextStyle(color: context.appOnSurface, fontWeight: FontWeight.bold),
                   children: [
                     TextSpan(
-                      text: _formatCurrency(s.y),
+                      text: _formatCurrencyValue(s.y, currency),
                       style: TextStyle(color: context.appPrimary, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -631,10 +630,6 @@ class _RevenueChart extends StatelessWidget {
       ),
     );
   }
-
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(value);
-  }
 }
 
 class _ByProfileTab extends ConsumerWidget {
@@ -650,6 +645,7 @@ class _ByProfileTab extends ConsumerWidget {
           return _buildEmptyState(context);
         }
 
+        final currency = _getCurrencyFromSettings(ref);
         final groupedByProfile = _groupByProfile(income.transactions);
         final sortedProfiles = groupedByProfile.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
@@ -676,6 +672,7 @@ class _ByProfileTab extends ConsumerWidget {
                       .length,
                   rank:
                       sortedProfiles.indexWhere((e) => e.key == entry.key) + 1,
+                  currency: currency,
                 );
               }),
             ],
@@ -725,12 +722,14 @@ class _ProfileRevenueCard extends StatelessWidget {
   final double revenue;
   final int transactionCount;
   final int rank;
+  final CurrencyInfo currency;
 
   const _ProfileRevenueCard({
     required this.profileName,
     required this.revenue,
     required this.transactionCount,
     required this.rank,
+    required this.currency,
   });
 
   @override
@@ -799,8 +798,8 @@ class _ProfileRevenueCard extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            _formatCurrency(revenue),
+Text(
+            _formatCurrencyValue(revenue, currency),
             style: TextStyle(
               color: context.appPrimary,
               fontWeight: FontWeight.bold,
@@ -823,10 +822,6 @@ class _ProfileRevenueCard extends StatelessWidget {
       default:
         return const Color(0xFF64748B); // Slate
     }
-  }
-
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(value);
   }
 }
 
@@ -1120,13 +1115,14 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-class _TransactionCard extends StatelessWidget {
+class _TransactionCard extends ConsumerWidget {
   final SalesTransaction transaction;
 
   const _TransactionCard({required this.transaction});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = _getCurrencyFromSettings(ref);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1169,8 +1165,7 @@ class _TransactionCard extends StatelessWidget {
                 ),
               ),
               Text(
-                NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0)
-                    .format(transaction.price),
+                _formatCurrencyValue(transaction.price, currency),
                 style: TextStyle(
                   color: context.appSecondary,
                   fontWeight: FontWeight.bold,
@@ -1225,4 +1220,12 @@ class _TransactionCard extends StatelessWidget {
   String _formatTimestamp(DateTime timestamp) {
     return FilterUtils.formatRelativeTime(timestamp);
   }
+}
+
+CurrencyInfo _getCurrencyFromSettings(WidgetRef ref) {
+  return ref.watch(currencyProvider);
+}
+
+String _formatCurrencyValue(double value, CurrencyInfo currency) {
+  return '${currency.symbol} ${CurrencyFormatter.formatInput(value, currency)}';
 }
