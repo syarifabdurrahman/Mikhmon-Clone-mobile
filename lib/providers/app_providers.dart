@@ -694,19 +694,26 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
         page: page, activeUsernames: activeUsernames);
   }
 
-/// Auto-record revenue when a voucher connects to the hotspot.
+  /// Auto-record revenue when a voucher connects to the hotspot.
   Future<void> _autoRecordRevenue(
       List<Map<String, dynamic>> activeUsers,
       List<Map<String, dynamic>> allUsers) async {
     try {
-      final activeUsernames = activeUsers
-          .map((u) => u['user'] as String? ?? '')
-          .where((name) => name.isNotEmpty)
-          .toSet();
+      // Create a map for quick user lookup to get comments
+      final userComments = <String, String>{};
+      for (final u in allUsers) {
+        final name = u['name'] as String? ?? '';
+        final comment = u['comment'] as String? ?? '';
+        if (name.isNotEmpty) {
+          userComments[name] = comment;
+        }
+      }
 
+      // Get profiles - await the future to ensure data is loaded
       final profiles = await ref.read(userProfileProvider.future);
       if (profiles.isEmpty) return;
 
+      // Build a map of profile name -> price
       final profilePrices = <String, double>{};
       for (final profile in profiles) {
         if (profile.price != null && profile.price! > 0) {
@@ -716,31 +723,37 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
       if (profilePrices.isEmpty) return;
 
-      for (final user in allUsers) {
-        final username = user['name'] as String? ?? '';
-        final comment = (user['comment'] as String? ?? '').toLowerCase();
-        final profileName = user['profile'] as String? ?? '';
+      for (final activeUser in activeUsers) {
+        final username = activeUser['user'] as String? ?? '';
+        final profileName = activeUser['profile'] as String? ?? '';
 
         if (username.isEmpty) continue;
-        if (!comment.contains('mode:vc') &&
-            !comment.contains('mode:up') &&
-            !comment.startsWith('vc-') &&
-            !comment.startsWith('up-')) continue;
 
-        if (!activeUsernames.contains(username)) continue;
+        // Skip if already recorded in this session (memory)
+        if (_recordedConnections.contains(username)) continue;
 
-final recordKey = '$username|${DateTime.now().hour}';
-        if (_recordedConnections.contains(recordKey)) {
-          continue;
-        }
+        // Verify if it's a voucher from the user list comment
+        final comment = userComments[username] ?? '';
+        final commentLower = comment.toLowerCase();
+        final isVoucher = commentLower.contains('mode:vc') || 
+                         commentLower.contains('mode:up') ||
+                         commentLower.startsWith('vc-') ||
+                         commentLower.startsWith('up-');
 
+        if (!isVoucher) continue;
+
+        // Check if this profile has a price
         final price = profilePrices[profileName.toLowerCase()];
         if (price == null || price <= 0) continue;
 
-        _recordedConnections.add(recordKey);
+        // Mark as recorded
+        _recordedConnections.add(username);
+
+        // Save to cache for persistence
         final cache = ref.read(cacheServiceProvider);
         await cache.saveRecordedConnections(_recordedConnections);
 
+        // Record the sale
         await ref.read(incomeProvider.notifier).recordSale(
               username: username,
               profile: profileName,
@@ -1419,10 +1432,6 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     await client.deleteProfile(id);
-
-    try {
-      Future.microtask(() => ref.invalidate(userProfileProvider));
-    } catch (_) {}
   }
 }
 

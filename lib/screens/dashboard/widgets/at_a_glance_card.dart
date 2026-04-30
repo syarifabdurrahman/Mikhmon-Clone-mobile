@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../theme/app_theme.dart';
 import '../../../providers/app_providers.dart';
-import '../../../utils/currency_formatter.dart';
+import '../../../services/models.dart';
 
 /// A compact "Quick Info" summary card showing key metrics
 class AtAGlanceCard extends ConsumerWidget {
@@ -59,7 +59,6 @@ class AtAGlanceCard extends ConsumerWidget {
                       context,
                       usersAsync,
                       incomeAsync,
-                      _getCurrency(ref),
                     ),
                   ),
                 ],
@@ -75,7 +74,6 @@ class AtAGlanceCard extends ConsumerWidget {
     BuildContext context,
     AsyncValue usersAsync,
     AsyncValue incomeAsync,
-    CurrencyInfo currency,
   ) {
     return Column(
       children: [
@@ -122,7 +120,7 @@ class AtAGlanceCard extends ConsumerWidget {
                 color: Colors.amber,
                 label: 'Today',
                 value: incomeAsync.when(
-                  data: (income) => _formatCurrency(income.summary.todayIncome, currency),
+                  data: (income) => _formatCurrency(income.summary.todayIncome),
                   loading: () => '-',
                   error: (_, __) => '-',
                 ),
@@ -137,7 +135,7 @@ class AtAGlanceCard extends ConsumerWidget {
                 label: 'Month',
                 value: incomeAsync.when(
                   data: (income) =>
-                      _formatCurrency(income.summary.thisMonthIncome, currency),
+                      _formatCurrency(income.summary.thisMonthIncome),
                   loading: () => '-',
                   error: (_, __) => '-',
                 ),
@@ -184,16 +182,12 @@ class AtAGlanceCard extends ConsumerWidget {
     );
   }
 
-  CurrencyInfo _getCurrency(WidgetRef ref) {
-    return ref.watch(currencyProvider);
-  }
-
-  String _formatCurrency(double amount, CurrencyInfo currency) {
+  String _formatCurrency(double amount) {
     if (amount >= 1000000) {
-      return '${currency.symbol}${CurrencyFormatter.formatInput(amount / 1000000, currency)}M';
+      return 'Rp ${(amount / 1000000).toStringAsFixed(1)}M';
     } else if (amount >= 1000) {
-      return '${currency.symbol}${CurrencyFormatter.formatInput(amount / 1000, currency)}K';
+      return 'Rp ${(amount / 1000).toStringAsFixed(0)}K';
     }
-    return '${currency.symbol}${CurrencyFormatter.formatInput(amount, currency)}';
+    return 'Rp ${amount.toStringAsFixed(0)}';
   }
 }

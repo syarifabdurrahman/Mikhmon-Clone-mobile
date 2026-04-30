@@ -247,7 +247,7 @@ class LogService {
     await addLog(
       type: LogType.sale,
       title: 'Sale Completed',
-      description: 'Sold $profile voucher for \$${amount.toStringAsFixed(0)}',
+      description: 'Sold $profile voucher for Rp ${amount.toStringAsFixed(0)}',
       username: username,
       metadata: {'profile': profile, 'amount': amount},
     );

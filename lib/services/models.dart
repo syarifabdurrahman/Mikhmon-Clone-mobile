@@ -1,6 +1,5 @@
 // Export activity log model
 export 'models/activity_log.dart';
-import '../utils/currency_formatter.dart';
 
 class InterfaceTraffic {
   final String name;
@@ -252,11 +251,11 @@ class UserProfile {
     return sessionTimeout!;
   }
 
-  String priceDisplay(CurrencyInfo currency) {
+  String get priceDisplay {
     if (price == null || price == 0) {
       return 'Free';
     }
-    return '${currency.symbol} ${CurrencyFormatter.formatInput(price!, currency)}';
+    return '\$${price!.toStringAsFixed(2)}';
   }
 
   String get sharedUsersDisplay {

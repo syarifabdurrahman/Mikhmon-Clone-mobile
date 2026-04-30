@@ -11,7 +11,9 @@
 /coverage/
 
 # Android Studio will place build artifacts here
-/android
+/android/app/debug
+/android/app/profile
+/android/app/release
 
 # Symbolication related
 app.*.symbols
@@ -134,7 +136,6 @@ firestore.rules
 firestore.indexes.json
 
 contoh_login.webp
-/assets
 
 # Uncomment to include specific VSCode configurations
 # /.vscode/settings.json

@@ -96,6 +96,16 @@ class FilterUtils {
     return sorted;
   }
 
+  /// Format currency for display
+  static String formatCurrency(double value, {String symbol = 'Rp '}) {
+    if (value >= 1000000) {
+      return '$symbol${(value / 1000000).toStringAsFixed(1)}M';
+    } else if (value >= 1000) {
+      return '$symbol${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return '$symbol${value.toStringAsFixed(0)}';
+  }
+
   /// Format relative time (e.g., "5m ago", "2h ago")
   static String formatRelativeTime(DateTime timestamp) {
     final now = DateTime.now();

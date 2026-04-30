@@ -184,7 +184,7 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       isScrollControlled: true,
-builder: (context) => _ProfileDetailsSheet(
+      builder: (context) => _ProfileDetailsSheet(
         profile: profile,
         onEdit: () => _navigateToEditProfile(profile),
         onDelete: () => _confirmDeleteProfile(profile),
@@ -303,11 +303,15 @@ builder: (context) => _ProfileDetailsSheet(
 }
 
 // Extracted as separate widget for better performance with RepaintBoundary
-String _formatPrice(double? price, CurrencyInfo currency) {
+String _formatPrice(double? price) {
   if (price == null || price == 0) {
     return 'Free';
   }
-  return '${currency.symbol}${price.toStringAsFixed(0)}';
+  final cache = CacheService();
+  final settings = cache.getAppSettings();
+  final currency = settings?['currency'] as String? ?? 'USD';
+  final symbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
+  return '$symbol${price.toStringAsFixed(0)}';
 }
 
 class _ProfileCard extends ConsumerWidget {
@@ -323,7 +327,6 @@ class _ProfileCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currency = ref.watch(currencyProvider);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: context.appSurface,
@@ -348,7 +351,7 @@ class _ProfileCard extends ConsumerWidget {
                   _buildIconContainer(context),
                   SizedBox(width: 16),
                   Expanded(
-                    child: _buildProfileInfo(context, currency),
+                    child: _buildProfileInfo(context),
                   ),
                   IconButton(
                     icon: Icon(Icons.more_vert_rounded),
@@ -388,7 +391,7 @@ class _ProfileCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileInfo(BuildContext context, CurrencyInfo currency) {
+  Widget _buildProfileInfo(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -401,7 +404,7 @@ class _ProfileCard extends ConsumerWidget {
         ),
         SizedBox(height: 4),
         Text(
-          _formatPrice(profile.price, currency),
+          _formatPrice(profile.price),
           style: TextStyle(
             color: context.appPrimary,
             fontWeight: FontWeight.w600,
@@ -492,7 +495,7 @@ class _InfoRow extends StatelessWidget {
 }
 
 // Extracted as separate widget for better performance
-class _ProfileDetailsSheet extends ConsumerWidget {
+class _ProfileDetailsSheet extends StatelessWidget {
   final UserProfile profile;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -504,8 +507,7 @@ class _ProfileDetailsSheet extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currency = ref.watch(currencyProvider);
+  Widget build(BuildContext context) {
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.7,
@@ -521,7 +523,7 @@ class _ProfileDetailsSheet extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDragHandle(context),
-            _buildHeader(context, currency),
+            _buildHeader(context),
             SizedBox(height: 24),
             _ProfileDetailItem(
               icon: Icons.speed_rounded,
@@ -568,7 +570,7 @@ class _ProfileDetailsSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, CurrencyInfo currency) {
+  Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
         Container(
@@ -604,7 +606,7 @@ class _ProfileDetailsSheet extends ConsumerWidget {
               ),
               SizedBox(height: 4),
               Text(
-                _formatPrice(profile.price, currency),
+                _formatPrice(profile.price),
                 style: TextStyle(
                   color: context.appPrimary,
                   fontWeight: FontWeight.w600,
