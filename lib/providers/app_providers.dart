@@ -1369,17 +1369,25 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
         ? '${profile.validity ?? "unlimited"}/${profile.price!.toInt()}'
         : null;
 
-    await client.addProfile({
+    final profileData = {
       'name': profile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
       if (onLoginScript != null) 'on-login': onLoginScript,
       if (comment != null) 'comment': comment,
       if (profile.sharedUsers != null) 'shared-users': profile.sharedUsers.toString(),
-    });
+    };
+
+    debugPrint('addProfile sending: $profileData');
 
     try {
-      Future.microtask(() => ref.invalidate(userProfileProvider));
-    } catch (_) {}
+      await client.addProfile(profileData);
+      debugPrint('addProfile success');
+    } catch (e) {
+      debugPrint('addProfile error: $e');
+      rethrow;
+    }
+
+    await silentRefresh();
   }
 
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -1419,9 +1427,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       if (updatedProfile.sharedUsers != null) 'shared-users': updatedProfile.sharedUsers.toString(),
     });
 
-    try {
-      Future.microtask(() => ref.invalidate(userProfileProvider));
-    } catch (_) {}
+    await silentRefresh();
   }
 
   Future<void> deleteProfile(String id) async {
@@ -1432,6 +1438,8 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     await client.deleteProfile(id);
+
+    await silentRefresh();
   }
 }
 

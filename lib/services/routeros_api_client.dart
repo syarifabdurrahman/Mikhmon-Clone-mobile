@@ -17,7 +17,7 @@ class RouterOSClient implements MikrotikClient {
   Map<String, dynamic>? _currentItem;
   bool _awaitingDone = false;
 
-  static const bool _debug = false;
+  static const bool _debug = true;
 
   void _log(String message) {
     if (_debug) {
@@ -223,10 +223,9 @@ class RouterOSClient implements MikrotikClient {
 
   void _processWord(String word) {
     if (word.startsWith('!re')) {
-      // New record starting - add previous item to response if exists
+      // New record starting
       if (_currentItem != null) {
         _currentResponse.add(_currentItem!);
-        _log('Added record to response (total: ${_currentResponse.length})');
       }
       _currentItem = {};
       _log('Starting new record');
@@ -235,14 +234,11 @@ class RouterOSClient implements MikrotikClient {
       _log('Received !done');
       if (_currentItem != null) {
         _currentResponse.add(_currentItem!);
-        _log(
-            'Added final record to response (total: ${_currentResponse.length})');
         _currentItem = null;
       }
       if (_awaitingDone &&
           _responseCompleter != null &&
           !_responseCompleter!.isCompleted) {
-        _log('Completing response with ${_currentResponse.length} items');
         _responseCompleter!.complete(List.from(_currentResponse));
         _currentResponse.clear();
         _awaitingDone = false;
@@ -253,31 +249,15 @@ class RouterOSClient implements MikrotikClient {
       _log('Received !trap (error)');
       if (_currentItem != null) {
         _currentResponse.add(_currentItem!);
-        _currentItem = null;
       }
-      if (_awaitingDone &&
-          _responseCompleter != null &&
-          !_responseCompleter!.isCompleted) {
-        _responseCompleter!.complete(List.from(_currentResponse));
-        _currentResponse.clear();
-        _awaitingDone = false;
-        _responseCompleter = null;
-      }
+      _currentItem = {}; // Start collecting error attributes
     } else if (word.startsWith('!fatal')) {
       // Fatal error
       _log('Received !fatal (fatal error)');
       if (_currentItem != null) {
         _currentResponse.add(_currentItem!);
-        _currentItem = null;
       }
-      if (_awaitingDone &&
-          _responseCompleter != null &&
-          !_responseCompleter!.isCompleted) {
-        _responseCompleter!.complete(List.from(_currentResponse));
-        _currentResponse.clear();
-        _awaitingDone = false;
-        _responseCompleter = null;
-      }
+      _currentItem = {}; // Start collecting fatal error attributes
     } else if (word.startsWith('=')) {
       // Attribute
       if (_currentItem != null) {
@@ -648,6 +628,7 @@ class RouterOSClient implements MikrotikClient {
   @override
   Future<void> addProfile(Map<String, String> profile) async {
     try {
+      // 1. Try standard add
       await _ensureConnected();
       _writeWord('/ip/hotspot/user/profile/add');
       for (var entry in profile.entries) {
@@ -657,9 +638,47 @@ class RouterOSClient implements MikrotikClient {
 
       final response = await _readResponse();
       if (_hasError(response)) {
-        throw Exception('Failed to add user profile: ${response.first}');
+        final error = response.first['message'] ?? response.first['detail'] ?? 'Unknown error';
+        _log('Initial addProfile failed: $error');
+        
+        if (error.toString().contains('unknown parameter')) {
+          _log('Attempting step-by-step add to isolate failing parameter...');
+          
+          // 2. Try adding with just name
+          _writeWord('/ip/hotspot/user/profile/add');
+          _writeWord('=name=${profile["name"]}');
+          _writeWord('');
+          final addResponse = await _readResponse();
+          
+          if (!_hasError(addResponse)) {
+            _log('✓ Created profile with name only');
+            
+            // Now try to set each parameter one by one
+            for (var entry in profile.entries) {
+              if (entry.key == 'name') continue;
+              
+              _writeWord('/ip/hotspot/user/profile/set');
+              _writeWord('=.id=${profile["name"]}'); // In API, we can often use name as ID for profiles
+              _writeWord('=${entry.key}=${entry.value}');
+              _writeWord('');
+              
+              final setResponse = await _readResponse();
+              if (_hasError(setResponse)) {
+                _log('✗ FAILED to set parameter "${entry.key}": ${setResponse.first}');
+              } else {
+                _log('✓ Set parameter: ${entry.key}');
+              }
+            }
+            return; // Success! Return early
+          } else {
+             throw Exception('Failed to add profile even with name only: ${addResponse.first}');
+          }
+        } else {
+          throw Exception('Failed to add user profile: $error');
+        }
       }
     } catch (e) {
+      _log('Error in addProfile: $e');
       throw Exception('Failed to add user profile: $e');
     }
   }

@@ -13,7 +13,7 @@ class RouterOSHttpClient implements MikrotikClient {
   Dio? _dio;
 
   // Enable debug logging
-  static const bool _debug = false;
+  static const bool _debug = true;
 
   void _log(String message) {
     if (_debug) {
@@ -48,7 +48,7 @@ class RouterOSHttpClient implements MikrotikClient {
           'Authorization':
               'Basic ${base64Encode(utf8.encode('$username:$password'))}',
         },
-        validateStatus: (status) => status != null && status < 500,
+        validateStatus: (status) => status != null && status >= 200 && status < 300,
       ));
 
       // Test connection by fetching system resources
@@ -112,12 +112,22 @@ class RouterOSHttpClient implements MikrotikClient {
 
   @override
   Future<void> addUser(Map<String, String> user) async {
-    await _dio!.post('/ip/hotspot/user', data: user);
+    try {
+      await _dio!.post('/ip/hotspot/user', data: user);
+    } on DioException catch (e) {
+      _log('Failed to add user: ${e.response?.data ?? e.message}');
+      rethrow;
+    }
   }
 
   @override
   Future<void> updateUser(String id, Map<String, String> user) async {
-    await _dio!.patch('/ip/hotspot/user/$id', data: user);
+    try {
+      await _dio!.patch('/ip/hotspot/user/$id', data: user);
+    } on DioException catch (e) {
+      _log('Failed to update user $id: ${e.response?.data ?? e.message}');
+      rethrow;
+    }
   }
 
   @override
@@ -242,7 +252,49 @@ class RouterOSHttpClient implements MikrotikClient {
 
   @override
   Future<void> addProfile(Map<String, String> profile) async {
-    await _dio!.post('/ip/hotspot/user/profile', data: profile);
+    try {
+      // 1. Try bulk add (standard)
+      await _dio!.post('/ip/hotspot/user/profile', data: profile);
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      _log('Initial addProfile failed: $errorData');
+      
+      if (errorData is Map && errorData['message'] == 'unknown parameter') {
+        _log('Attempting step-by-step add to isolate failing parameter...');
+        
+        // 2. Try creating with just the name
+        final nameOnly = {'name': profile['name']!};
+        try {
+          await _dio!.post('/ip/hotspot/user/profile', data: nameOnly);
+          _log('✓ Created profile with name only');
+          
+          // Now try to update other fields one by one to find the culprit
+          for (var entry in profile.entries) {
+            if (entry.key == 'name') continue;
+            try {
+              // We need the .id to patch, but we just created it.
+              // For simplicity in REST, we can try to patch by name if supported, 
+              // but standard REST requires the ID. Let's find the ID first.
+              final profiles = await getHotspotProfiles();
+              final newProfile = profiles.firstWhere((p) => p['name'] == profile['name']);
+              final id = newProfile['.id'];
+              
+              await _dio!.patch('/ip/hotspot/user/profile/$id', data: {entry.key: entry.value});
+              _log('✓ Set parameter: ${entry.key}');
+            } catch (e2) {
+              _log('✗ FAILED to set parameter "${entry.key}": $e2');
+              // Continue to try other parameters
+            }
+          }
+          return; // Success! Return early
+        } catch (e3) {
+          _log('✗ FAILED to create even with name only: $e3');
+          rethrow;
+        }
+      } else {
+        rethrow;
+      }
+    }
   }
 
   @override
