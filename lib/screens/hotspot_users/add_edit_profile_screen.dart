@@ -156,10 +156,6 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cache = CacheService();
-    final settings = cache.getAppSettings();
-    final currency = settings?['currency'] as String? ?? 'USD';
-    final symbol = CurrencyData.currencies[currency]?.symbol ?? '$';
     final isEditing = widget.profile != null;
 
     return PopScope(
@@ -292,6 +288,11 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
   }
 
   Widget _buildPriceField() {
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    final currency = settings?['currency'] as String? ?? 'USD';
+    final symbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

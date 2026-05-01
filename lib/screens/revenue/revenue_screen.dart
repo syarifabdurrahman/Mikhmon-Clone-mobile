@@ -202,7 +202,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: 'Today',
-                      value: _formatCurrency(ref, summary.todayIncome),
+                      value: formatCurrency(ref, summary.todayIncome),
                       icon: Icons.today_rounded,
                       color: context.appPrimary,
                     ),
@@ -211,7 +211,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: 'This Month',
-                      value: _formatCurrency(ref, summary.thisMonthIncome),
+                      value: formatCurrency(ref, summary.thisMonthIncome),
                       icon: Icons.calendar_month_rounded,
                       color: context.appSecondary,
                     ),
@@ -233,7 +233,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: filterLabel,
-                      value: _formatCurrency(ref, income.chartPoints.fold(0.0, (sum, p) => sum + p.amount)),
+                      value: formatCurrency(ref, income.chartPoints.fold(0.0, (sum, p) => sum + p.amount)),
                       icon: Icons.analytics_rounded,
                       color: Colors.teal,
                     ),
@@ -277,13 +277,7 @@ class _SummaryCards extends ConsumerWidget {
     );
   }
 
-  String _formatCurrency(WidgetRef ref, double value) {
-    final cache = ref.read(cacheServiceProvider);
-    final settings = cache.getAppSettings();
-    final currencyCode = settings?['currency'] as String? ?? 'USD';
-    final currencyInfo = CurrencyData.fromCode(currencyCode);
-    return CurrencyFormatter.format(value, currencyInfo);
-  }
+
 }
 
 class _SummaryCard extends StatelessWidget {
@@ -457,13 +451,13 @@ class _ChartsTab extends ConsumerWidget {
   }
 }
 
-class _RevenueChart extends StatelessWidget {
+class _RevenueChart extends ConsumerWidget {
   final List<SalesChartPoint> points;
 
   const _RevenueChart({required this.points});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (points.isEmpty || points.every((p) => p.amount == 0)) {
       return _buildEmptyChart(context);
     }
@@ -591,7 +585,7 @@ class _RevenueChart extends StatelessWidget {
                   TextStyle(color: context.appOnSurface, fontWeight: FontWeight.bold),
                   children: [
                     TextSpan(
-                      text: _formatCurrency(ref, s.y),
+                      text: formatCurrency(ref, s.y),
                       style: TextStyle(color: context.appPrimary, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -638,13 +632,6 @@ class _RevenueChart extends StatelessWidget {
     );
   }
 
-  String _formatCurrency(WidgetRef ref, double value) {
-    final cache = ref.read(cacheServiceProvider);
-    final settings = cache.getAppSettings();
-    final currencyCode = settings?['currency'] as String? ?? 'USD';
-    final currencyInfo = CurrencyData.fromCode(currencyCode);
-    return CurrencyFormatter.format(value, currencyInfo);
-  }
 }
 
 class _ByProfileTab extends ConsumerWidget {
@@ -810,7 +797,7 @@ class _ProfileRevenueCard extends ConsumerWidget {
             ),
           ),
           Text(
-            _formatCurrency(ref, revenue),
+            formatCurrency(ref, revenue),
             style: TextStyle(
               color: context.appPrimary,
               fontWeight: FontWeight.bold,
@@ -1183,7 +1170,7 @@ class _TransactionCard extends ConsumerWidget {
                 ),
               ),
               Text(
-                _formatPrice(ref, transaction.price),
+                formatCurrency(ref, transaction.price),
                 style: TextStyle(
                   color: context.appSecondary,
                   fontWeight: FontWeight.bold,
@@ -1235,15 +1222,17 @@ class _TransactionCard extends ConsumerWidget {
     );
   }
 
-  String _formatPrice(WidgetRef ref, double price) {
-    final cache = ref.read(cacheServiceProvider);
-    final settings = cache.getAppSettings();
-    final currencyCode = settings?['currency'] as String? ?? 'USD';
-    final currencyInfo = CurrencyData.fromCode(currencyCode);
-    return CurrencyFormatter.format(price, currencyInfo);
-  }
+
 
   String _formatTimestamp(DateTime timestamp) {
     return FilterUtils.formatRelativeTime(timestamp);
   }
+}
+
+String formatCurrency(WidgetRef ref, double value) {
+  final cache = ref.read(cacheServiceProvider);
+  final settings = cache.getAppSettings();
+  final currencyCode = settings?['currency'] as String? ?? 'USD';
+  final currencyInfo = CurrencyData.fromCode(currencyCode);
+  return CurrencyFormatter.format(value, currencyInfo);
 }
