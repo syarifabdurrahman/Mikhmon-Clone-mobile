@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../services/cache_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../l10n/translations.dart';
 
 class AddEditProfileScreen extends ConsumerStatefulWidget {
@@ -118,10 +120,10 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
         lockDevice: _lockDevice,
       );
 
-      if (widget.profile == null) {
-        await ref.read(userProfileProvider.notifier).addProfile(profile);
+      if (widget.profile != null) {
+        await ref.read(userProfileProvider.notifier).updateProfile(widget.profile!, profile);
       } else {
-        await ref.read(userProfileProvider.notifier).updateProfile(profile);
+        await ref.read(userProfileProvider.notifier).addProfile(profile);
       }
 
       if (mounted) {
@@ -154,6 +156,10 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cache = CacheService();
+    final settings = cache.getAppSettings();
+    final currency = settings?['currency'] as String? ?? 'USD';
+    final symbol = CurrencyData.currencies[currency]?.symbol ?? '$';
     final isEditing = widget.profile != null;
 
     return PopScope(
@@ -303,7 +309,7 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
           decoration: InputDecoration(
             hintText: '0.00',
             prefixIcon: Icon(Icons.payments_rounded),
-            suffixText: '\$',
+            suffixText: symbol,
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {

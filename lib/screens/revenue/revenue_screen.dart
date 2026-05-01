@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../services/cache_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../utils/filter_utils.dart';
 import '../../utils/show_feedback.dart';
 import '../../l10n/translations.dart';
@@ -200,7 +202,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: 'Today',
-                      value: _formatCurrency(summary.todayIncome),
+                      value: _formatCurrency(ref, summary.todayIncome),
                       icon: Icons.today_rounded,
                       color: context.appPrimary,
                     ),
@@ -209,7 +211,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: 'This Month',
-                      value: _formatCurrency(summary.thisMonthIncome),
+                      value: _formatCurrency(ref, summary.thisMonthIncome),
                       icon: Icons.calendar_month_rounded,
                       color: context.appSecondary,
                     ),
@@ -231,7 +233,7 @@ class _SummaryCards extends ConsumerWidget {
                   Expanded(
                     child: _SummaryCard(
                       title: filterLabel,
-                      value: _formatCurrency(income.chartPoints.fold(0.0, (sum, p) => sum + p.amount)),
+                      value: _formatCurrency(ref, income.chartPoints.fold(0.0, (sum, p) => sum + p.amount)),
                       icon: Icons.analytics_rounded,
                       color: Colors.teal,
                     ),
@@ -275,8 +277,12 @@ class _SummaryCards extends ConsumerWidget {
     );
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(value);
+  String _formatCurrency(WidgetRef ref, double value) {
+    final cache = ref.read(cacheServiceProvider);
+    final settings = cache.getAppSettings();
+    final currencyCode = settings?['currency'] as String? ?? 'USD';
+    final currencyInfo = CurrencyData.fromCode(currencyCode);
+    return CurrencyFormatter.format(value, currencyInfo);
   }
 }
 
@@ -585,7 +591,7 @@ class _RevenueChart extends StatelessWidget {
                   TextStyle(color: context.appOnSurface, fontWeight: FontWeight.bold),
                   children: [
                     TextSpan(
-                      text: _formatCurrency(s.y),
+                      text: _formatCurrency(ref, s.y),
                       style: TextStyle(color: context.appPrimary, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -632,8 +638,12 @@ class _RevenueChart extends StatelessWidget {
     );
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(value);
+  String _formatCurrency(WidgetRef ref, double value) {
+    final cache = ref.read(cacheServiceProvider);
+    final settings = cache.getAppSettings();
+    final currencyCode = settings?['currency'] as String? ?? 'USD';
+    final currencyInfo = CurrencyData.fromCode(currencyCode);
+    return CurrencyFormatter.format(value, currencyInfo);
   }
 }
 
@@ -720,7 +730,7 @@ class _ByProfileTab extends ConsumerWidget {
   }
 }
 
-class _ProfileRevenueCard extends StatelessWidget {
+class _ProfileRevenueCard extends ConsumerWidget {
   final String profileName;
   final double revenue;
   final int transactionCount;
@@ -734,7 +744,7 @@ class _ProfileRevenueCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final rankColor = _getRankColor(rank);
 
     return Container(
@@ -800,7 +810,7 @@ class _ProfileRevenueCard extends StatelessWidget {
             ),
           ),
           Text(
-            _formatCurrency(revenue),
+            _formatCurrency(ref, revenue),
             style: TextStyle(
               color: context.appPrimary,
               fontWeight: FontWeight.bold,
@@ -825,8 +835,12 @@ class _ProfileRevenueCard extends StatelessWidget {
     }
   }
 
-  String _formatCurrency(double value) {
-    return NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0).format(value);
+  String _formatCurrency(WidgetRef ref, double value) {
+    final cache = ref.read(cacheServiceProvider);
+    final settings = cache.getAppSettings();
+    final currencyCode = settings?['currency'] as String? ?? 'USD';
+    final currencyInfo = CurrencyData.fromCode(currencyCode);
+    return CurrencyFormatter.format(value, currencyInfo);
   }
 }
 
@@ -1120,13 +1134,13 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-class _TransactionCard extends StatelessWidget {
+class _TransactionCard extends ConsumerWidget {
   final SalesTransaction transaction;
 
   const _TransactionCard({required this.transaction});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1169,8 +1183,7 @@ class _TransactionCard extends StatelessWidget {
                 ),
               ),
               Text(
-                NumberFormat.currency(symbol: 'Rp ', decimalDigits: 0)
-                    .format(transaction.price),
+                _formatPrice(ref, transaction.price),
                 style: TextStyle(
                   color: context.appSecondary,
                   fontWeight: FontWeight.bold,
@@ -1220,6 +1233,14 @@ class _TransactionCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatPrice(WidgetRef ref, double price) {
+    final cache = ref.read(cacheServiceProvider);
+    final settings = cache.getAppSettings();
+    final currencyCode = settings?['currency'] as String? ?? 'USD';
+    final currencyInfo = CurrencyData.fromCode(currencyCode);
+    return CurrencyFormatter.format(price, currencyInfo);
   }
 
   String _formatTimestamp(DateTime timestamp) {

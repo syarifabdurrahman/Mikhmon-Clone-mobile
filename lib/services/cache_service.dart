@@ -24,6 +24,7 @@ class CacheService {
   static const String _vouchersKey = 'generated_vouchers';
   static const String _appSettingsKey = 'app_settings';
   static const String _recordedConnectionsKey = 'recorded_connections';
+  static const String _profilePricesKey = 'profile_prices_map';
 
   /// Initialize Hive cache
   Future<void> init() async {
@@ -44,6 +45,26 @@ class CacheService {
 
   /// Check if cache is initialized
   bool get isInitialized => _initialized;
+
+  /// Get persistent profile prices map {profileName: price}
+  Map<String, double> getProfilePrices() {
+    try {
+      final data = _cacheBox.get(_profilePricesKey);
+      if (data != null && data is Map) {
+        return Map<String, double>.from(data.map((key, value) => MapEntry(key.toString(), (value as num).toDouble())));
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  /// Save profile price to persistent map
+  Future<void> saveProfilePrice(String profileName, double price) async {
+    try {
+      final map = getProfilePrices();
+      map[profileName] = price;
+      await _cacheBox.put(_profilePricesKey, map);
+    } catch (e) {}
+  }
 
   /// Get system resources from cache
   Map<String, dynamic>? getSystemResources() {

@@ -1320,10 +1320,22 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
           .where((p) => _isProfileData(p))
           .toList();
 
-      final profiles =
-          profilesData.map((data) => UserProfile.fromJson(data)).toList();
+      final localPrices = cache.getProfilePrices();
+      final List<UserProfile> profiles = [];
+      
+      for (var data in profilesData) {
+        var profile = UserProfile.fromJson(data);
+        
+        // If price is missing from MikroTik, check local persistent map
+        if ((profile.price == null || profile.price == 0) && 
+            localPrices.containsKey(profile.name)) {
+          profile = profile.copyWith(price: localPrices[profile.name]);
+        }
+        
+        profiles.add(profile);
+      }
 
-      // Cache the profiles (cache original data, filtering is applied on load)
+      // Cache the profiles
       await cache.saveUserProfiles(profilesData);
 
       return profiles;
@@ -1351,6 +1363,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
   Future<void> addProfile(UserProfile profile) async {
     final service = ref.read(routerOSServiceProvider);
+    final cache = ref.read(cacheServiceProvider);
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
@@ -1370,6 +1383,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
           profile.validity!.toLowerCase() != 'unlimited' &&
           profile.validity!.isNotEmpty) {
         onLoginScript = OnLoginScriptGenerator.generate(profile.validity!);
+        // Fallback for old MikroTik versions: store price in on-login script
+        if (profile.price != null && profile.price! > 0) {
+          final p = profile.price!.toInt();
+          onLoginScript = ':local price "$p"; $onLoginScript ;#price=$p';
+        }
       }
     } catch (e) {
       // Skip on-login script if generation fails
@@ -1383,8 +1401,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     final profileData = {
       'name': profile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
-      // Temporarily disabling on-login script to test if it's the unknown parameter
-      // if (onLoginScript != null) 'on-login': onLoginScript,
+      if (onLoginScript != null) 'on-login': onLoginScript,
       if (comment != null) 'comment': comment,
       if (profile.sharedUsers != null) 'shared-users': profile.sharedUsers,
     };
@@ -1392,6 +1409,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     debugPrint('addProfile sending: $profileData');
 
     try {
+      // Save price to local persistent cache first
+      if (profile.price != null && profile.price! > 0) {
+        await cache.saveProfilePrice(profile.name, profile.price!);
+      }
+      
       await client.addProfile(profileData);
       debugPrint('addProfile success');
     } catch (e) {
@@ -1402,11 +1424,17 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     await silentRefresh();
   }
 
-  Future<void> updateProfile(UserProfile updatedProfile) async {
+  Future<void> updateProfile(UserProfile oldProfile, UserProfile updatedProfile) async {
     final service = ref.read(routerOSServiceProvider);
+    final cache = ref.read(cacheServiceProvider);
     final client = service.client;
     if (client == null) {
       throw Exception('Not connected to RouterOS');
+    }
+
+    // Save price to local persistent cache first
+    if (updatedProfile.price != null && updatedProfile.price! > 0) {
+      await cache.saveProfilePrice(updatedProfile.name, updatedProfile.price!);
     }
 
     // Build rate-limit string from upload/download
@@ -1423,6 +1451,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
           updatedProfile.validity!.toLowerCase() != 'unlimited' &&
           updatedProfile.validity!.isNotEmpty) {
         onLoginScript = OnLoginScriptGenerator.generate(updatedProfile.validity!);
+        // Fallback for old MikroTik versions: store price in on-login script
+        if (updatedProfile.price != null && updatedProfile.price! > 0) {
+          final p = updatedProfile.price!.toInt();
+          onLoginScript = ':local price "$p"; $onLoginScript ;#price=$p';
+        }
       }
     } catch (e) {}
 
@@ -1434,7 +1467,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     await client.updateProfile(updatedProfile.id, {
       'name': updatedProfile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
-      // if (onLoginScript != null) 'on-login': onLoginScript,
+      if (onLoginScript != null) 'on-login': onLoginScript,
       if (comment != null) 'comment': comment,
       if (updatedProfile.sharedUsers != null) 'shared-users': updatedProfile.sharedUsers,
     });

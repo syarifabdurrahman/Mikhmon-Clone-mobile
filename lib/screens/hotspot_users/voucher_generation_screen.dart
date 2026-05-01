@@ -247,6 +247,15 @@ class _VoucherGenerationScreenState
         // Store generated voucher
         _generatedVouchers.add(voucher);
 
+        // Record sale for analytics
+        if (selectedProfileObj.price != null && selectedProfileObj.price! > 0) {
+          await ref.read(incomeProvider.notifier).recordSale(
+                username: username,
+                profile: _selectedProfile ?? 'default',
+                price: selectedProfileObj.price!,
+              );
+        }
+
         // Small delay between requests to avoid overwhelming the router
         if (i < qty) {
           await Future.delayed(const Duration(milliseconds: 200));
@@ -266,6 +275,7 @@ class _VoucherGenerationScreenState
 
       // Invalidate vouchers provider to refresh the list
       ref.invalidate(vouchersProvider);
+      ref.invalidate(hotspotUsersProvider);
 
       // Log voucher creation
       await LogService.logVoucherCreated(
@@ -372,7 +382,10 @@ class _VoucherGenerationScreenState
         (p) => p.name == _selectedProfile,
         orElse: () => UserProfile(id: '', name: _selectedProfile!),
       );
-      validity = selectedProfileObj.sessionTimeout ?? '';
+      // Use the parsed validity and price from the profile
+      validity = (selectedProfileObj.validity != null && selectedProfileObj.validity!.isNotEmpty && selectedProfileObj.validity != 'unlimited')
+          ? selectedProfileObj.validity!
+          : (selectedProfileObj.sessionTimeout ?? '');
       price = selectedProfileObj.price;
     }
 

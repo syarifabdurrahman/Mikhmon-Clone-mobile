@@ -309,9 +309,9 @@ String _formatPrice(double? price) {
   }
   final cache = CacheService();
   final settings = cache.getAppSettings();
-  final currency = settings?['currency'] as String? ?? 'USD';
-  final symbol = CurrencyData.currencies[currency]?.symbol ?? '\$';
-  return '$symbol${price.toStringAsFixed(0)}';
+  final currencyCode = settings?['currency'] as String? ?? 'USD';
+  final currencyInfo = CurrencyData.fromCode(currencyCode);
+  return CurrencyFormatter.format(price, currencyInfo);
 }
 
 class _ProfileCard extends ConsumerWidget {

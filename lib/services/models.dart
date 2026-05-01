@@ -186,12 +186,18 @@ class UserProfile {
         }
       }
       
-      // Strategy 3: Try "price=5000" format
+      // Strategy 4: Fallback to on-login script parsing (for old ROS versions without profile comments)
       if (price == null || price == 0) {
-        final priceMatch = RegExp(r'price\s*=\s*(\d+)').firstMatch(comment);
-        final pg1 = priceMatch?.group(1);
-        if (pg1 != null) {
-          price = double.tryParse(pg1);
+        final onLogin = json['on-login']?.toString() ?? '';
+        if (onLogin.isNotEmpty) {
+          // Look for price in any format: price=5000, "5000", or :local price "5000"
+          final priceMatch = RegExp(r'(?:price|amount)\s*[:=]\s*"?(\d+)"?|local\s+price\s+"?(\d+)"?').firstMatch(onLogin);
+          if (priceMatch != null) {
+            final pStr = priceMatch.group(1) ?? priceMatch.group(2);
+            if (pStr != null) {
+              price = double.tryParse(pStr);
+            }
+          }
         }
       }
     }

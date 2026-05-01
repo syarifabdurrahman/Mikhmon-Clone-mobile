@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../theme/app_theme.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/models.dart';
+import '../../../utils/currency_formatter.dart';
 
 /// A compact "Quick Info" summary card showing key metrics
 class AtAGlanceCard extends ConsumerWidget {
@@ -13,6 +14,10 @@ class AtAGlanceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(hotspotUsersProvider);
     final incomeAsync = ref.watch(incomeProvider);
+    
+    final cache = ref.read(cacheServiceProvider);
+    final settings = cache.getAppSettings();
+    final currencyCode = settings?['currency'] as String? ?? 'USD';
 
     return Card(
       color: context.appSurface,
@@ -59,6 +64,7 @@ class AtAGlanceCard extends ConsumerWidget {
                       context,
                       usersAsync,
                       incomeAsync,
+                      currencyCode,
                     ),
                   ),
                 ],
@@ -74,6 +80,7 @@ class AtAGlanceCard extends ConsumerWidget {
     BuildContext context,
     AsyncValue usersAsync,
     AsyncValue incomeAsync,
+    String currencyCode,
   ) {
     return Column(
       children: [
@@ -120,7 +127,7 @@ class AtAGlanceCard extends ConsumerWidget {
                 color: Colors.amber,
                 label: 'Today',
                 value: incomeAsync.when(
-                  data: (income) => _formatCurrency(income.summary.todayIncome),
+                  data: (income) => _formatCurrency(income.summary.todayIncome, currencyCode),
                   loading: () => '-',
                   error: (_, __) => '-',
                 ),
@@ -135,7 +142,7 @@ class AtAGlanceCard extends ConsumerWidget {
                 label: 'Month',
                 value: incomeAsync.when(
                   data: (income) =>
-                      _formatCurrency(income.summary.thisMonthIncome),
+                      _formatCurrency(income.summary.thisMonthIncome, currencyCode),
                   loading: () => '-',
                   error: (_, __) => '-',
                 ),
@@ -182,12 +189,8 @@ class AtAGlanceCard extends ConsumerWidget {
     );
   }
 
-  String _formatCurrency(double amount) {
-    if (amount >= 1000000) {
-      return 'Rp ${(amount / 1000000).toStringAsFixed(1)}M';
-    } else if (amount >= 1000) {
-      return 'Rp ${(amount / 1000).toStringAsFixed(0)}K';
-    }
-    return 'Rp ${amount.toStringAsFixed(0)}';
+  String _formatCurrency(double amount, String currencyCode) {
+    final currencyInfo = CurrencyData.fromCode(currencyCode);
+    return CurrencyFormatter.formatCompact(amount, currencyInfo);
   }
 }
