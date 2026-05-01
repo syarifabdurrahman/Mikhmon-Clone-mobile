@@ -395,12 +395,12 @@ class RouterOSClient implements MikrotikClient {
   }
 
   @override
-  Future<void> addUser(Map<String, String> user) async {
+  Future<void> addUser(Map<String, dynamic> user) async {
     try {
       await _ensureConnected();
       _writeWord('/ip/hotspot/user/add');
       for (var entry in user.entries) {
-        _writeWord('=${entry.key}=${entry.value}');
+        _writeWord('=${entry.key}=${entry.value.toString()}');
       }
       _writeWord(''); // Empty word to terminate sentence
 
@@ -409,18 +409,18 @@ class RouterOSClient implements MikrotikClient {
         throw Exception('Failed to add user: ${response.first}');
       }
     } catch (e) {
-      throw Exception('Failed to add hotspot user: $e');
+      throw Exception('Failed to add user: $e');
     }
   }
 
   @override
-  Future<void> updateUser(String id, Map<String, String> user) async {
+  Future<void> updateUser(String id, Map<String, dynamic> user) async {
     try {
       await _ensureConnected();
       _writeWord('/ip/hotspot/user/set');
       _writeWord('=.id=$id');
       for (var entry in user.entries) {
-        _writeWord('=${entry.key}=${entry.value}');
+        _writeWord('=${entry.key}=${entry.value.toString()}');
       }
       _writeWord(''); // Empty word to terminate sentence
 
@@ -429,7 +429,7 @@ class RouterOSClient implements MikrotikClient {
         throw Exception('Failed to update user: ${response.first}');
       }
     } catch (e) {
-      throw Exception('Failed to update hotspot user: $e');
+      throw Exception('Failed to update user: $e');
     }
   }
 
@@ -626,7 +626,7 @@ class RouterOSClient implements MikrotikClient {
   Future<void> removeHotspotUser(String id) async => deleteUser(id);
 
   @override
-  Future<void> addProfile(Map<String, String> profile) async {
+  Future<void> addProfile(Map<String, dynamic> profile) async {
     try {
       // 1. Try standard add
       await _ensureConnected();
@@ -684,21 +684,46 @@ class RouterOSClient implements MikrotikClient {
   }
 
   @override
-  Future<void> updateProfile(String id, Map<String, String> profile) async {
+  Future<void> updateProfile(String id, Map<String, dynamic> profile) async {
     try {
       await _ensureConnected();
       _writeWord('/ip/hotspot/user/profile/set');
       _writeWord('=.id=$id');
       for (var entry in profile.entries) {
-        _writeWord('=${entry.key}=${entry.value}');
+        _writeWord('=${entry.key}=${entry.value.toString()}');
       }
       _writeWord(''); // Empty word to terminate sentence
 
       final response = await _readResponse();
       if (_hasError(response)) {
-        throw Exception('Failed to update user profile: ${response.first}');
+        final error = response.first['message'] ?? response.first['detail'] ?? 'Unknown error';
+        _log('Initial updateProfile failed: $error');
+        
+        if (error.toString().contains('unknown parameter')) {
+          _log('Attempting step-by-step update to isolate failing parameter...');
+          for (var entry in profile.entries) {
+            try {
+              await _ensureConnected();
+              _writeWord('/ip/hotspot/user/profile/set');
+              _writeWord('=.id=$id');
+              _writeWord('=${entry.key}=${entry.value.toString()}');
+              _writeWord('');
+              final stepResponse = await _readResponse();
+              if (_hasError(stepResponse)) {
+                _log('✗ FAILED to set parameter "${entry.key}": ${stepResponse.first}');
+              } else {
+                _log('✓ Set parameter: ${entry.key}');
+              }
+            } catch (e) {
+              _log('Error setting ${entry.key}: $e');
+            }
+          }
+        } else {
+          throw Exception('Failed to update user profile: $error');
+        }
       }
     } catch (e) {
+      _log('Error in updateProfile: $e');
       throw Exception('Failed to update user profile: $e');
     }
   }

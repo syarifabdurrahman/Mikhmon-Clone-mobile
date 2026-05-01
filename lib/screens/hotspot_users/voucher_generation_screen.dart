@@ -361,21 +361,25 @@ class _VoucherGenerationScreenState
     final mode = _userMode == UserMode.up ? 'up' : 'vc';
     final comment = _commentController.text.trim();
 
-    // Use profile's session-timeout for comment
+    // Use profile's session-timeout and price for comment
     final profilesAsync = ref.read(userProfileProvider);
     final profiles = profilesAsync.valueOrNull ?? [];
     String validity = '';
+    double? price;
+    
     if (_selectedProfile != null) {
       final selectedProfileObj = profiles.firstWhere(
         (p) => p.name == _selectedProfile,
         orElse: () => UserProfile(id: '', name: _selectedProfile!),
       );
       validity = selectedProfileObj.sessionTimeout ?? '';
+      price = selectedProfileObj.price;
     }
 
     return ValidityParser.buildCommentWithExpiry(
       mode: mode,
       validity: validity,
+      price: price,
       comment: comment.isEmpty ? null : comment,
     );
   }

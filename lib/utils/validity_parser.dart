@@ -105,27 +105,32 @@ class ValidityParser {
   }
 
   /// Build comment with expiry for Mikhmon compatibility
-  /// Format: "vc-CODE-DATE-EXPIRY" or "up-CODE-DATE-EXPIRY"
+  /// Format: "mode:vc;1d/5000;MM/DD/YY HH:MM:SS;..."
   static String buildCommentWithExpiry({
     required String mode, // 'vc' or 'up'
     required String validity,
+    double? price,
     String? comment,
   }) {
+    final now = DateTime.now();
+    final dateStr = '${now.month}.${now.day}.${now.year.toString().substring(2)}';
+    
+    // Ensure validity is not empty string for the price part
+    final effectiveValidity = (validity == null || validity.isEmpty) ? "unlimited" : validity;
+    
+    final pricePart = price != null && price > 0 
+        ? '$effectiveValidity/${price.toInt()}' 
+        : effectiveValidity;
+
     final expiry = parseValidity(validity);
     if (expiry == null) {
       // No expiry, build basic comment
-      final code = DateTime.now().millisecondsSinceEpoch % 1000;
-      final date = DateTime.now();
-      final dateStr = '${date.month}.${date.day}.${date.year.toString().substring(2)}';
-      return 'mode:$mode;$dateStr;${comment ?? ""}';
+      return 'mode:$mode;$pricePart;$dateStr;${comment ?? ""}';
     }
 
     // Build comment with expiry
-    final code = DateTime.now().millisecondsSinceEpoch % 1000;
-    final date = DateTime.now();
-    final dateStr = '${date.month}.${date.day}.${date.year.toString().substring(2)}';
-    // Mikhmon compatible format: mode:vc;...
-    return 'mode:$mode;$dateStr;${comment ?? ""}';
+    final expiryStr = formatExpiryDate(expiry);
+    return 'mode:$mode;$pricePart;$expiryStr;${comment ?? ""}';
   }
 
   /// Get validity in MikroTik format for API

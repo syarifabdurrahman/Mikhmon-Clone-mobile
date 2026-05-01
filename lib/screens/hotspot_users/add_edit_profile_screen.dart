@@ -59,8 +59,8 @@ class _AddEditProfileScreenState extends ConsumerState<AddEditProfileScreen> {
         profile.rateLimitDownload ?? 'unlimited';
     _validityController.text = profile.validity ?? 'unlimited';
     _sessionTimeoutController.text = profile.sessionTimeout ?? 'unlimited';
-    _priceController.text = profile.price?.toString() ?? '0';
-    _sharedUsersController.text = (profile.sharedUsers ?? 0).toString();
+    _priceController.text = profile.price != null ? profile.price!.toInt().toString() : '0';
+    _sharedUsersController.text = (profile.sharedUsers ?? 1).toString();
     _autologout = profile.autologout ?? true;
     _lockDevice = profile.lockDevice;
 

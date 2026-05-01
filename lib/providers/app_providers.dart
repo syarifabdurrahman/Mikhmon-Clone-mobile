@@ -207,6 +207,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final service = ref.read(routerOSServiceProvider);
+      final cache = ref.read(cacheServiceProvider);
+      
+      // Clear cache before connecting to a new host to prevent data leaks
+      await cache.clearCache();
 
       // Connect to RouterOS
       final client = await service.connectWithCredentials(
@@ -220,7 +224,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       // Pre-fetch system resources during login
       final resources = await client.getSystemResources();
 
-      final cache = ref.read(cacheServiceProvider);
       await cache.saveSystemResources(resources);
 
       // Pre-fetch hotspot users and profiles in background for faster screen loads
@@ -267,6 +270,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       // Clear credentials
       await service.clearCredentials();
+
+      // Clear cache on logout
+      final cache = ref.read(cacheServiceProvider);
+      await cache.clearCache();
 
       // Log logout
       await LogService.logLogout('User');
@@ -599,8 +606,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
   PaginatedUsers _paginateUsers(List<Map<String, dynamic>> allUsers,
       {required int page, Set<String> activeUsernames = const {}}) {
-    // Filter out system/default users like "trial" and non-user data
-    final systemUserNames = {'trial'};
+    // Filter out system/default users like "trial", "admin", "default" and non-user data
+    final systemUserNames = {'trial', 'admin', 'default'};
     final filteredUsers = allUsers.where((user) {
       final userName = user['name'] as String? ?? '';
       if (systemUserNames.contains(userName.toLowerCase())) {
@@ -1245,8 +1252,8 @@ final interfaceTrafficProvider =
 });
 
 class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
-  // System profiles to filter out
-  static const Set<String> _systemProfileNames = {'trial', 'default'};
+  // System profiles to filter out (only trial, keep default visible per user request)
+  static const Set<String> _systemProfileNames = {'trial'};
 
   bool _isProfileData(Map<String, dynamic> data) {
     // User profiles from /ip/hotspot/user/profile/print
@@ -1331,6 +1338,10 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
 
   Future<void> silentRefresh() async {
     try {
+      // Clear cache to force re-parsing with updated logic
+      final cache = ref.read(cacheServiceProvider);
+      await cache.clearUserProfiles();
+      
       final newData = await _fetchProfilesAndCache();
       if (newData.isNotEmpty) {
         state = AsyncValue.data(newData);
@@ -1372,9 +1383,10 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     final profileData = {
       'name': profile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
-      if (onLoginScript != null) 'on-login': onLoginScript,
+      // Temporarily disabling on-login script to test if it's the unknown parameter
+      // if (onLoginScript != null) 'on-login': onLoginScript,
       if (comment != null) 'comment': comment,
-      if (profile.sharedUsers != null) 'shared-users': profile.sharedUsers.toString(),
+      if (profile.sharedUsers != null) 'shared-users': profile.sharedUsers,
     };
 
     debugPrint('addProfile sending: $profileData');
@@ -1422,9 +1434,9 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     await client.updateProfile(updatedProfile.id, {
       'name': updatedProfile.name,
       if (rateLimit != null) 'rate-limit': rateLimit,
-      if (onLoginScript != null) 'on-login': onLoginScript,
+      // if (onLoginScript != null) 'on-login': onLoginScript,
       if (comment != null) 'comment': comment,
-      if (updatedProfile.sharedUsers != null) 'shared-users': updatedProfile.sharedUsers.toString(),
+      if (updatedProfile.sharedUsers != null) 'shared-users': updatedProfile.sharedUsers,
     });
 
     await silentRefresh();

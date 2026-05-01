@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 // Export activity log model
 export 'models/activity_log.dart';
 
@@ -143,23 +145,57 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    debugPrint('[UserProfile] Parsing JSON: $json');
     double? price = json['price'] != null ? double.tryParse(json['price'].toString()) : null;
+    String? validity = json['validity']?.toString();
     
-    // Fallback: Try to parse price from comment if null (Mikhmon format: "1d/5000" or "price=5000")
-    if (price == null && json['comment'] != null) {
+    // Fallback: Aggressively parse price and validity from comment
+    if (json['comment'] != null && json['comment'].toString().isNotEmpty) {
       final comment = json['comment'].toString();
-      // Try "1d/5000" format
-      final slashMatch = RegExp(r'/(\d+)$').firstMatch(comment);
-      if (slashMatch != null) {
-        price = double.tryParse(slashMatch.group(1)!);
-      } else {
-        // Try "price=5000" format
-        final priceMatch = RegExp(r'price=(\d+)').firstMatch(comment);
-        if (priceMatch != null) {
-          price = double.tryParse(priceMatch.group(1)!);
+      debugPrint('[UserProfile] Parsing comment: $comment');
+      
+      // Strategy 1: Mikhmon slash format "validity/price" (e.g., "1d/5000")
+      if (comment.contains('/')) {
+        final slashParts = comment.split('/');
+        if (slashParts.length >= 2) {
+          final vPart = slashParts[0].trim();
+          final pPartWithMore = slashParts[1].trim();
+          if (validity == null || validity == 'unlimited' || validity.isEmpty) {
+            validity = vPart;
+          }
+          
+          if (price == null || price == 0) {
+            // Extract only the numbers from the beginning of the second part
+            final pOnly = pPartWithMore.split(RegExp(r'[^0-9]'))[0];
+            if (pOnly.isNotEmpty) {
+              price = double.tryParse(pOnly);
+            }
+          }
+        }
+      }
+      
+      // Strategy 2: If price still 0, look for any part that is purely a large number
+      if (price == null || price == 0) {
+        final allParts = comment.split(RegExp(r'[;/\s]'));
+        for (var part in allParts) {
+          final p = part.trim();
+          if (RegExp(r'^\d{3,7}$').hasMatch(p)) { // Looking for 3-7 digit numbers (prices)
+            price = double.tryParse(p);
+            break;
+          }
+        }
+      }
+      
+      // Strategy 3: Try "price=5000" format
+      if (price == null || price == 0) {
+        final priceMatch = RegExp(r'price\s*=\s*(\d+)').firstMatch(comment);
+        final pg1 = priceMatch?.group(1);
+        if (pg1 != null) {
+          price = double.tryParse(pg1);
         }
       }
     }
+    debugPrint('[UserProfile] Result: validity=$validity, price=$price');
 
     // Parse rate limit (MikroTik format: "upload/download" or "limit")
     String? upload;
@@ -178,7 +214,7 @@ class UserProfile {
       name: json['name'] ?? 'default',
       rateLimitUpload: upload ?? json['rate-limit-upload'],
       rateLimitDownload: download ?? json['rate-limit-download'],
-      validity: json['validity'],
+      validity: validity,
       sessionTimeout: json['session-timeout'],
       price: price,
       sharedUsers: json['shared-users'] != null

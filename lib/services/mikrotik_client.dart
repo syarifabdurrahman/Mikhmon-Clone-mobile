@@ -6,7 +6,7 @@ abstract class MikrotikClient {
   Future<List<Map<String, dynamic>>> getHotspotHosts();
   Future<List<Map<String, dynamic>>> getHotspotProfiles();
   Future<List<Map<String, dynamic>>> getDhcpLeases();
-  Future<void> addUser(Map<String, String> user);
+  Future<void> addUser(Map<String, dynamic> user);
   Future<void> addHotspotUser({
     required String username,
     required String password,
@@ -15,7 +15,7 @@ abstract class MikrotikClient {
     String? validity,
     String? dataLimit,
   });
-  Future<void> updateUser(String id, Map<String, String> user);
+  Future<void> updateUser(String id, Map<String, dynamic> user);
   Future<void> updateHotspotUser({
     required String id,
     required String username,
@@ -31,8 +31,8 @@ abstract class MikrotikClient {
   Future<void> logoutUser(String id);
   Future<void> logoutUserByName(String username);
   Future<void> logoutHotspotUser(String id);
-  Future<void> addProfile(Map<String, String> profile);
-  Future<void> updateProfile(String id, Map<String, String> profile);
+  Future<void> addProfile(Map<String, dynamic> profile);
+  Future<void> updateProfile(String id, Map<String, dynamic> profile);
   Future<void> deleteProfile(String id);
   Future<List<Map<String, dynamic>>> getFiles();
   Future<void> deleteFile(String id);

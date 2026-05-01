@@ -111,7 +111,7 @@ class RouterOSHttpClient implements MikrotikClient {
   }
 
   @override
-  Future<void> addUser(Map<String, String> user) async {
+  Future<void> addUser(Map<String, dynamic> user) async {
     try {
       await _dio!.post('/ip/hotspot/user', data: user);
     } on DioException catch (e) {
@@ -121,7 +121,7 @@ class RouterOSHttpClient implements MikrotikClient {
   }
 
   @override
-  Future<void> updateUser(String id, Map<String, String> user) async {
+  Future<void> updateUser(String id, Map<String, dynamic> user) async {
     try {
       await _dio!.patch('/ip/hotspot/user/$id', data: user);
     } on DioException catch (e) {
@@ -251,10 +251,16 @@ class RouterOSHttpClient implements MikrotikClient {
   Future<void> removeHotspotUser(String id) async => deleteUser(id);
 
   @override
-  Future<void> addProfile(Map<String, String> profile) async {
+  Future<void> addProfile(Map<String, dynamic> profile) async {
     try {
+      // For maximum compatibility, send everything as string first
+      final processedData = Map<String, dynamic>.from(profile);
+      if (processedData.containsKey('shared-users')) {
+        processedData['shared-users'] = processedData['shared-users'].toString();
+      }
+
       // 1. Try bulk add (standard)
-      await _dio!.post('/ip/hotspot/user/profile', data: profile);
+      await _dio!.post('/ip/hotspot/user/profile', data: processedData);
     } on DioException catch (e) {
       final errorData = e.response?.data;
       _log('Initial addProfile failed: $errorData');
@@ -263,7 +269,8 @@ class RouterOSHttpClient implements MikrotikClient {
         _log('Attempting step-by-step add to isolate failing parameter...');
         
         // 2. Try creating with just the name
-        final nameOnly = {'name': profile['name']!};
+        final nameStr = profile['name']?.toString() ?? 'unknown';
+        final nameOnly = {'name': nameStr};
         try {
           await _dio!.post('/ip/hotspot/user/profile', data: nameOnly);
           _log('✓ Created profile with name only');
@@ -272,18 +279,21 @@ class RouterOSHttpClient implements MikrotikClient {
           for (var entry in profile.entries) {
             if (entry.key == 'name') continue;
             try {
-              // We need the .id to patch, but we just created it.
-              // For simplicity in REST, we can try to patch by name if supported, 
-              // but standard REST requires the ID. Let's find the ID first.
               final profiles = await getHotspotProfiles();
-              final newProfile = profiles.firstWhere((p) => p['name'] == profile['name']);
-              final id = newProfile['.id'];
+              final newProfile = profiles.firstWhere(
+                (p) => p['name'] == nameStr,
+                orElse: () => <String, dynamic>{},
+              );
+              final id = newProfile['.id'] ?? newProfile['id'];
+              if (id == null) {
+                _log('! Could not find ID for profile $nameStr to set ${entry.key}');
+                continue;
+              }
               
-              await _dio!.patch('/ip/hotspot/user/profile/$id', data: {entry.key: entry.value});
+              await _dio!.patch('/ip/hotspot/user/profile/$id', data: {entry.key: entry.value.toString()});
               _log('✓ Set parameter: ${entry.key}');
             } catch (e2) {
               _log('✗ FAILED to set parameter "${entry.key}": $e2');
-              // Continue to try other parameters
             }
           }
           return; // Success! Return early
@@ -298,8 +308,12 @@ class RouterOSHttpClient implements MikrotikClient {
   }
 
   @override
-  Future<void> updateProfile(String id, Map<String, String> profile) async {
-    await _dio!.patch('/ip/hotspot/user/profile/$id', data: profile);
+  Future<void> updateProfile(String id, Map<String, dynamic> profile) async {
+    final processedData = Map<String, dynamic>.from(profile);
+    if (processedData.containsKey('shared-users')) {
+      processedData['shared-users'] = processedData['shared-users'].toString();
+    }
+    await _dio!.patch('/ip/hotspot/user/profile/$id', data: processedData);
   }
 
   @override

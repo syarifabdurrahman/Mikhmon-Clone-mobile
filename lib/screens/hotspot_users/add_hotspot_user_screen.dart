@@ -104,13 +104,21 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
       // This is the "Limit Uptime" setting in MikroTik
       final limitUptime = selectedProfile.sessionTimeout;
 
+      // Build Mikhmon-compatible comment for revenue tracking
+      final generatedComment = ValidityParser.buildCommentWithExpiry(
+        mode: 'up', // Manual users are usually 'up' mode
+        validity: selectedProfile.validity ?? 'unlimited',
+        price: selectedProfile.price,
+        comment: _commentController.text.trim().isEmpty
+            ? null
+            : _commentController.text.trim(),
+      );
+
       await client.addHotspotUser(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
         profile: selectedProfile.name,
-        comment: _commentController.text.trim().isEmpty
-            ? null
-            : _commentController.text.trim(),
+        comment: generatedComment,
         validity: validity == 'unlimited' ? null : validity,
       );
 
@@ -119,9 +127,7 @@ class _AddHotspotUserScreenState extends ConsumerState<AddHotspotUserScreen> {
         username: _usernameController.text.trim(),
         password: _passwordController.text,
         profile: selectedProfile.name,
-        comment: _commentController.text.trim().isEmpty
-            ? null
-            : _commentController.text.trim(),
+        comment: generatedComment,
         sessionTimeout: limitUptime,
       );
 
