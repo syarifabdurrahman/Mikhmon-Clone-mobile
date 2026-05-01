@@ -1382,13 +1382,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       if (profile.validity != null &&
           profile.validity!.toLowerCase() != 'unlimited' &&
           profile.validity!.isNotEmpty) {
-        onLoginScript = OnLoginScriptGenerator.generate(profile.validity!);
-        // Fallback for old MikroTik versions: store price in on-login script
-        if (profile.price != null && profile.price! > 0) {
-          final p = profile.price!.toInt();
-          onLoginScript = ':local price "$p"; $onLoginScript ;#price=$p';
+          onLoginScript = OnLoginScriptGenerator.generate(
+            profile.validity!,
+            price: profile.price,
+          );
         }
-      }
     } catch (e) {
       // Skip on-login script if generation fails
     }
@@ -1450,13 +1448,11 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       if (updatedProfile.validity != null &&
           updatedProfile.validity!.toLowerCase() != 'unlimited' &&
           updatedProfile.validity!.isNotEmpty) {
-        onLoginScript = OnLoginScriptGenerator.generate(updatedProfile.validity!);
-        // Fallback for old MikroTik versions: store price in on-login script
-        if (updatedProfile.price != null && updatedProfile.price! > 0) {
-          final p = updatedProfile.price!.toInt();
-          onLoginScript = ':local price "$p"; $onLoginScript ;#price=$p';
+          onLoginScript = OnLoginScriptGenerator.generate(
+            updatedProfile.validity!,
+            price: updatedProfile.price,
+          );
         }
-      }
     } catch (e) {}
 
     // Format comment with price for Mikhmon compatibility
@@ -1739,7 +1735,60 @@ class IncomeNotifier extends AsyncNotifier<IncomeState> {
     // Sort transactions by timestamp (newest first)
     transactions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
+    // Try to sync with router in background to capture new activations
+    _syncWithRouter(transactions);
+
     return _calculateState(transactions, '30days');
+  }
+
+  Future<void> _syncWithRouter(List<SalesTransaction> existingTransactions) async {
+    try {
+      // Force a fresh refresh of hotspot users to see the latest comments
+      ref.invalidate(hotspotUsersProvider);
+      final usersAsync = await ref.read(hotspotUsersProvider.future);
+      
+      final cache = ref.read(cacheServiceProvider);
+      bool updated = false;
+
+      for (final user in usersAsync.users) {
+        final comment = user['comment'] as String? ?? '';
+        
+        // Look for our specific activation tag: aktif-PRICE-DATE
+        if (comment.startsWith('aktif-')) {
+          final parts = comment.split('-');
+          if (parts.length >= 3) {
+            final price = double.tryParse(parts[1]) ?? 0.0;
+            final username = user['name'] as String? ?? '';
+            
+            // Check if we already recorded this specific activation
+            // Using username + exact comment as a unique key
+            final alreadyRecorded = existingTransactions.any((t) => 
+              t.username == username && t.comment == comment);
+              
+            if (!alreadyRecorded && price > 0) {
+              final transaction = SalesTransaction(
+                id: 'sync_${username}_${DateTime.now().millisecondsSinceEpoch}',
+                username: username,
+                profile: user['profile'] as String? ?? 'default',
+                price: price,
+                timestamp: DateTime.now(),
+                comment: comment,
+              );
+              
+              await cache.saveSalesTransaction(transaction.toJson());
+              updated = true;
+            }
+          }
+        }
+      }
+
+      if (updated) {
+        // Refresh local state if new transactions were added
+        ref.invalidateSelf();
+      }
+    } catch (e) {
+      debugPrint('Revenue sync failed: $e');
+    }
   }
 
   Future<void> setFilter(String filter) async {

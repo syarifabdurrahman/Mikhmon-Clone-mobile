@@ -1,5 +1,5 @@
 class OnLoginScriptGenerator {
-  static String generate(String validity) {
+  static String generate(String validity, {double? price}) {
     final parsed = _parseValidity(validity);
     if (parsed == null) return '';
 
@@ -13,9 +13,11 @@ class OnLoginScriptGenerator {
     if ((parsed['minutes'] ?? 0) > 0) interval += '${parsed['minutes']}m';
     if (interval.isEmpty) interval = '1m';
 
-    return ':if ([/ip hotspot user get [find name="\$user"] comment] != "aktif") do={'
-        '/ip hotspot user set [find name="\$user"] comment="aktif"; '
-        // Perhatikan penggunaan \$user di luar tanda kutip on-event agar nilainya "tertanam"
+    final priceTag = price != null ? '-${price.toInt()}' : '';
+
+    return ':local date [/system clock get date]; '
+        ':if ([/ip hotspot user get [find name="\$user"] comment] != "aktif$priceTag-\$date") do={'
+        '/ip hotspot user set [find name="\$user"] comment="aktif$priceTag-\$date"; '
         '/system scheduler add name="\$user" interval=$interval on-event="/ip hotspot user disable [find name=\\"\$user\\"]; /ip hotspot active remove [find user=\\"\$user\\"]; /system scheduler remove [find name=\\"\$user\\"]"'
         '}';
   }

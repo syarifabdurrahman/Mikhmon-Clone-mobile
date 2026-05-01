@@ -247,15 +247,6 @@ class _VoucherGenerationScreenState
         // Store generated voucher
         _generatedVouchers.add(voucher);
 
-        // Record sale for analytics
-        if (selectedProfileObj.price != null && selectedProfileObj.price! > 0) {
-          await ref.read(incomeProvider.notifier).recordSale(
-                username: username,
-                profile: _selectedProfile ?? 'default',
-                price: selectedProfileObj.price!,
-              );
-        }
-
         // Small delay between requests to avoid overwhelming the router
         if (i < qty) {
           await Future.delayed(const Duration(milliseconds: 200));

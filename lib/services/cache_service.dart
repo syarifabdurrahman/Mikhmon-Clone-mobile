@@ -317,10 +317,24 @@ class CacheService {
     return DateTime.now().difference(lastUpdate) > maxAge;
   }
 
-  /// Clear all cached data
+  /// Clear operational cached data but preserve persistent settings
   Future<void> clearCache() async {
     try {
-      await _cacheBox.clear();
+      // List of keys to preserve
+      final persistentKeys = [
+        _savedConnectionsKey,
+        _appSettingsKey,
+        _salesTransactionsKey,
+        _profilePricesKey,
+        _vouchersKey,
+      ];
+
+      final allKeys = _cacheBox.keys.toList();
+      for (final key in allKeys) {
+        if (!persistentKeys.contains(key)) {
+          await _cacheBox.delete(key);
+        }
+      }
     } catch (e) {
       // Error clearing
     }
