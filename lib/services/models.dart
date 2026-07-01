@@ -185,17 +185,39 @@ class UserProfile {
           }
         }
       }
-      
-      // Strategy 4: Fallback to on-login script parsing (for old ROS versions without profile comments)
-      if (price == null || price == 0) {
-        final onLogin = json['on-login']?.toString() ?? '';
-        if (onLogin.isNotEmpty) {
-          // Look for price in any format: price=5000, "5000", or :local price "5000"
-          final priceMatch = RegExp(r'(?:price|amount)\s*[:=]\s*"?(\d+)"?|local\s+price\s+"?(\d+)"?').firstMatch(onLogin);
-          if (priceMatch != null) {
-            final pStr = priceMatch.group(1) ?? priceMatch.group(2);
-            if (pStr != null) {
-              price = double.tryParse(pStr);
+    }
+    // Strategy 4: Fallback to on-login script parsing (for old ROS versions without profile comments, or Mikhmon scripts)
+    if (price == null || price == 0 || validity == null || validity == 'unlimited' || validity.isEmpty) {
+      final onLogin = json['on-login']?.toString() ?? '';
+      if (onLogin.isNotEmpty) {
+        // Look for price
+        if (price == null || price == 0) {
+          // Check for explicit local price first
+          final explicitPriceMatch = RegExp(r'(?:price|amount)\s*[:=]\s*"?(\d+)"?|local\s+price\s+"?(\d+)"?').firstMatch(onLogin);
+          if (explicitPriceMatch != null) {
+            final pStr = explicitPriceMatch.group(1) ?? explicitPriceMatch.group(2);
+            if (pStr != null) price = double.tryParse(pStr);
+          } else {
+            // Check for Mikhmon's aktif-PRICE-$date pattern
+            final aktifMatch = RegExp(r'aktif-(\d+)-\$date').firstMatch(onLogin);
+            if (aktifMatch != null) {
+              final pStr = aktifMatch.group(1);
+              if (pStr != null) price = double.tryParse(pStr);
+            }
+          }
+        }
+        
+        // Look for validity
+        if (validity == null || validity == 'unlimited' || validity.isEmpty) {
+          // Check for explicit local validity first
+          final explicitValMatch = RegExp(r'(?:validity)\s*[:=]\s*"?([a-zA-Z0-9]+)"?|local\s+validity\s+"?([a-zA-Z0-9]+)"?').firstMatch(onLogin);
+          if (explicitValMatch != null) {
+            validity = explicitValMatch.group(1) ?? explicitValMatch.group(2);
+          } else {
+            // Check for Mikhmon's interval=... pattern
+            final intervalMatch = RegExp(r'interval=([0-9a-zA-Z]+)').firstMatch(onLogin);
+            if (intervalMatch != null) {
+              validity = intervalMatch.group(1);
             }
           }
         }
