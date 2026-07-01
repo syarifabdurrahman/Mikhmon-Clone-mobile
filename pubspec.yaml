@@ -55,7 +55,15 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.3
 
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  adaptive_icon_background: '#1A1A2E'
+  adaptive_icon_foreground: assets/icon512x512.png
+  image_path: assets/icon512x512.png

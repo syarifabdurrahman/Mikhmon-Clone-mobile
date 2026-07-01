@@ -164,7 +164,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       } else {
         if (mounted) {
           setState(() {
-            _errorMessage = 'Not connected to RouterOS. Please login again.';
+            _errorMessage = AppStrings.of(context).notConnectedLoginFirst;
           });
         }
       }
@@ -256,7 +256,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: [
             Expanded(
               child: Text(
-                'Dashboard',
+                AppStrings.of(context).dashboard,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: context.appOnSurface,
                       fontWeight: FontWeight.bold,
@@ -266,19 +266,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.15),
+                color: context.appSuccess.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.cloud_done_rounded, size: 14, color: Colors.green),
-                  SizedBox(width: 4),
-                  Text('Live',
+                  Icon(Icons.cloud_done_rounded, size: 14, color: context.appSuccess),
+                  const SizedBox(width: 4),
+                  Text(AppStrings.of(context).live,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.green,
+                      color: context.appSuccess,
                     ),
                   ),
                 ],
@@ -289,7 +289,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search_rounded),
-            tooltip: 'Search users',
+            tooltip: AppStrings.of(context).searchUsers,
             onPressed: () => _openUserSearch(context),
           ),
           IconButton(
@@ -364,7 +364,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Connection Error',
+                      AppStrings.of(context).connectionError,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: context.appOnBackground,
                             fontWeight: FontWeight.bold,
@@ -509,19 +509,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             const SizedBox(height: 12),
             _buildInfoRow(
               Icons.memory_rounded,
-              'Platform',
+              AppStrings.of(context).platform,
               _resources!.platform,
             ),
             const SizedBox(height: 8),
             _buildInfoRow(
               Icons.speed_rounded,
-              'CPU',
+              AppStrings.of(context).cpu,
               '${_resources!.cpuFrequency} MHz',
             ),
             const SizedBox(height: 8),
             _buildInfoRow(
               Icons.access_time_rounded,
-              'Uptime',
+              AppStrings.of(context).uptime,
               _formatUptime(_resources!.uptimeSeconds),
             ),
           ],
@@ -654,7 +654,7 @@ class _UserSearchDelegate extends SearchDelegate<String> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Search for hotspot users',
+              AppStrings.of(context).searchUsersPlaceholder,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -693,7 +693,7 @@ class _UserSearchDelegate extends SearchDelegate<String> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No users found for "$query"',
+                  AppStrings.of(context).noUsersFoundForQuery.replaceAll('%s', query),
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Theme.of(context)
                             .colorScheme

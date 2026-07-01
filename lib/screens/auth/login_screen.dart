@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../utils/validators.dart';
 import '../../utils/network_scanner.dart';
+import '../../widgets/scanning_dialog.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../theme/app_theme.dart';
 import '../../l10n/translations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -33,8 +35,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _saveConnection = true;
   bool _useRestApi = false;
 
-  static const Color primaryColor = Color(0xFF7B61FF);
-
   @override
   void dispose() {
     _ipController.dispose();
@@ -53,18 +53,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (loadingContext) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: context.appSurface,
         content: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+              valueColor: AlwaysStoppedAnimation<Color>(context.appPrimary),
             ),
             const SizedBox(width: 16),
-            const Text(
-              'Connecting...',
-              style: TextStyle(color: Color(0xFF1E293B)),
+            Text(
+              AppStrings.of(context).connecting,
+              style: TextStyle(color: context.appOnSurface),
             ),
           ],
         ),
@@ -78,24 +78,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _scanNetwork() async {
     setState(() => _isScanning = true);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const ScanningDialog(),
+    );
     try {
       final results = await NetworkScanner.scanForRouters();
       if (!mounted) return;
+      Navigator.of(context).pop();
       if (results.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No MikroTik routers found on network')),
+          SnackBar(content: Text(AppStrings.of(context).noRoutersFound)),
         );
         return;
       }
       _showRouterListDialog(results);
     } catch (e) {
       if (mounted) {
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scan failed: $e')),
+          SnackBar(
+              content:
+                  Text(AppStrings.of(context).scanFailed.replaceAll('%s', '$e'))),
         );
       }
     } finally {
-      if (mounted) setState(() => _isScanning = false);
+      if (mounted) {
+        setState(() => _isScanning = false);
+      }
     }
   }
 
@@ -103,14 +114,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: context.appSurface,
         title: Row(
           children: [
-            Icon(Icons.wifi_tethering_rounded, size: 22, color: primaryColor),
+            Icon(Icons.wifi_tethering_rounded, size: 22, color: context.appPrimary),
             const SizedBox(width: 8),
             Text(
-              'Found ${results.length} Router${results.length > 1 ? 's' : ''}',
-              style: const TextStyle(color: Color(0xFF1E293B), fontSize: 18),
+              AppStrings.of(context)
+                  .foundRouters
+                  .replaceAll('%d', results.length.toString()),
+              style: TextStyle(color: context.appOnSurface, fontSize: 18),
             ),
           ],
         ),
@@ -125,14 +138,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 leading: Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
+                    color: context.appPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.router_rounded, color: primaryColor, size: 22),
+                  child: Icon(Icons.router_rounded, color: context.appPrimary, size: 22),
                 ),
                 title: Text(r.ip, style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Port ${r.port}${r.isRestApi ? ' (REST)' : ' (API)'}'),
-                trailing: Icon(Icons.add_rounded, color: primaryColor),
+                subtitle: Text(
+                    'Port ${r.port}${r.isRestApi ? ' (REST)' : ' (API)'}'),
+                trailing: Icon(Icons.add_rounded, color: context.appPrimary),
                 onTap: () {
                   Navigator.pop(ctx);
                   _ipController.text = r.ip;
@@ -146,7 +160,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Close', style: TextStyle(color: Colors.grey[600])),
+            child: Text(AppStrings.of(context).close,
+                style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.6))),
           ),
         ],
       ),
@@ -230,7 +245,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: primaryColor,
+      backgroundColor: context.appPrimary,
       body: Stack(
         children: [
           SafeArea(
@@ -298,74 +313,75 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 10),
-                      const Text(
-                        "Add New Router",
+                      Text(
+                        AppStrings.of(context).addRouterTitle,
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B),
+                          color: context.appOnSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Enter your Mikrotik router details",
+                        AppStrings.of(context).enterRouterDetailsForm,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: context.appOnSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 24),
-                        if (_errorMessage != null)
-                          Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFEE2E2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.error_outline,
-                                      color: Color(0xFFF43F5E),
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        _errorMessage!.replaceAll('Exception: ', ''),
-                                        style: const TextStyle(
-                                          color: Color(0xFFF43F5E),
-                                          fontSize: 13,
-                                        ),
+                      if (_errorMessage != null)
+                        Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: context.appError.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: context.appError,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!
+                                          .replaceAll('Exception: ', ''),
+                                      style: TextStyle(
+                                        color: context.appError,
+                                        fontSize: 13,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton.icon(
-                                  onPressed: () {
-                                    setState(() => _errorMessage = null);
-                                    _scanNetwork();
-                                  },
-                                  icon: Icon(Icons.wifi_find_rounded,
-                                      size: 16, color: Colors.green[700]),
-                                  label: Text(
-                                    'Find Router on Network',
-                                    style: TextStyle(
-                                      color: Colors.green[700],
-                                      fontSize: 12,
-                                    ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  setState(() => _errorMessage = null);
+                                  _scanNetwork();
+                                },
+                                icon: Icon(Icons.wifi_find_rounded,
+                                    size: 16, color: context.appSuccess),
+                                label: Text(
+                                  AppStrings.of(context).findRouter,
+                                  style: TextStyle(
+                                    color: context.appSuccess,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
                       Row(
                         children: [
                           Expanded(
@@ -387,12 +403,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           height: 18,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            color: primaryColor,
+                                            color: context.appPrimary,
                                           ),
                                         )
                                       : Icon(Icons.wifi_find_rounded,
-                                          color: primaryColor, size: 20),
-                                  tooltip: 'Find Router',
+                                          color: context.appPrimary, size: 20),
+                                  tooltip: AppStrings.of(context).findRouter,
                                   onPressed: _isScanning ? null : _scanNetwork,
                                 ),
                                 border: OutlineInputBorder(
@@ -401,7 +417,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide:
-                                      const BorderSide(color: primaryColor),
+                                      BorderSide(color: context.appPrimary),
                                 ),
                               ),
                               validator: Validators.validateIP,
@@ -417,7 +433,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 labelText: AppStrings.of(context).port,
                                 hintText: '8728',
                                 prefixIcon: Tooltip(
-                                  message: 'RouterOS API port (default: 8728)',
+                                  message: AppStrings.of(context)
+                                      .routerosDefaultPort,
                                   child: Icon(Icons.info_outline_rounded,
                                       size: 18),
                                 ),
@@ -427,7 +444,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide:
-                                      const BorderSide(color: primaryColor),
+                                      BorderSide(color: context.appPrimary),
                                 ),
                               ),
                               validator: Validators.validatePort,
@@ -452,7 +469,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: primaryColor),
+                            borderSide: BorderSide(color: context.appPrimary),
                           ),
                         ),
                         validator: Validators.validateUsername,
@@ -468,8 +485,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           prefixIcon: const Icon(Icons.lock_rounded, size: 20),
                           suffixIcon: IconButton(
                             tooltip: _obscurePassword
-                                ? 'Show password'
-                                : 'Hide password',
+                                ? AppStrings.of(context).showPassword
+                                : AppStrings.of(context).hidePassword,
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility
@@ -486,7 +503,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: primaryColor),
+                            borderSide: BorderSide(color: context.appPrimary),
                           ),
                         ),
                         validator: Validators.validateOptionalPassword,
@@ -496,12 +513,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: _useRestApi
-                              ? const Color(0xFF10B981).withValues(alpha: 0.1)
-                              : const Color(0xFFF1F5F9),
+                              ? context.appSuccess.withValues(alpha: 0.1)
+                              : context.appCard,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: _useRestApi
-                                ? const Color(0xFF10B981)
+                                ? context.appSuccess
                                 : Colors.transparent,
                           ),
                         ),
@@ -512,8 +529,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ? Icons.check_circle
                                   : Icons.cloud_outlined,
                               color: _useRestApi
-                                  ? const Color(0xFF10B981)
-                                  : Colors.grey[600],
+                                  ? context.appSuccess
+                                  : context.appOnSurface.withValues(alpha: 0.6),
                               size: 20,
                             ),
                             const SizedBox(width: 12),
@@ -522,19 +539,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _useRestApi ? 'REST API (Active)' : 'Legacy API',
+                                    _useRestApi
+                                        ? AppStrings.of(context).restApiActive
+                                        : AppStrings.of(context).legacyApi,
                                     style: TextStyle(
-                                      color: Color(0xFF1E293B),
+                                      color: context.appOnSurface,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                     ),
                                   ),
                                   Text(
                                     _useRestApi
-                                        ? 'HTTP-based (faster, ROS7 recommended)'
-                                        : 'Socket-based (ROS6)',
+                                        ? AppStrings.of(context).httpBased
+                                        : AppStrings.of(context).socketBased,
                                     style: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: context.appOnSurface
+                                          .withValues(alpha: 0.6),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -551,7 +571,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   _portController.text = '8728';
                                 }
                               },
-                              activeThumbColor: const Color(0xFF10B981),
+                              activeTrackColor:
+                                  context.appSuccess.withValues(alpha: 0.3),
+                              activeThumbColor: context.appSuccess,
                             ),
                           ],
                         ),
@@ -562,18 +584,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Checkbox(
                             value: _saveConnection,
                             onChanged: (value) {
-                              setState(() => _saveConnection = value ?? false);
+                              setState(
+                                  () => _saveConnection = value ?? false);
                             },
-                            activeColor: primaryColor,
+                            activeColor: context.appPrimary,
                           ),
                           GestureDetector(
                             onTap: () {
                               setState(
                                   () => _saveConnection = !_saveConnection);
                             },
-                            child: const Text(
-                              'Save this router',
-                              style: TextStyle(color: Color(0xFF64748B)),
+                            child: Text(
+                              AppStrings.of(context).saveThisRouter,
+                              style: TextStyle(
+                                  color: context.appOnSurface
+                                      .withValues(alpha: 0.6)),
                             ),
                           ),
                         ],
@@ -585,30 +610,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : () => _login(),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
+                            backgroundColor: context.appPrimary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: _isLoading
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 24,
                                   height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(
+                                            Colors.white),
                                   ),
                                 )
-                              : const Row(
+                              : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.login_rounded),
-                                    SizedBox(width: 8),
+                                    const Icon(Icons.login_rounded),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'Connect',
-                                      style: TextStyle(
+                                      AppStrings.of(context).connect,
+                                      style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -626,9 +652,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: TextButton(
                           onPressed: () => context.go('/'),
                           child: Text(
-                            "BACK TO HOME",
+                            AppStrings.of(context).backToHome,
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color:
+                                  context.appOnSurface.withValues(alpha: 0.5),
                               letterSpacing: 2,
                               fontWeight: FontWeight.w600,
                             ),
@@ -666,18 +693,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   color: Colors.amber,
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'Saved Routers',
+                Text(
+                  AppStrings.of(context).savedRouters,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B),
+                    color: context.appOnSurface,
                   ),
                 ),
                 const Spacer(),
                 Text(
-                  '${connections.length} saved',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  '${connections.length} ${AppStrings.of(context).saved}',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: context.appOnSurface.withValues(alpha: 0.5)),
                 ),
               ],
             ),
@@ -695,7 +724,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: context.appCard,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Material(
@@ -713,8 +742,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        primaryColor,
-                        primaryColor.withValues(alpha: 0.7),
+                        context.appPrimary,
+                        context.appPrimary.withValues(alpha: 0.7),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(8),
@@ -735,22 +764,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        connection.name,
-                        style: const TextStyle(
-                          color: Color(0xFF1E293B),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          connection.name,
+                          style: TextStyle(
+                            color: context.appOnSurface,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        '${connection.host}:${connection.port}',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${connection.host}:${connection.port}',
+                          style: TextStyle(
+                            color:
+                                context.appOnSurface.withValues(alpha: 0.5),
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -759,7 +796,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Icon(
                   Icons.login_rounded,
                   size: 18,
-                  color: primaryColor,
+                  color: context.appPrimary,
                 ),
               ],
             ),
@@ -798,7 +835,6 @@ class _QuickLoginDialog extends StatefulWidget {
 
 class _QuickLoginDialogState extends State<_QuickLoginDialog> {
   late final TextEditingController _passwordController;
-  static const Color primaryColor = Color(0xFF7B61FF);
 
   @override
   void initState() {
@@ -815,11 +851,11 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: context.appSurface,
       title: Text(
-        'Connect to ${widget.connection.name}',
-        style: const TextStyle(
-          color: Color(0xFF1E293B),
+        '${AppStrings.of(context).connect} ${widget.connection.name}',
+        style: TextStyle(
+          color: context.appOnSurface,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -842,7 +878,7 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: primaryColor),
+                borderSide: BorderSide(color: context.appPrimary),
               ),
             ),
             autofocus: true,
@@ -857,7 +893,8 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(AppStrings.of(context).cancel,
-              style: TextStyle(color: Colors.grey[600])),
+              style: TextStyle(
+                  color: context.appOnSurface.withValues(alpha: 0.6))),
         ),
         ElevatedButton(
           onPressed: () {
@@ -865,7 +902,7 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
             widget.onConnect(_passwordController.text);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
+            backgroundColor: context.appPrimary,
             foregroundColor: Colors.white,
           ),
           child: Text(AppStrings.of(context).connect),
@@ -877,9 +914,13 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16,
+            color: context.appOnSurface.withValues(alpha: 0.6)),
         const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+        Text(text,
+            style: TextStyle(
+                color: context.appOnSurface.withValues(alpha: 0.6),
+                fontSize: 14)),
       ],
     );
   }

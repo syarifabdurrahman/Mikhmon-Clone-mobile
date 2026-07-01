@@ -34,8 +34,8 @@ class AppStrings {
 
   String get onboardingSubtitle => _get({
         'en': 'Open Mikrotik Monitor',
-        'id': 'Open Mikrotik Monitor',
-        'ms': 'Open Mikrotik Monitor',
+        'id': 'Buka Mikrotik Monitor',
+        'ms': 'Buka Mikrotik Monitor',
       });
 
   String get onboardingDescription => _get({
@@ -199,6 +199,11 @@ class AppStrings {
       });
   String get language =>
       _get({'en': 'Language', 'id': 'Bahasa', 'ms': 'Bahasa'});
+  String get selectLanguage => _get({
+        'en': 'Select Your Language',
+        'id': 'Pilih Bahasa Anda',
+        'ms': 'Pilih Bahasa Anda'
+      });
   String get saveAndContinue => _get({
         'en': 'Save & Continue',
         'id': 'Simpan & Lanjutkan',
@@ -1237,6 +1242,162 @@ class AppStrings {
   String get generate => _get({'en': 'Generate', 'id': 'Buat', 'ms': 'Jana'});
   String get printAll =>
       _get({'en': 'Print All', 'id': 'Cetak Semua', 'ms': 'Cetak Semua'});
+
+  // ─── Login / Scanner ───
+  String get findRouter => _get({
+        'en': 'Find Router on Network',
+        'id': 'Cari Router di Jaringan',
+        'ms': 'Cari Router di Rangkaian'
+      });
+  String get scanFailed => _get({
+        'en': 'Scan failed: %s',
+        'id': 'Pemindaian gagal: %s',
+        'ms': 'Imbasan gagal: %s'
+      });
+  String get noRoutersFound => _get({
+        'en': 'No MikroTik routers found on network',
+        'id': 'Tidak ada router MikroTik ditemukan di jaringan',
+        'ms': 'Tiada router MikroTik ditemui di rangkaian'
+      });
+  String get foundRouters => _get({
+        'en': 'Found %d Router(s)',
+        'id': 'Ditemukan %d Router',
+        'ms': 'Ditemui %d Router'
+      });
+  String get restApiActive => _get({
+        'en': 'REST API (Active)',
+        'id': 'REST API (Aktif)',
+        'ms': 'REST API (Aktif)'
+      });
+  String get legacyApi => _get({
+        'en': 'Legacy API',
+        'id': 'API Lama',
+        'ms': 'API Lama'
+      });
+  String get httpBased => _get({
+        'en': 'HTTP-based (faster, ROS7 recommended)',
+        'id': 'Berbasis HTTP (lebih cepat, disarankan ROS7)',
+        'ms': 'Berasaskan HTTP (lebih cepat, disyorkan ROS7)'
+      });
+  String get socketBased => _get({
+        'en': 'Socket-based (ROS6)',
+        'id': 'Berbasis Socket (ROS6)',
+        'ms': 'Berasaskan Socket (ROS6)'
+      });
+  String get showPassword => _get({
+        'en': 'Show password',
+        'id': 'Tampilkan kata sandi',
+        'ms': 'Tunjukkan kata laluan'
+      });
+  String get hidePassword => _get({
+        'en': 'Hide password',
+        'id': 'Sembunyikan kata sandi',
+        'ms': 'Sembunyikan kata laluan'
+      });
+  String get routerosDefaultPort => _get({
+        'en': 'RouterOS API port (default: 8728)',
+        'id': 'Port API RouterOS (default: 8728)',
+        'ms': 'Port API RouterOS (lalai: 8728)'
+      });
+  String get enterRouterDetailsForm => _get({
+        'en': 'Enter your Mikrotik router details',
+        'id': 'Masukkan detail router Mikrotik Anda',
+        'ms': 'Masukkan butiran router Mikrotik anda'
+      });
+
+  // ─── Feedback ───
+  String get sendFeedback => _get({
+        'en': 'Send Feedback',
+        'id': 'Kirim Masukan',
+        'ms': 'Hantar Maklum Balas'
+      });
+  String get yourName => _get({
+        'en': 'Your Name',
+        'id': 'Nama Anda',
+        'ms': 'Nama Anda'
+      });
+  String get enterYourName => _get({
+        'en': 'Enter your name',
+        'id': 'Masukkan nama Anda',
+        'ms': 'Masukkan nama anda'
+      });
+  String get yourFeedback => _get({
+        'en': 'Your Feedback',
+        'id': 'Masukan Anda',
+        'ms': 'Maklum Balas Anda'
+      });
+  String get feedbackHint => _get({
+        'en': 'Tell us what you think...',
+        'id': 'Katakan apa yang Anda pikirkan...',
+        'ms': 'Katakan apa yang anda fikirkan...'
+      });
+  String get feedbackSent => _get({
+        'en': 'Feedback sent. Thank you!',
+        'id': 'Masukan terkirim. Terima kasih!',
+        'ms': 'Maklum balas dihantar. Terima kasih!'
+      });
+  String get feedbackFailed => _get({
+        'en': 'Failed to open feedback form',
+        'id': 'Gagal membuka formulir masukan',
+        'ms': 'Gagal membuka borang maklum balas'
+      });
+  String get openInBrowser => _get({
+        'en': 'Open in Browser',
+        'id': 'Buka di Peramban',
+        'ms': 'Buka dalam Pelayar'
+      });
+
+  // ─── Activity Logs ───
+  String get exportCsv => _get({
+        'en': 'Export CSV',
+        'id': 'Ekspor CSV',
+        'ms': 'Eksport CSV'
+      });
+  String get searchLogs => _get({
+        'en': 'Search logs...',
+        'id': 'Cari log...',
+        'ms': 'Cari log...'
+      });
+  String get failedToLoadLogs => _get({
+        'en': 'Failed to load logs',
+        'id': 'Gagal memuat log',
+        'ms': 'Gagal memuat log'
+      });
+  String get clearAllLogs => _get({
+        'en': 'Clear all logs?',
+        'id': 'Hapus semua log?',
+        'ms': 'Padam semua log?'
+      });
+  String get actionCannotBeUndone => _get({
+        'en': 'This action cannot be undone.',
+        'id': 'Tindakan ini tidak dapat dibatalkan.',
+        'ms': 'Tindakan ini tidak boleh dibatalkan.'
+      });
+  String get apply => _get({
+        'en': 'Apply',
+        'id': 'Terapkan',
+        'ms': 'Guna'
+      });
+  String get untilDate => _get({
+        'en': 'Until %s',
+        'id': 'Hingga %s',
+        'ms': 'Sehingga %s'
+      });
+  String get allTime => _get({
+        'en': 'All Time',
+        'id': 'Sepanjang Masa',
+        'ms': 'Sepanjang Masa'
+      });
+  String get justNow => _get({
+        'en': 'Just now',
+        'id': 'Baru saja',
+        'ms': 'Baru sahaja'
+      });
+  String get noUsersFoundForQuery => _get({
+        'en': 'No users found for "%s"',
+        'id': 'Tidak ada pengguna ditemukan untuk "%s"',
+        'ms': 'Tiada pengguna ditemui untuk "%s"'
+      });
 
   // ─── Dashboard Widgets ───
   String get networkTraffic => _get({

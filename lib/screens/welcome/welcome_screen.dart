@@ -5,6 +5,8 @@ import '../../utils/network_scanner.dart';
 import '../../services/onboarding_service.dart';
 import '../../providers/app_providers.dart';
 import '../../services/models.dart';
+import '../../widgets/scanning_dialog.dart';
+import '../../theme/app_theme.dart';
 import '../../l10n/translations.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -15,8 +17,6 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 }
 
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
-  static const Color primaryColor = Color(0xFF7B61FF);
-
   @override
   void initState() {
     super.initState();
@@ -40,20 +40,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.white,
-        content: Row(
-          children: [
-            CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-            ),
-            const SizedBox(width: 16),
-            const Text('Scanning network...',
-                style: TextStyle(color: Color(0xFF1E293B))),
-          ],
-        ),
-      ),
+      builder: (_) => const ScanningDialog(),
     );
     try {
       final results = await NetworkScanner.scanForRouters();
@@ -61,7 +48,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       Navigator.of(context).pop();
       if (results.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No MikroTik routers found on network')),
+          SnackBar(content: Text(AppStrings.of(context).noRoutersFound)),
         );
         return;
       }
@@ -70,7 +57,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scan failed: $e')),
+          SnackBar(
+              content: Text(
+                  AppStrings.of(context).scanFailed.replaceAll('%s', '$e'))),
         );
       }
     }
@@ -80,14 +69,17 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: context.appSurface,
         title: Row(
           children: [
-            Icon(Icons.wifi_tethering_rounded, size: 22, color: primaryColor),
+            Icon(Icons.wifi_tethering_rounded, size: 22,
+                color: context.appPrimary),
             const SizedBox(width: 8),
             Text(
-              'Found ${results.length} Router${results.length > 1 ? 's' : ''}',
-              style: const TextStyle(color: Color(0xFF1E293B), fontSize: 18),
+              AppStrings.of(context).foundRouters.replaceAll(
+                  '%d', results.length.toString()),
+              style: TextStyle(
+                  color: context.appOnSurface, fontSize: 18),
             ),
           ],
         ),
@@ -102,17 +94,21 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 leading: Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
+                    color: context.appPrimary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.router_rounded, color: primaryColor, size: 22),
+                  child: Icon(Icons.router_rounded,
+                      color: context.appPrimary, size: 22),
                 ),
-                title: Text(r.ip, style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text('Port ${r.port}${r.isRestApi ? ' (REST)' : ' (API)'}'),
-                trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+                title: Text(r.ip,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                    'Port ${r.port}${r.isRestApi ? ' (REST)' : ' (API)'}'),
+                trailing: Icon(Icons.add_rounded,
+                    color: context.appPrimary),
                 onTap: () {
                   Navigator.pop(ctx);
-                  context.push('/login');
+                  _handleScannedRouter(r);
                 },
               );
             },
@@ -121,298 +117,223 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Close', style: TextStyle(color: Colors.grey[600])),
+            child: Text(AppStrings.of(context).close,
+                style: TextStyle(
+                    color: context.appOnSurface.withValues(alpha: 0.6))),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _quickLogin(RouterConnection connection, String password) async {
-    _showLoadingDialog();
-
-    try {
-      await ref.read(authStateProvider.notifier).login(
-            host: connection.host,
-            port: connection.port,
-            username: connection.username,
-            password: password,
-            rememberMe: false,
-          );
-
-      if (mounted) {
-        _hideLoadingDialog();
-        _navigateAfterLogin();
-      }
-    } catch (e) {
-      if (mounted) {
-        _hideLoadingDialog();
-        _showErrorDialog(e.toString().replaceAll('Exception: ', ''));
-      }
-    }
-  }
-
-  void _showLoadingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (loadingContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        content: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-            ),
-            const SizedBox(width: 16),
-            Text(
-              AppStrings.of(context).connecting,
-              style: TextStyle(color: Color(0xFF1E293B)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _hideLoadingDialog() {
-    Navigator.of(context).pop();
-  }
-
-  void _showErrorDialog(String message, {VoidCallback? onRetry}) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Color(0xFFF43F5E)),
-            const SizedBox(width: 12),
-            Text(
-              AppStrings.of(context).connectionFailed,
-              style: const TextStyle(color: Color(0xFF1E293B)),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(color: Color(0xFF64748B)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (onRetry != null) {
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  _scanNetwork();
-                });
-              }
-            },
-            child: Text('Find Router',
-                style: TextStyle(color: Colors.green[700])),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(AppStrings.of(context).ok),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showQuickLoginDialog(RouterConnection connection) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => _QuickLoginDialog(
-        connection: connection,
-        onConnect: (password) => _quickLogin(connection, password),
-      ),
-    );
+  void _handleScannedRouter(NetworkScannerResult r) {
+    context.push('/login');
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final topPadding = MediaQuery.of(context).padding.top;
-
     return Scaffold(
-      backgroundColor: primaryColor,
-      body: Column(
-        children: [
-          // Header
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.only(top: topPadding + 16, bottom: 24),
-            child: Column(
+      backgroundColor: context.appPrimary,
+      body: SafeArea(
+        child: Column(
+          children: [
+              // Fixed header
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => context.go('/login'),
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: context.appPrimary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(
+                        Icons.router_rounded,
+                        size: 50,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "\u03A9MMON",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    AppStrings.of(context).onboardingSubtitle,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Scrollable bottom section
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: context.appSurface,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(40),
+                    topRight: Radius.circular(40),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                        child: _buildSavedConnectionsSection(),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                      child: _buildQuickConnectSection(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickConnectSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: context.appSuccess.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.add_rounded,
+                color: context.appSuccess,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              AppStrings.of(context).connectNewRouter,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: context.appOnSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () => context.push('/login'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: context.appPrimary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.router_rounded,
-                    size: 50,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "\u03A9MMON",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  AppStrings.of(context).onboardingSubtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 11,
-                    letterSpacing: 0.5,
+                const Icon(Icons.login_rounded, size: 18),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      AppStrings.of(context).enterDetails,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          // Content
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: _scanNetwork,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: BorderSide(
+                  color: context.appSuccess.withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(30, 30, 30, bottomPadding + 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppStrings.of(context).welcomeBack,
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        AppStrings.of(context).selectRouter,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Saved connections
-                      _buildSavedConnectionsSection(),
-                      const SizedBox(height: 12),
-                      // Connect to new router button
-                      GestureDetector(
-                        onTap: () => context.push('/login'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: primaryColor.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.add_rounded,
-                                  color: primaryColor, size: 22),
-                              const SizedBox(width: 12),
-                              Text(
-                                AppStrings.of(context).connectNewRouter,
-                                style: TextStyle(
-                                  color: primaryColor,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: () => _scanNetwork(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.green.withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.wifi_find_rounded,
-                                  color: Colors.green, size: 20),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Find Router on Network',
-                                style: TextStyle(
-                                  color: Colors.green.shade700,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final service = ref.watch(routerOSServiceProvider);
-                          if (!service.isConnected) {
-                            return const SizedBox.shrink();
-                          }
-                          return Center(
-                            child: TextButton(
-                              onPressed: () => context.go('/main/dashboard'),
-                              child: Text(
-                                AppStrings.of(context).enterApp,
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                  letterSpacing: 2,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_find_rounded,
+                    size: 18, color: context.appSuccess),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      AppStrings.of(context).findRouter,
+                      style: TextStyle(
+                          color: context.appSuccess,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13),
+                      maxLines: 1,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Consumer(
+          builder: (context, ref, _) {
+            final service = ref.watch(routerOSServiceProvider);
+            if (!service.isConnected) {
+              return const SizedBox.shrink();
+            }
+            return Center(
+              child: TextButton(
+                onPressed: () => context.go('/main/dashboard'),
+                child: Text(
+                  AppStrings.of(context).enterApp,
+                  style: TextStyle(
+                    color: context.appOnSurface.withValues(alpha: 0.5),
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -443,7 +364,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B),
+                      color: context.appOnSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -453,21 +374,20 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   '${connections.length}',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey[500],
+                    color: context.appOnSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            SizedBox(
-              height: 180,
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: connections.length,
-                itemBuilder: (context, index) {
-                  return _buildConnectionTile(connections[index]);
-                },
-              ),
+            ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: connections.length,
+              itemBuilder: (context, index) {
+                return _buildConnectionTile(connections[index]);
+              },
             ),
             const SizedBox(height: 8),
           ],
@@ -481,12 +401,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   Widget _buildEmptyConnections() {
     return Center(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: context.appCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color(0xFFE2E8F0),
+            color: context.appOnSurface.withValues(alpha: 0.08),
             style: BorderStyle.solid,
           ),
         ),
@@ -496,7 +416,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             Icon(
               Icons.wifi_tethering_off_rounded,
               size: 48,
-              color: Colors.grey[400],
+              color: context.appOnSurface.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 12),
             Text(
@@ -504,7 +424,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
+                color: context.appOnSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 8),
@@ -512,7 +432,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               AppStrings.of(context).tapToConnectFirstRouter,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[500],
+                color: context.appOnSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
@@ -526,112 +446,230 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: context.appCard,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showQuickLoginDialog(connection),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        primaryColor,
-                        primaryColor.withValues(alpha: 0.7),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      connection.name.isNotEmpty
-                          ? connection.name[0].toUpperCase()
-                          : 'R',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        children: [
+          Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showQuickLoginDialog(connection),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
                     children: [
-                      Text(
-                        connection.name,
-                        style: const TextStyle(
-                          color: Color(0xFF1E293B),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              context.appPrimary,
+                              context.appPrimary.withValues(alpha: 0.7),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        child: Center(
+                          child: Text(
+                            connection.name.isNotEmpty
+                                ? connection.name[0].toUpperCase()
+                                : 'R',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.dns_rounded,
-                            size: 12,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${connection.host}:${connection.port}',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                connection.name,
+                                style: TextStyle(
+                                  color: context.appOnSurface,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.person_rounded,
-                            size: 12,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            connection.username,
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
+                            const SizedBox(height: 2),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.dns_rounded,
+                                    size: 12,
+                                    color: context.appOnSurface
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${connection.host}:${connection.port}',
+                                    style: TextStyle(
+                                      color: context.appOnSurface
+                                          .withValues(alpha: 0.5),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.person_rounded,
+                                    size: 12,
+                                    color: context.appOnSurface
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    connection.username,
+                                    style: TextStyle(
+                                      color: context.appOnSurface
+                                          .withValues(alpha: 0.5),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: context.appPrimary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.login_rounded,
+                          size: 20,
+                          color: context.appPrimary,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.login_rounded,
-                    size: 20,
-                    color: primaryColor,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _confirmDeleteConnection(connection),
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+              child: Container(
+                width: 48,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: context.appError.withValues(alpha: 0.08),
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                ),
+                child: Icon(
+                  Icons.delete_outline_rounded,
+                  size: 20,
+                  color: context.appError,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _confirmDeleteConnection(RouterConnection connection) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: context.appSurface,
+        title: Text(
+          AppStrings.of(context).deleteConnectionTitle,
+          style: TextStyle(color: context.appOnSurface),
+        ),
+        content: Text(
+          AppStrings.of(context).removeConnection(connection.name),
+          style: TextStyle(
+              color: context.appOnSurface.withValues(alpha: 0.7)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(AppStrings.of(context).cancel,
+                style: TextStyle(
+                    color: context.appOnSurface.withValues(alpha: 0.6))),
+          ),
+          TextButton(
+            onPressed: () {
+              ref
+                  .read(savedConnectionsProvider.notifier)
+                  .deleteConnection(connection.id);
+              Navigator.pop(dialogContext);
+            },
+            child: Text(
+              AppStrings.of(context).delete,
+              style: TextStyle(color: context.appError),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQuickLoginDialog(RouterConnection connection) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => _QuickLoginDialog(
+        connection: connection,
+        onConnect: (password) => _handleQuickLogin(connection, password),
+      ),
+    );
+  }
+
+  Future<void> _handleQuickLogin(
+      RouterConnection connection, String password) async {
+    try {
+      await ref.read(authStateProvider.notifier).login(
+            host: connection.host,
+            port: connection.port,
+            username: connection.username,
+            password: password,
+            rememberMe: false,
+            useRest: false,
+          );
+      if (mounted) {
+        _navigateAfterLogin();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '${AppStrings.of(context).connectionFailed}: $e'),
+            backgroundColor: context.appError,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -650,7 +688,7 @@ class _QuickLoginDialog extends StatefulWidget {
 
 class _QuickLoginDialogState extends State<_QuickLoginDialog> {
   late final TextEditingController _passwordController;
-  static const Color primaryColor = Color(0xFF7B61FF);
+  bool _isConnecting = false;
 
   @override
   void initState() {
@@ -667,17 +705,16 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: context.appSurface,
       title: Text(
-        'Connect to ${widget.connection.name}',
-        style: const TextStyle(
-          color: Color(0xFF1E293B),
+        '${AppStrings.of(context).connect} ${widget.connection.name}',
+        style: TextStyle(
+          color: context.appOnSurface,
           fontWeight: FontWeight.bold,
         ),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoRow(Icons.dns_rounded,
               '${widget.connection.host}:${widget.connection.port}'),
@@ -688,43 +725,58 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
             controller: _passwordController,
             obscureText: true,
             decoration: InputDecoration(
-              labelText: 'Password',
-              hintText: 'Enter router password',
+              labelText: AppStrings.of(context).password,
               prefixIcon: const Icon(Icons.lock_rounded, size: 20),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: primaryColor),
+                borderSide: BorderSide(color: context.appPrimary),
               ),
             ),
             autofocus: true,
-            onSubmitted: (value) {
-              Navigator.pop(context);
-              widget.onConnect(value);
-            },
+            onSubmitted: _isConnecting
+                ? null
+                : (value) {
+                    setState(() => _isConnecting = true);
+                    Navigator.pop(context);
+                    widget.onConnect(value);
+                  },
           ),
         ],
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(
-            'Cancel',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
+          onPressed: _isConnecting
+              ? null
+              : () => Navigator.pop(context),
+          child: Text(AppStrings.of(context).cancel,
+              style: TextStyle(
+                  color: context.appOnSurface.withValues(alpha: 0.6))),
         ),
         ElevatedButton(
-          onPressed: () {
-            Navigator.pop(context);
-            widget.onConnect(_passwordController.text);
-          },
+          onPressed: _isConnecting
+              ? null
+              : () {
+                  setState(() => _isConnecting = true);
+                  Navigator.pop(context);
+                  widget.onConnect(_passwordController.text);
+                },
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
+            backgroundColor: context.appPrimary,
             foregroundColor: Colors.white,
           ),
-          child: Text(AppStrings.of(context).connect),
+          child: _isConnecting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(AppStrings.of(context).connect),
         ),
       ],
     );
@@ -733,12 +785,13 @@ class _QuickLoginDialogState extends State<_QuickLoginDialog> {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16,
+            color: context.appOnSurface.withValues(alpha: 0.6)),
         const SizedBox(width: 8),
-        Text(
-          text,
-          style: TextStyle(color: Colors.grey[600], fontSize: 14),
-        ),
+        Text(text,
+            style: TextStyle(
+                color: context.appOnSurface.withValues(alpha: 0.6),
+                fontSize: 14)),
       ],
     );
   }

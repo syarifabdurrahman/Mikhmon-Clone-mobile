@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../services/onboarding_service.dart';
 import '../../l10n/translations.dart';
+import '../../l10n/locale_provider.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
   bool _agreedToTerms = false;
@@ -25,7 +27,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _nextPage() {
-    if (_currentPage < 3) {
+    if (_currentPage < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -60,13 +62,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(
           children: [
             // Skip button
-            if (_currentPage < 3)
+            if (_currentPage > 0 && _currentPage < 4)
               Align(
                 alignment: Alignment.topRight,
                 child: TextButton(
                   onPressed: () {
                     _pageController.animateToPage(
-                      3,
+                      4,
                       duration: const Duration(milliseconds: 400),
                       curve: Curves.easeInOut,
                     );
@@ -80,6 +82,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
               )
+            else if (_currentPage == 4)
+              const SizedBox(height: 48)
             else
               const SizedBox(height: 48),
 
@@ -91,6 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   setState(() => _currentPage = page);
                 },
                 children: [
+                  _buildLanguagePage(),
                   _buildWelcomePage(),
                   _buildFeaturesPage(),
                   _buildWarningPage(),
@@ -104,7 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (index) {
+                children: List.generate(5, (index) {
                   final isActive = index == _currentPage;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
@@ -129,6 +134,110 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLanguagePage() {
+    final currentLocale = ref.watch(localeProvider);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _primaryColor,
+                  _primaryColor.withValues(alpha: 0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: _primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.translate_rounded,
+              size: 60,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 40),
+          Text(
+            AppStrings.of(context).selectLanguage,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: context.appOnSurface,
+            ),
+          ),
+          const SizedBox(height: 32),
+          ...LocaleService.localeNames.entries.map((entry) {
+            final isSelected = currentLocale.languageCode == entry.key;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GestureDetector(
+                onTap: () {
+                  ref
+                      .read(localeProvider.notifier)
+                      .setLocale(Locale(entry.key));
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? _primaryColor.withValues(alpha: 0.1)
+                        : context.appSurface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected
+                          ? _primaryColor
+                          : context.appOnSurface.withValues(alpha: 0.12),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        LocaleService.localeFlags[entry.key] ?? '',
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          entry.value,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: context.appOnSurface,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(Icons.check_circle_rounded,
+                            color: _primaryColor, size: 24),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -524,7 +633,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildBottomButtons() {
-    if (_currentPage == 3) {
+    if (_currentPage == 4) {
       return const SizedBox.shrink();
     }
 
@@ -561,7 +670,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             child: Text(
-              _currentPage == 2
+              _currentPage == 3
                   ? AppStrings.of(context).continue_
                   : AppStrings.of(context).next,
               style: const TextStyle(fontWeight: FontWeight.w600),

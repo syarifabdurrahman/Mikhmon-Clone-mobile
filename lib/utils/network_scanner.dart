@@ -15,108 +15,85 @@ class NetworkScannerResult {
 }
 
 class NetworkScanner {
-  static const _timeout = Duration(milliseconds: 500);
+  static const _timeout = Duration(milliseconds: 800);
   static const _maxConcurrent = 50;
 
-  static Future<List<String>> _getLocalIpAndPrefix() async {
+  /// Mendapatkan subnet prefix dari IP WiFi HP saat ini
+  /// Contoh: HP punya IP 192.168.100.5 → return "192.168.100"
+  static Future<String> _getCurrentSubnet() async {
     try {
       final interfaces = await NetworkInterface.list(
         type: InternetAddressType.IPv4,
       );
       for (final iface in interfaces) {
         for (final addr in iface.addresses) {
-          if (addr.address.startsWith('192.168.') ||
-              addr.address.startsWith('10.') ||
-              addr.address.startsWith('172.')) {
-            final parts = addr.address.split('.');
-            parts[3] = '0';
-            return [addr.address, parts.join('.')];
+          final ip = addr.address;
+          if (ip.startsWith('192.168.') ||
+              ip.startsWith('10.') ||
+              ip.startsWith('172.')) {
+            final parts = ip.split('.');
+            parts.removeLast();
+            return parts.join('.');
           }
         }
       }
     } catch (e) {
-      debugPrint('[Scanner] Error getting network info: $e');
+      debugPrint('[Scanner] Gagal dapat IP: $e');
     }
-    return ['', ''];
+    return '';
   }
 
-  static Future<List<String>> scanSubnet({
-    int port = 8728,
-    Duration timeout = _timeout,
-  }) async {
-    final addresses = await _getLocalIpAndPrefix();
-    final subnetPrefix = addresses.length > 1 ? addresses[1] : '';
-    if (subnetPrefix.isEmpty) return [];
+  /// Scan 1 IP spesifik di port 8728 (API RouterOS)
+  static Future<bool> _checkIp(String ip) async {
+    try {
+      final socket = await Socket.connect(ip, 8728, timeout: _timeout);
+      socket.destroy();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
-    final ips = <String>[];
+  /// Scan semua IP di subnet yang sama dengan WiFi HP
+  /// Priority: gateway (.1) dulu, baru 2-254
+  static Future<List<NetworkScannerResult>> scanForRouters() async {
+    final subnet = await _getCurrentSubnet();
+    if (subnet.isEmpty) return [];
+
+    final results = <NetworkScannerResult>[];
+    final foundIps = <String>{};
+
+    // Cek gateway dulu (paling sering jadi IP router)
+    final gateway = '$subnet.1';
+    if (await _checkIp(gateway)) {
+      results.add(NetworkScannerResult(
+        ip: gateway, port: 8728, isRestApi: false,
+      ));
+      foundIps.add(gateway);
+    }
+
+    // Scan semua IP 2-254
     final semaphore = Semaphore(_maxConcurrent);
     final futures = <Future<void>>[];
 
-    for (var i = 1; i <= 254; i++) {
-      final ip = '$subnetPrefix.$i';
+    for (var i = 2; i <= 254; i++) {
       futures.add(semaphore.acquire().then((_) async {
+        final ip = '$subnet.$i';
         try {
-          final socket = await Socket.connect(
-            ip,
-            port,
-            timeout: timeout,
-          );
+          final socket = await Socket.connect(ip, 8728, timeout: _timeout);
           socket.destroy();
-          ips.add(ip);
+          if (!foundIps.contains(ip)) {
+            foundIps.add(ip);
+            results.add(NetworkScannerResult(
+              ip: ip, port: 8728, isRestApi: false,
+            ));
+          }
         } catch (_) {}
         semaphore.release();
       }));
     }
 
     await Future.wait(futures);
-    return ips;
-  }
-
-  static Future<List<NetworkScannerResult>> scanForRouters() async {
-    final results = <NetworkScannerResult>[];
-
-    // First try common IPs (fast)
-    final commonResults = await scanCommonIps();
-    results.addAll(commonResults);
-    final foundIps = results.map((r) => r.ip).toSet();
-
-    // Then scan full subnet for RouterOS API port 8728
-    final apiIps = await scanSubnet(port: 8728);
-    for (final ip in apiIps) {
-      if (!foundIps.contains(ip)) {
-        results.add(NetworkScannerResult(
-          ip: ip, port: 8728, isRestApi: false,
-        ));
-      }
-    }
-
-    return results;
-  }
-
-  static Future<List<NetworkScannerResult>> scanCommonIps() async {
-    final commonIps = [
-      '192.168.88.1',
-      '192.168.1.1',
-      '192.168.0.1',
-      '192.168.10.1',
-      '10.0.0.1',
-      '10.0.0.2',
-      '172.16.0.1',
-    ];
-
-    final results = <NetworkScannerResult>[];
-
-    for (final ip in commonIps) {
-      try {
-        final socket = await Socket.connect(
-          ip, 8728,
-          timeout: _timeout,
-        );
-        socket.destroy();
-        results.add(NetworkScannerResult(ip: ip, port: 8728, isRestApi: false));
-      } catch (_) {}
-    }
-
     return results;
   }
 }

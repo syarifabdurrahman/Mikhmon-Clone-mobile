@@ -303,8 +303,19 @@ class _UserProfilesScreenState extends ConsumerState<UserProfilesScreen>
 }
 
 // Extracted as separate widget for better performance with RepaintBoundary
-String _formatPrice(double? price) {
+String _formatPrice(double? price, {String? profileName}) {
   if (price == null || price == 0) {
+    if (profileName != null) {
+      final cache = CacheService();
+      final localPrices = cache.getProfilePrices();
+      final localPrice = localPrices[profileName];
+      if (localPrice != null && localPrice > 0) {
+        final settings = cache.getAppSettings();
+        final currencyCode = settings?['currency'] as String? ?? 'USD';
+        final currencyInfo = CurrencyData.fromCode(currencyCode);
+        return CurrencyFormatter.format(localPrice, currencyInfo);
+      }
+    }
     return 'Free';
   }
   final cache = CacheService();
@@ -606,7 +617,7 @@ class _ProfileDetailsSheet extends StatelessWidget {
               ),
               SizedBox(height: 4),
               Text(
-                _formatPrice(profile.price),
+          _formatPrice(profile.price, profileName: profile.name),
                 style: TextStyle(
                   color: context.appPrimary,
                   fontWeight: FontWeight.w600,

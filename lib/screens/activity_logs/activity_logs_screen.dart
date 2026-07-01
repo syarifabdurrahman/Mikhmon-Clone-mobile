@@ -80,10 +80,10 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
-          tooltip: 'Back',
+          tooltip: AppStrings.of(context).back,
         ),
         title: Text(
-          'Activity Logs',
+          AppStrings.of(context).activityLogs,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: context.appOnSurface,
                 fontWeight: FontWeight.bold,
@@ -93,17 +93,17 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
           IconButton(
             icon: const Icon(Icons.file_download_rounded),
             onPressed: _exportLogs,
-            tooltip: 'Export CSV',
+            tooltip: AppStrings.of(context).exportCsv,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded),
             onPressed: _confirmClearLogs,
-            tooltip: 'Clear logs',
+            tooltip: AppStrings.of(context).clear,
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => ref.read(activityLogsProvider.notifier).loadLogs(),
-            tooltip: 'Refresh',
+            tooltip: AppStrings.of(context).refresh,
           ),
         ],
       ),
@@ -202,7 +202,7 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
               Expanded(
                 child: TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search logs...',
+                    hintText: AppStrings.of(context).searchLogs,
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -298,7 +298,7 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Failed to load logs',
+             AppStrings.of(context).failedToLoadLogs,
             style: TextStyle(
               color: context.appOnSurface,
               fontWeight: FontWeight.bold,
@@ -322,9 +322,9 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
     } else if (_startDate != null) {
       return '${_formatDate(_startDate!)} - Now';
     } else if (_endDate != null) {
-      return 'Until ${_formatDate(_endDate!)}';
+      return AppStrings.of(context).untilDate.replaceAll('%s', _formatDate(_endDate!));
     }
-    return 'All Time';
+    return AppStrings.of(context).allTime;
   }
 
   String _formatDate(DateTime date) {
@@ -337,12 +337,12 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       currentDate: DateTime.now(),
-      saveText: 'Apply',
+      saveText: AppStrings.of(context).apply,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.dark(
-              primary: const Color(0xFF7C3AED),
+              primary: context.appPrimary,
               onPrimary: Colors.white,
               surface: const Color(0xFF1E293B),
               onSurface: const Color(0xFFE2E8F0),
@@ -377,7 +377,7 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
         SnackBar(
           content: Text(AppStrings.of(context).exportedLogEntries.replaceFirst('%d', logs.length.toString())),
           action: SnackBarAction(
-            label: 'OK',
+            label: AppStrings.of(context).ok,
             onPressed: () {},
           ),
         ),
@@ -391,18 +391,18 @@ class _ActivityLogsScreenState extends ConsumerState<ActivityLogsScreen> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: context.appSurface,
         title: Text(
-          'Clear all logs?',
+           AppStrings.of(context).clearAllLogs,
           style: TextStyle(color: context.appOnSurface),
         ),
         content: Text(
-          'This action cannot be undone.',
+           AppStrings.of(context).actionCannotBeUndone,
           style: TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
-              'Cancel',
+              AppStrings.of(context).cancel,
               style:
                   TextStyle(color: context.appOnSurface.withValues(alpha: 0.7)),
             ),

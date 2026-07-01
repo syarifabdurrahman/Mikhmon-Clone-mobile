@@ -592,10 +592,14 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   bool _timerStarted = false;
   Timer? _refreshTimer;
   final Set<String> _recordedConnections = {};
+  bool _isRefreshing = false;
 
   @override
   Future<PaginatedUsers> build() async {
-    ref.onDispose(() => _refreshTimer?.cancel());
+    ref.onDispose(() {
+      _refreshTimer?.cancel();
+      _timerStarted = false;
+    });
     _currentPage = 1;
 
     // Record previously seen connections for revenue tracking
@@ -610,18 +614,19 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
 
     // If we have cached data, show it immediately and refresh in background
     if (cachedUsers != null && cachedUsers.isNotEmpty) {
-      // Return cached data first (instant)
       final cachedData = _paginateUsers(cachedUsers, page: 1);
 
-      // Start background refresh - fire and forget, don't await
       _startAutoRefresh();
       Future.microtask(() => silentRefresh());
 
       return cachedData;
     }
 
-    // No cache - fetch from API
-    final data = await _loadUsers(page: 1);
+    // No cache - fetch from API with timeout
+    final data = await _loadUsers(page: 1).timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => _emptyPaginatedUsers(),
+    );
     _startAutoRefresh();
     return data;
   }
@@ -679,8 +684,10 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   void _startAutoRefresh() {
     if (_timerStarted) return;
     _timerStarted = true;
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      Future.microtask(() => silentRefresh());
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      if (!_isRefreshing) {
+        Future.microtask(() => silentRefresh());
+      }
     });
   }
 
@@ -698,13 +705,19 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
       return _emptyPaginatedUsers();
     }
 
-    // Fetch hotspot users first (critical data)
-    final allUsers = await client.getHotspotUsers();
+    // Fetch hotspot users first (critical data) with timeout
+    final allUsers = await client.getHotspotUsers().timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => [],
+    );
+    if (allUsers.isEmpty) return _emptyPaginatedUsers();
 
     // Fetch active users separately (non-critical - don't fail the whole load)
     List<Map<String, dynamic>> activeUsers = [];
     try {
-      activeUsers = await client.getHotspotActiveUsers();
+      activeUsers = await client.getHotspotActiveUsers().timeout(
+        const Duration(seconds: 10),
+      );
     } catch (_) {
       // Active users fetch failed - continue without active status
     }
@@ -735,8 +748,8 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   Future<void> _autoRecordRevenue(
       List<Map<String, dynamic>> activeUsers,
       List<Map<String, dynamic>> allUsers) async {
+    if (activeUsers.isEmpty || _recordedConnections.length > 500) return;
     try {
-      // Create a map for quick user lookup to get comments
       final userComments = <String, String>{};
       for (final u in allUsers) {
         final name = u['name'] as String? ?? '';
@@ -746,61 +759,52 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
         }
       }
 
-      // Get profiles - await the future to ensure data is loaded
-      final profiles = await ref.read(userProfileProvider.future);
-      if (profiles.isEmpty) return;
-
-      // Build a map of profile name -> price
+      // Use cached profiles instead of triggering provider fetch
+      final cache = ref.read(cacheServiceProvider);
+      final cachedProfiles = cache.getUserProfiles();
       final profilePrices = <String, double>{};
-      for (final profile in profiles) {
-        if (profile.price != null && profile.price! > 0) {
-          profilePrices[profile.name.toLowerCase()] = profile.price!;
+      if (cachedProfiles != null) {
+        for (final data in cachedProfiles) {
+          final name = data['name'] as String? ?? '';
+          final localPrices = cache.getProfilePrices();
+          double? price;
+          final priceStr = data['price'] as String?;
+          if (priceStr != null) price = double.tryParse(priceStr);
+          if ((price == null || price == 0) && localPrices.containsKey(name)) {
+            price = localPrices[name];
+          }
+          if (price != null && price > 0) {
+            profilePrices[name.toLowerCase()] = price;
+          }
         }
       }
-
       if (profilePrices.isEmpty) return;
 
       for (final activeUser in activeUsers) {
         final username = activeUser['user'] as String? ?? '';
         final profileName = activeUser['profile'] as String? ?? '';
+        if (username.isEmpty || _recordedConnections.contains(username)) continue;
 
-        if (username.isEmpty) continue;
+        final commentLower = (userComments[username] ?? '').toLowerCase();
+        if (!commentLower.contains('mode:vc') &&
+            !commentLower.contains('mode:up') &&
+            !commentLower.startsWith('vc-') &&
+            !commentLower.startsWith('up-')) continue;
 
-        // Skip if already recorded in this session (memory)
-        if (_recordedConnections.contains(username)) continue;
-
-        // Verify if it's a voucher from the user list comment
-        final comment = userComments[username] ?? '';
-        final commentLower = comment.toLowerCase();
-        final isVoucher = commentLower.contains('mode:vc') || 
-                         commentLower.contains('mode:up') ||
-                         commentLower.startsWith('vc-') ||
-                         commentLower.startsWith('up-');
-
-        if (!isVoucher) continue;
-
-        // Check if this profile has a price
         final price = profilePrices[profileName.toLowerCase()];
         if (price == null || price <= 0) continue;
 
-        // Mark as recorded
         _recordedConnections.add(username);
-
-        // Save to cache for persistence
-        final cache = ref.read(cacheServiceProvider);
         await cache.saveRecordedConnections(_recordedConnections);
 
-        // Record the sale
-        await ref.read(incomeProvider.notifier).recordSale(
+        ref.read(incomeProvider.notifier).recordSale(
               username: username,
               profile: profileName,
               price: price,
               comment: 'Auto: voucher activated',
             );
       }
-    } catch (e) {
-      debugPrint('Error in _autoRecordRevenue: $e');
-    }
+    } catch (_) {}
   }
 
   /// Track session time for active voucher users.
@@ -999,15 +1003,19 @@ class HotspotUsersNotifier extends AsyncNotifier<PaginatedUsers> {
   }
 
   Future<void> silentRefresh() async {
-    // Don't use lock - run independently to avoid blocking
+    if (_isRefreshing) return;
+    _isRefreshing = true;
     try {
-      final newData = await _loadUsers(page: 1);
-      // Only update if we got data
+      final newData = await _loadUsers(page: 1).timeout(
+        const Duration(seconds: 20),
+        onTimeout: () => _emptyPaginatedUsers(),
+      );
       if (newData.users.isNotEmpty) {
         state = AsyncValue.data(newData);
       }
-    } catch (e) {
-      // Keep previous state on error
+    } catch (_) {
+    } finally {
+      _isRefreshing = false;
     }
   }
 
@@ -1341,7 +1349,10 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
     }
 
     try {
-      var profilesData = await client.getHotspotProfiles();
+      var profilesData = await client.getHotspotProfiles().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => [],
+      );
 
       // Filter out system profiles AND any user data that leaked in
       profilesData = profilesData
@@ -1449,7 +1460,7 @@ class UserProfileNotifier extends AsyncNotifier<List<UserProfile>> {
       rethrow;
     }
 
-    await silentRefresh();
+    silentRefresh();
   }
 
   Future<void> updateProfile(UserProfile oldProfile, UserProfile updatedProfile) async {
