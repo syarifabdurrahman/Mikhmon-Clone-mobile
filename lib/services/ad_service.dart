@@ -23,9 +23,9 @@ class AdService {
   /// Using Test ID for now
   static String get nativeAdUnitId {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'ca-app-pub-3940256099942544/2247696110';
+      return 'ca-app-pub-8500075420783419/2381981675';
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      return 'ca-app-pub-3940256099942544/3986624511';
+      return 'ca-app-pub-8500075420783419/2381981675';
     }
     throw UnsupportedError('Unsupported platform');
   }
